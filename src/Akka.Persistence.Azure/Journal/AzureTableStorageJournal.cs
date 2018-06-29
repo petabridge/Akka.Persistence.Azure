@@ -164,9 +164,37 @@ namespace Akka.Persistence.Azure.Journal
             return exceptions;
         }
 
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        protected override async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
-            throw new NotImplementedException();
+            var deleteQuery = new TableQuery<PersistentJournalEntry>().Where(
+                        TableQuery.CombineFilters(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId),
+                                TableOperators.And,
+                                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, toSequenceNr.ToJournalRowKey())))
+                .Select(new []{ "PartitionKey", "RowKey" });
+
+            async Task DeleteRows(Task<TableQuerySegment<PersistentJournalEntry>> queryTask)
+            {
+                var queryResults = await queryTask;
+                if (queryResults.Results.Count > 0)
+                {
+                    var tableBatchOperation = new TableBatchOperation();
+                    foreach (var toBeDeleted in queryResults.Results)
+                    {
+                        tableBatchOperation.Delete(toBeDeleted);
+                    }
+
+                    var deleteTask = Table.ExecuteBatchAsync(tableBatchOperation);
+                    if (queryResults.ContinuationToken != null) // more data on the wire
+                    {
+                        var nextQuery = Table.ExecuteQuerySegmentedAsync(deleteQuery, queryResults.ContinuationToken);
+                        await DeleteRows(nextQuery);
+                    }
+
+                    await deleteTask;
+                }
+            }
+            
+            await DeleteRows(Table.ExecuteQuerySegmentedAsync(deleteQuery, null));
         }
     }
 }
