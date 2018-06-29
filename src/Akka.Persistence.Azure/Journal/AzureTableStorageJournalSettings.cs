@@ -8,13 +8,13 @@ namespace Akka.Persistence.Azure.Journal
     /// </summary>
     public sealed class AzureTableStorageJournalSettings
     {
-        public AzureTableStorageJournalSettings(string connectionString, string tableName, TimeSpan connectTimeout, TimeSpan requestTimeout, int batchSize)
+        public AzureTableStorageJournalSettings(string connectionString, string tableName, TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging)
         {
             ConnectionString = connectionString;
             TableName = tableName;
             ConnectTimeout = connectTimeout;
             RequestTimeout = requestTimeout;
-            BatchSize = batchSize;
+            VerboseLogging = verboseLogging;
         }
 
         /// <summary>
@@ -38,9 +38,9 @@ namespace Akka.Persistence.Azure.Journal
         public TimeSpan RequestTimeout { get; }
 
         /// <summary>
-        /// The batch size used when writing journal events to Azure table storage.
+        /// For debugging purposes only. Logs every individual operation to Azure table storage.
         /// </summary>
-        public int BatchSize { get; }
+        public bool VerboseLogging { get; }
 
         /// <summary>
         /// Creates an <see cref="AzureTableStorageJournalSettings"/> instance using the 
@@ -54,8 +54,8 @@ namespace Akka.Persistence.Azure.Journal
             var tableName = config.GetString("table-name");
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
-            var batchSize = config.GetInt("batch-size", 100);
-            return new AzureTableStorageJournalSettings(connectionString, tableName, connectTimeout, requestTimeout, batchSize);
+            var verbose = config.GetBoolean("verbose-logging", false);
+            return new AzureTableStorageJournalSettings(connectionString, tableName, connectTimeout, requestTimeout, verbose);
         }
     }
 }

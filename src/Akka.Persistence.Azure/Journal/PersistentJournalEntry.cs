@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Akka.Persistence.Azure.Util;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 
@@ -36,7 +37,7 @@ namespace Akka.Persistence.Azure.Journal
 
             PartitionKey = persistentId;
             SeqNo = seqNo;
-            RowKey = seqNo.ToString();
+            RowKey = seqNo.ToJournalRowKey();
         }
 
         public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)

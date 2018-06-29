@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Journal;
+using Akka.Util.Internal;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
+using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Persistence.Azure.Journal
 {
@@ -64,13 +66,53 @@ namespace Akka.Persistence.Azure.Journal
             throw new NotImplementedException();
         }
 
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
-            throw new NotImplementedException();
-            foreach (var write in messages)
+            var exceptions = ImmutableList<Exception>.Empty;
+            using (var atomicWrites = messages.GetEnumerator())
             {
+                while (atomicWrites.MoveNext())
+                {
+                    Debug.Assert(atomicWrites.Current != null, "atomicWrites.Current != null");
 
+                    var batch = new TableBatchOperation();
+                    using (var persistentMsgs = atomicWrites.Current.Payload
+                            .AsInstanceOf<IImmutableList<IPersistentRepresentation>>().GetEnumerator())
+                    {
+                        while (persistentMsgs.MoveNext())
+                        {
+                            var currentMsg = persistentMsgs.Current;
+
+                            Debug.Assert(currentMsg != null, nameof(currentMsg) + " != null");
+
+                            batch.Insert(
+                                new PersistentJournalEntry(currentMsg.PersistenceId,
+                                    currentMsg.SequenceNr, _serialization.PersistentToBytes(currentMsg), currentMsg.Manifest));
+                        }
+                    }
+
+                    try
+                    {
+                        var results = await Table.ExecuteBatchAsync(batch,
+                            new TableRequestOptions() {MaximumExecutionTime = _settings.RequestTimeout},
+                            new OperationContext());
+
+                        if (_log.IsDebugEnabled && _settings.VerboseLogging)
+                        {
+                            foreach (var r in results)
+                            {
+                                _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag, r.HttpStatusCode);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        exceptions = exceptions.Add(ex);
+                    }
+                }
             }
+
+            return exceptions;
         }
 
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
