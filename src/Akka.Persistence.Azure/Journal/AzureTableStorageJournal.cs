@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Journal;
 using Akka.Util.Internal;
 using Microsoft.WindowsAzure.Storage;
@@ -56,14 +58,61 @@ namespace Akka.Persistence.Azure.Journal
         {
             if (max == 0)
                 return;
-            throw new NotImplementedException();
+ 
+            var replayQuery = ReplayQuery(persistenceId, fromSequenceNr, toSequenceNr, (int) max);
 
+            Task<TableQuerySegment<PersistentJournalEntry>> nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, null);
+
+            while (nextTask != null)
+            {
+                var tableQueryResult = await nextTask;
+                
+                // we have results
+                if (tableQueryResult.Results.Count > 0)
+                {
+                    // and we have more data waiting on the wire
+                    if (tableQueryResult.ContinuationToken != null)
+                    {
+                        // kick off the next set of reads in parallel with our recovery efforts with the current persistent actor
+                        nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, tableQueryResult.ContinuationToken);
+                    }
+                    else
+                    {
+                        nextTask = null; // query is finished
+                    }
+
+                    foreach (var savedEvent in tableQueryResult.Results)
+                    {
+                        recoveryCallback(_serialization.PersistentFromBytes(savedEvent.Payload));
+                    }
+                }
+            }
         }
 
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        private static TableQuery<PersistentJournalEntry> ReplayQuery(string persistentId, long fromSequenceNumber,
+            long toSequenceNumber, int max)
         {
-            //Table.ExecuteAsync(TableOperation.Retrieve<PersistentJournalEntry>(persistenceId, ))
-            throw new NotImplementedException();
+            return new TableQuery<PersistentJournalEntry>().Where(
+                TableQuery.CombineFilters(
+                    TableQuery.CombineFilters(
+                        TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistentId),
+                        TableOperators.And,
+                        TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual,
+                            fromSequenceNumber.ToJournalRowKey())), TableOperators.And,
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual,
+                    toSequenceNumber.ToJournalRowKey()))).Take(max);
+        }
+
+        public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        {
+            var result = await Table.ExecuteQuerySegmentedAsync(
+                new TableQuery<PersistentJournalEntry>()
+                    .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId)).Take(1),
+                null);
+
+            if (result.Results.Count > 0)
+                return result.Results.First().SeqNo;
+            return 0L;
         }
 
         protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
@@ -94,7 +143,7 @@ namespace Akka.Persistence.Azure.Journal
                     try
                     {
                         var results = await Table.ExecuteBatchAsync(batch,
-                            new TableRequestOptions() {MaximumExecutionTime = _settings.RequestTimeout},
+                            new TableRequestOptions() { MaximumExecutionTime = _settings.RequestTimeout },
                             new OperationContext());
 
                         if (_log.IsDebugEnabled && _settings.VerboseLogging)
