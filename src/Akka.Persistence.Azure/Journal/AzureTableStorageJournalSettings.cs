@@ -1,4 +1,6 @@
-﻿namespace Akka.Persistence.Azure
+﻿using Akka.Configuration;
+
+namespace Akka.Persistence.Azure.Journal
 {
     /// <summary>
     /// Defines all of the configuration settings used by the `akka.persistence.journal.azure-table` plugin.
@@ -27,5 +29,20 @@
         /// if it doesn't already exist.
         /// </summary>
         public bool CreateTableIfNotExists { get; }
+
+        /// <summary>
+        /// Creates an <see cref="AzureTableStorageJournalSettings"/> instance using the 
+        /// `akka.persistence.journal.azure-table` HOCON configuration section.
+        /// </summary>
+        /// <param name="config">The `akka.persistence.journal.azure-table` HOCON section.</param>
+        /// <returns>A new settings instance.</returns>
+        public static AzureTableStorageJournalSettings Create(Config config)
+        {
+            var connectionString = config.GetString("connection-string");
+            var tableName = config.GetString("table-name");
+            var createTableIfNotExists = config.GetBoolean("create-table", true);
+
+            return new AzureTableStorageJournalSettings(connectionString, tableName, createTableIfNotExists);
+        }
     }
 }
