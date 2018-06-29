@@ -1,4 +1,5 @@
-﻿using Akka.Configuration;
+﻿using System;
+using Akka.Configuration;
 
 namespace Akka.Persistence.Azure.Journal
 {
@@ -7,11 +8,12 @@ namespace Akka.Persistence.Azure.Journal
     /// </summary>
     public sealed class AzureTableStorageJournalSettings
     {
-        public AzureTableStorageJournalSettings(string connectionString, string tableName, bool createTableIfNotExists)
+        public AzureTableStorageJournalSettings(string connectionString, string tableName, TimeSpan connectTimeout, TimeSpan requestTimeout)
         {
             ConnectionString = connectionString;
             TableName = tableName;
-            CreateTableIfNotExists = createTableIfNotExists;
+            ConnectTimeout = connectTimeout;
+            RequestTimeout = requestTimeout;
         }
 
         /// <summary>
@@ -25,10 +27,14 @@ namespace Akka.Persistence.Azure.Journal
         public string TableName { get; }
 
         /// <summary>
-        /// Defaults to <c>true</c>. When <c>true</c>, we will create <see cref="TableName"/>
-        /// if it doesn't already exist.
+        /// Initial timeout to use when connecting to Azure Table Storage for the first time.
         /// </summary>
-        public bool CreateTableIfNotExists { get; }
+        public TimeSpan ConnectTimeout { get; }
+
+        /// <summary>
+        /// Timeouts for individual read, write, and delete requests to Azure Table Storage.
+        /// </summary>
+        public TimeSpan RequestTimeout { get; }
 
         /// <summary>
         /// Creates an <see cref="AzureTableStorageJournalSettings"/> instance using the 
@@ -40,9 +46,9 @@ namespace Akka.Persistence.Azure.Journal
         {
             var connectionString = config.GetString("connection-string");
             var tableName = config.GetString("table-name");
-            var createTableIfNotExists = config.GetBoolean("create-table", true);
-
-            return new AzureTableStorageJournalSettings(connectionString, tableName, createTableIfNotExists);
+            var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
+            var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
+            return new AzureTableStorageJournalSettings(connectionString, tableName, connectTimeout, requestTimeout);
         }
     }
 }

@@ -2,15 +2,50 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Persistence.Journal;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Akka.Persistence.Azure.Journal
 {
     public class AzureTableStorageJournal : AsyncWriteJournal
     {
         private readonly SerializationHelper _serialization;
+        private readonly AzureTableStorageJournalSettings _settings;
+        private readonly CloudStorageAccount _storageAccount;
+        private readonly Lazy<CloudTable> _tableStorage;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        public AzureTableStorageJournal(AzureTableStorageJournalSettings settings)
+        {
+            _settings = settings;
+            _serialization = new SerializationHelper(Context.System);
+            _storageAccount = CloudStorageAccount.Parse(settings.ConnectionString);
+
+            _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage().Result);
+        }
+
+        private async Task<CloudTable> InitCloudStorage()
+        {
+            var tableClient = _storageAccount.CreateCloudTableClient();
+            var tableRef = tableClient.GetTableReference(_settings.TableName);
+            var op = new OperationContext();
+            var cts = new CancellationTokenSource(_settings.ConnectTimeout);
+            if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
+            {
+                _log.Info("Created Azure Cloud Table", _settings.TableName);
+            }
+            else
+            {
+                _log.Info("Successfully connected to existing table", _settings.TableName);
+            }
+
+            return tableRef;
+        }
 
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
