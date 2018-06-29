@@ -20,6 +20,8 @@ namespace Akka.Persistence.Azure.Journal
         private readonly Lazy<CloudTable> _tableStorage;
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        public CloudTable Table => _tableStorage.Value;
+
         public AzureTableStorageJournal(AzureTableStorageJournalSettings settings)
         {
             _settings = settings;
@@ -47,20 +49,28 @@ namespace Akka.Persistence.Azure.Journal
             return tableRef;
         }
 
-        public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
+        public override async Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
+            if (max == 0)
+                return;
             throw new NotImplementedException();
+
         }
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
+            //Table.ExecuteAsync(TableOperation.Retrieve<PersistentJournalEntry>(persistenceId, ))
             throw new NotImplementedException();
         }
 
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
             throw new NotImplementedException();
+            foreach (var write in messages)
+            {
+
+            }
         }
 
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)

@@ -8,12 +8,13 @@ namespace Akka.Persistence.Azure.Journal
     /// </summary>
     public sealed class AzureTableStorageJournalSettings
     {
-        public AzureTableStorageJournalSettings(string connectionString, string tableName, TimeSpan connectTimeout, TimeSpan requestTimeout)
+        public AzureTableStorageJournalSettings(string connectionString, string tableName, TimeSpan connectTimeout, TimeSpan requestTimeout, int batchSize)
         {
             ConnectionString = connectionString;
             TableName = tableName;
             ConnectTimeout = connectTimeout;
             RequestTimeout = requestTimeout;
+            BatchSize = batchSize;
         }
 
         /// <summary>
@@ -37,6 +38,11 @@ namespace Akka.Persistence.Azure.Journal
         public TimeSpan RequestTimeout { get; }
 
         /// <summary>
+        /// The batch size used when writing journal events to Azure table storage.
+        /// </summary>
+        public int BatchSize { get; }
+
+        /// <summary>
         /// Creates an <see cref="AzureTableStorageJournalSettings"/> instance using the 
         /// `akka.persistence.journal.azure-table` HOCON configuration section.
         /// </summary>
@@ -48,7 +54,8 @@ namespace Akka.Persistence.Azure.Journal
             var tableName = config.GetString("table-name");
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
-            return new AzureTableStorageJournalSettings(connectionString, tableName, connectTimeout, requestTimeout);
+            var batchSize = config.GetInt("batch-size", 100);
+            return new AzureTableStorageJournalSettings(connectionString, tableName, connectTimeout, requestTimeout, batchSize);
         }
     }
 }

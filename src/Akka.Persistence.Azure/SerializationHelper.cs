@@ -1,5 +1,6 @@
 ﻿using System;
 using Akka.Actor;
+using Akka.Serialization;
 
 namespace Akka.Persistence.Azure
 {
@@ -36,6 +37,22 @@ namespace Akka.Persistence.Azure
              */
 
             var serializer = _actorSystem.Serialization.FindSerializerForType(_persistentRepresentation);
+            return serializer.FromBinary<IPersistentRepresentation>(bytes);
+        }
+
+        public IPersistentRepresentation PersistentFromBytesWithManifest(byte[] bytes, string manifest)
+        {
+            /*
+             * Implementation note: Akka.NET caches the serialization lookups internally here,
+             * so there's no need to do it again.
+             */
+
+            var serializer = _actorSystem.Serialization.FindSerializerForType(_persistentRepresentation);
+            if (serializer is SerializerWithStringManifest manifestSerializer)
+            {
+                return (IPersistentRepresentation)manifestSerializer.FromBinary(bytes, manifest);
+            }
+
             return serializer.FromBinary<IPersistentRepresentation>(bytes);
         }
     }

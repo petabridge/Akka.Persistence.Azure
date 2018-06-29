@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Akka.Configuration;
+﻿using Akka.Configuration;
 
-namespace Akka.Persistence.Azure.SnapshotStore
+namespace Akka.Persistence.Azure.Snapshot
 {
     /// <summary>
     /// Configuration settings for the <see cref="AzureBlobSnapshotStore"/>
