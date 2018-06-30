@@ -15,6 +15,9 @@ namespace Akka.Persistence.Azure.Snapshot
         {
             ConnectionString = connectionString;
             ContainerName = containerName;
+            RequestTimeout = requestTimeout;
+            ConnectTimeout = connectTimeout;
+            VerboseLogging = verboseLogging;
         }
 
         /// <summary>

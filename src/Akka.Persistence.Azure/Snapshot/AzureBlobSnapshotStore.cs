@@ -13,6 +13,9 @@ using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
+    /// <summary>
+    /// Azure Blob Storage-backed snapshot store for Akka.Persistence.
+    /// </summary>
     public class AzureBlobSnapshotStore : SnapshotStore
     {
         private readonly SerializationHelper _serialization;
