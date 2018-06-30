@@ -25,5 +25,26 @@ namespace Akka.Persistence.Azure.Util
         {
             return $"{seqNo:d19}";
         }
+
+        /// <summary>
+        /// Converts a <see cref="SnapshotMetadata"/> object into a Uri-friendly string that can be sorted
+        /// into lexicographical order for a particular snapshot.
+        /// </summary>
+        /// <param name="metadata">The metadata used for the current snapshot.</param>
+        /// <returns>A Uri-friendly snapshot blob name.</returns>
+        public static string ToSnapshotBlobId(this SnapshotMetadata metadata)
+        {
+            return $"snapshot-{Uri.EscapeDataString(metadata.PersistenceId)}-{metadata.SequenceNr.ToJournalRowKey()}";
+        }
+
+        /// <summary>
+        /// Used to help search for the most recent snapshot in Azure Blob storage.
+        /// </summary>
+        /// <param name="persistentId">The ID of the persistent entity.</param>
+        /// <returns>The prefix of a blob store search string.</returns>
+        public static string ToSnapshotSearchQuery(string persistentId)
+        {
+            return $"snapshot-{Uri.EscapeDataString(persistentId)}";
+        }
     }
 }

@@ -16,6 +16,14 @@ using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Persistence.Azure.Journal
 {
+    /// <inheritdoc />
+    /// <summary>
+    /// Akka.Persistence Journal implementation that uses Azure Table Storage
+    /// as the backing store.
+    /// Designed to work against a single table and process operations in a manner
+    /// that is least taxing on the CPU and bandwidth by taking advantage of opportunities
+    /// for parallelism without doing it on an unbounded scale.
+    /// </summary>
     public class AzureTableStorageJournal : AsyncWriteJournal
     {
         private readonly SerializationHelper _serialization;
@@ -51,6 +59,19 @@ namespace Akka.Persistence.Azure.Journal
             }
 
             return tableRef;
+        }
+
+        protected override void PreStart()
+        {
+            _log.Debug("Initializing Azure Table Storage...");
+
+            // forces loading of the value
+            var name = Table.Name;
+
+            _log.Debug("Successfully started Azure Table Storage!");
+
+            // need to call the base in order to ensure Akka.Persistence starts up correctly
+            base.PreStart();
         }
 
         public override async Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,

@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Azure.Test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Azure.Tests.Performance", "src\Akka.Persistence.Azure.Tests.Performance\Akka.Persistence.Azure.Tests.Performance.csproj", "{CAE7CA7C-0D0C-4FDA-BDE9-BE16A27343EF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Azure.TestHelpers", "src\Akka.Persistence.Azure.TestHelpers\Akka.Persistence.Azure.TestHelpers.csproj", "{FE4C3232-1DB9-40E5-B0BE-BD70ACB4C1F3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,8 +29,15 @@ Global
 		{CAE7CA7C-0D0C-4FDA-BDE9-BE16A27343EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CAE7CA7C-0D0C-4FDA-BDE9-BE16A27343EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CAE7CA7C-0D0C-4FDA-BDE9-BE16A27343EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE4C3232-1DB9-40E5-B0BE-BD70ACB4C1F3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE4C3232-1DB9-40E5-B0BE-BD70ACB4C1F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE4C3232-1DB9-40E5-B0BE-BD70ACB4C1F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE4C3232-1DB9-40E5-B0BE-BD70ACB4C1F3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A2D867B3-6A2B-46B6-B249-81408CFD7A50}
 	EndGlobalSection
 EndGlobal

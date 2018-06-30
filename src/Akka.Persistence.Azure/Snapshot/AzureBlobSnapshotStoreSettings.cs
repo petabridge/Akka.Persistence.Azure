@@ -1,4 +1,5 @@
 ﻿using Akka.Configuration;
+using System;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
@@ -7,7 +8,8 @@ namespace Akka.Persistence.Azure.Snapshot
     /// </summary>
     public sealed class AzureBlobSnapshotStoreSettings
     {
-        public AzureBlobSnapshotStoreSettings(string connectionString, string containerName)
+        public AzureBlobSnapshotStoreSettings(string connectionString, string containerName, 
+            TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging)
         {
             ConnectionString = connectionString;
             ContainerName = containerName;
@@ -24,6 +26,21 @@ namespace Akka.Persistence.Azure.Snapshot
         public string ContainerName { get; }
 
         /// <summary>
+        /// Initial timeout to use when connecting to Azure Table Storage for the first time.
+        /// </summary>
+        public TimeSpan ConnectTimeout { get; }
+
+        /// <summary>
+        /// Timeouts for individual read, write, and delete requests to Azure Table Storage.
+        /// </summary>
+        public TimeSpan RequestTimeout { get; }
+
+        /// <summary>
+        /// For debugging purposes only. Logs every individual operation to Azure table storage.
+        /// </summary>
+        public bool VerboseLogging { get; }
+
+        /// <summary>
         /// Creates an <see cref="AzureBlobSnapshotStoreSettings"/> instance using the 
         /// `akka.persistence.snapshot-store.azure-blob-store` HOCON configuration section.
         /// </summary>
@@ -33,7 +50,10 @@ namespace Akka.Persistence.Azure.Snapshot
         {
             var connectionString = config.GetString("connection-string");
             var containerName = config.GetString("container-name");
-            return new AzureBlobSnapshotStoreSettings(connectionString, containerName);
+            var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
+            var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
+            var verbose = config.GetBoolean("verbose-logging", false);
+            return new AzureBlobSnapshotStoreSettings(connectionString, containerName, connectTimeout, requestTimeout, verbose);
         }
     }
 }

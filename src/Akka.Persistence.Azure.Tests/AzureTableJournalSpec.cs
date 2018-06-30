@@ -1,9 +1,10 @@
 using System;
+using Akka.Persistence.TCK.Journal;
 using Xunit;
 
 namespace Akka.Persistence.Azure.Tests
 {
-    public class UnitTest1
+    public class AzureTableJournalSpec : JournalSpec
     {
         [Fact]
         public void TestMethod1()

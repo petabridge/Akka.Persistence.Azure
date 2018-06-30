@@ -17,6 +17,7 @@ namespace Akka.Persistence.Azure
         }
 
         private readonly Type _persistentRepresentation = typeof(IPersistentRepresentation);
+        private readonly Type _snapshotType = typeof(Serialization.Snapshot);
 
         public byte[] PersistentToBytes(IPersistentRepresentation message)
         {
@@ -54,6 +55,18 @@ namespace Akka.Persistence.Azure
             }
 
             return serializer.FromBinary<IPersistentRepresentation>(bytes);
+        }
+
+        public byte[] SnapshotToBytes(Serialization.Snapshot snapshot)
+        {
+            var serializer = _actorSystem.Serialization.FindSerializerForType(_snapshotType);
+            return serializer.ToBinary(snapshot);
+        }
+
+        public Serialization.Snapshot SnapshotFromBytes(byte[] bytes)
+        {
+            var serializer = _actorSystem.Serialization.FindSerializerForType(_snapshotType);
+            return serializer.FromBinary<Serialization.Snapshot>(bytes);
         }
     }
 }
