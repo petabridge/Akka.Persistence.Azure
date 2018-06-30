@@ -1,4 +1,10 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+// <copyright file="AzureBlobSnapshotStore.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2018 Petabridge, LLC <https://petabridge.com>
+// </copyright>
+// -----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,26 +15,22 @@ using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Snapshot;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
     /// <summary>
-    /// Azure Blob Storage-backed snapshot store for Akka.Persistence.
+    ///     Azure Blob Storage-backed snapshot store for Akka.Persistence.
     /// </summary>
     public class AzureBlobSnapshotStore : SnapshotStore
     {
-        private readonly SerializationHelper _serialization;
-        private readonly AzureBlobSnapshotStoreSettings _settings;
-        private readonly CloudStorageAccount _storageAccount;
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-
-        private readonly Lazy<CloudBlobContainer> _container;
-
         private const string TimeStampMetaDataKey = "Timestamp";
         private const string SeqNoMetaDataKey = "SeqNo";
 
-        public CloudBlobContainer Container => _container.Value;
+        private readonly Lazy<CloudBlobContainer> _container;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly SerializationHelper _serialization;
+        private readonly AzureBlobSnapshotStoreSettings _settings;
+        private readonly CloudStorageAccount _storageAccount;
 
         public AzureBlobSnapshotStore()
         {
@@ -39,6 +41,8 @@ namespace Akka.Persistence.Azure.Snapshot
             _container = new Lazy<CloudBlobContainer>(() => InitCloudStorage().Result);
         }
 
+        public CloudBlobContainer Container => _container.Value;
+
         private async Task<CloudBlobContainer> InitCloudStorage()
         {
             var blobClient = _storageAccount.CreateCloudBlobClient();
@@ -47,18 +51,14 @@ namespace Akka.Persistence.Azure.Snapshot
 
             using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
             {
-                if (await containerRef.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Container, new BlobRequestOptions(), op, cts.Token))
-                {
+                if (await containerRef.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Container,
+                    new BlobRequestOptions(), op, cts.Token))
                     _log.Info("Created Azure Blob Container", _settings.ContainerName);
-                }
                 else
-                {
                     _log.Info("Successfully connected to existing container", _settings.ContainerName);
-                }
 
                 return containerRef;
             }
-
         }
 
         protected override void PreStart()
@@ -75,13 +75,15 @@ namespace Akka.Persistence.Azure.Snapshot
         }
 
 
-        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId,
+            SnapshotSelectionCriteria criteria)
         {
             var requestOptions = GenerateOptions();
             BlobResultSegment results = null;
             using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
             {
-                results = await Container.ListBlobsSegmentedAsync(SeqNoHelper.ToSnapshotSearchQuery(persistenceId), true,
+                results = await Container.ListBlobsSegmentedAsync(SeqNoHelper.ToSnapshotSearchQuery(persistenceId),
+                    true,
                     BlobListingDetails.Metadata, null, null, requestOptions, new OperationContext(), cts.Token);
             }
 
@@ -96,7 +98,9 @@ namespace Akka.Persistence.Azure.Snapshot
                     .Where(x => FilterBlobSeqNo(criteria, x))
                     .Where(x => FilterBlobTimestamp(criteria, x))
                     .OrderByDescending(x => FetchBlobSeqNo(x)) // ordering matters - get highest seqNo item
-                    .ThenByDescending(x => FetchBlobTimestamp(x)) // if there are multiple snapshots taken at same SeqNo, need latest timestamp
+                    .ThenByDescending(x =>
+                        FetchBlobTimestamp(
+                            x)) // if there are multiple snapshots taken at same SeqNo, need latest timestamp
                     .FirstOrDefault();
 
                 // couldn't find what we were looking for. Onto the next part of the query
@@ -104,14 +108,15 @@ namespace Akka.Persistence.Azure.Snapshot
                 if (filtered == null)
                     return null;
 
-                using(var cts = new CancellationTokenSource(_settings.RequestTimeout))
+                using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
                 using (var memoryStream = new MemoryStream())
                 {
                     await filtered.DownloadToStreamAsync(memoryStream, AccessCondition.GenerateIfExistsCondition(),
                         GenerateOptions(), new OperationContext(), cts.Token);
 
                     var snapshot = _serialization.SnapshotFromBytes(memoryStream.ToArray());
-                    return new SelectedSnapshot(new SnapshotMetadata(persistenceId, FetchBlobSeqNo(filtered)), snapshot.Data);
+                    return new SelectedSnapshot(new SnapshotMetadata(persistenceId, FetchBlobSeqNo(filtered)),
+                        snapshot.Data);
                 }
             }
 
@@ -149,7 +154,6 @@ namespace Akka.Persistence.Azure.Snapshot
             var blob = Container.GetBlockBlobReference(metadata.ToSnapshotBlobId());
             using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
             {
-
                 await blob.DeleteIfExistsAsync(DeleteSnapshotsOption.None, AccessCondition.GenerateIfExistsCondition(),
                     GenerateOptions(), new OperationContext(),
                     cts.Token);
@@ -166,7 +170,8 @@ namespace Akka.Persistence.Azure.Snapshot
                  * Query only the metadata - don't need to stream the entire blob back to us
                  * in order to delete it from storage in the next request.
                  */
-                results = await Container.ListBlobsSegmentedAsync(SeqNoHelper.ToSnapshotSearchQuery(persistenceId), true,
+                results = await Container.ListBlobsSegmentedAsync(SeqNoHelper.ToSnapshotSearchQuery(persistenceId),
+                    true,
                     BlobListingDetails.Metadata, null, null, requestOptions, new OperationContext(), cts.Token);
             }
 
@@ -184,10 +189,9 @@ namespace Akka.Persistence.Azure.Snapshot
                 using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
                 {
                     foreach (var blob in filtered)
-                    {
-                        deleteTasks.Add(blob.DeleteIfExistsAsync(DeleteSnapshotsOption.None, AccessCondition.GenerateIfExistsCondition(),
+                        deleteTasks.Add(blob.DeleteIfExistsAsync(DeleteSnapshotsOption.None,
+                            AccessCondition.GenerateIfExistsCondition(),
                             GenerateOptions(), new OperationContext(), cts.Token));
-                    }
 
                     await Task.WhenAll(deleteTasks);
                 }
@@ -245,7 +249,7 @@ namespace Akka.Persistence.Azure.Snapshot
 
         private static BlobRequestOptions GenerateOptions(AzureBlobSnapshotStoreSettings settings)
         {
-            return new BlobRequestOptions() { MaximumExecutionTime = settings.RequestTimeout };
+            return new BlobRequestOptions {MaximumExecutionTime = settings.RequestTimeout};
         }
     }
 }

@@ -1,6 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿// -----------------------------------------------------------------------
+// <copyright file="AzurePersistenceConfigSpec.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2018 Petabridge, LLC <https://petabridge.com>
+// </copyright>
+// -----------------------------------------------------------------------
+
+using System;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Snapshot;
@@ -20,24 +24,6 @@ namespace Akka.Persistence.Azure.Tests
         }
 
         [Fact]
-        public void ShouldParseTableConfig()
-        {
-            var tableSettings =
-                AzureTableStorageJournalSettings.Create(
-                    ConfigurationFactory.ParseString(@"akka.persistence.journal.azure-table{
-                        connection-string = foo
-                        table-name = bar
-                    }").WithFallback(AzurePersistence.DefaultConfig)
-                   .GetConfig("akka.persistence.journal.azure-table"));
-
-            tableSettings.TableName.Should().Be("bar");
-            tableSettings.ConnectionString.Should().Be("foo");
-            tableSettings.ConnectTimeout.Should().Be(TimeSpan.FromSeconds(3));
-            tableSettings.RequestTimeout.Should().Be(TimeSpan.FromSeconds(3));
-            tableSettings.VerboseLogging.Should().BeFalse();
-        }
-
-        [Fact]
         public void ShouldParseDefaultSnapshotConfig()
         {
             var blobSettings =
@@ -53,6 +39,24 @@ namespace Akka.Persistence.Azure.Tests
             blobSettings.ConnectTimeout.Should().Be(TimeSpan.FromSeconds(3));
             blobSettings.RequestTimeout.Should().Be(TimeSpan.FromSeconds(3));
             blobSettings.VerboseLogging.Should().BeFalse();
+        }
+
+        [Fact]
+        public void ShouldParseTableConfig()
+        {
+            var tableSettings =
+                AzureTableStorageJournalSettings.Create(
+                    ConfigurationFactory.ParseString(@"akka.persistence.journal.azure-table{
+                        connection-string = foo
+                        table-name = bar
+                    }").WithFallback(AzurePersistence.DefaultConfig)
+                        .GetConfig("akka.persistence.journal.azure-table"));
+
+            tableSettings.TableName.Should().Be("bar");
+            tableSettings.ConnectionString.Should().Be("foo");
+            tableSettings.ConnectTimeout.Should().Be(TimeSpan.FromSeconds(3));
+            tableSettings.RequestTimeout.Should().Be(TimeSpan.FromSeconds(3));
+            tableSettings.VerboseLogging.Should().BeFalse();
         }
     }
 }

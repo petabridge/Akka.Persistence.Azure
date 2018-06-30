@@ -1,23 +1,29 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+// <copyright file="SerializationHelper.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2018 Petabridge, LLC <https://petabridge.com>
+// </copyright>
+// -----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Serialization;
 
 namespace Akka.Persistence.Azure
 {
     /// <summary>
-    /// INTERNAL API
+    ///     INTERNAL API
     /// </summary>
     internal sealed class SerializationHelper
     {
         private readonly ActorSystem _actorSystem;
 
+        private readonly Type _persistentRepresentation = typeof(IPersistentRepresentation);
+        private readonly Type _snapshotType = typeof(Serialization.Snapshot);
+
         public SerializationHelper(ActorSystem actorSystem)
         {
             _actorSystem = actorSystem;
         }
-
-        private readonly Type _persistentRepresentation = typeof(IPersistentRepresentation);
-        private readonly Type _snapshotType = typeof(Serialization.Snapshot);
 
         public byte[] PersistentToBytes(IPersistentRepresentation message)
         {
@@ -50,9 +56,7 @@ namespace Akka.Persistence.Azure
 
             var serializer = _actorSystem.Serialization.FindSerializerForType(_persistentRepresentation);
             if (serializer is SerializerWithStringManifest manifestSerializer)
-            {
-                return (IPersistentRepresentation)manifestSerializer.FromBinary(bytes, manifest);
-            }
+                return (IPersistentRepresentation) manifestSerializer.FromBinary(bytes, manifest);
 
             return serializer.FromBinary<IPersistentRepresentation>(bytes);
         }

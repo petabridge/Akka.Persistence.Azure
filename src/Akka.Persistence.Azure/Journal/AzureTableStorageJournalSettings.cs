@@ -1,14 +1,21 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+// <copyright file="AzureTableStorageJournalSettings.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2018 Petabridge, LLC <https://petabridge.com>
+// </copyright>
+// -----------------------------------------------------------------------
+
+using System;
 using Akka.Configuration;
 
 namespace Akka.Persistence.Azure.Journal
 {
     /// <summary>
-    /// Defines all of the configuration settings used by the `akka.persistence.journal.azure-table` plugin.
+    ///     Defines all of the configuration settings used by the `akka.persistence.journal.azure-table` plugin.
     /// </summary>
     public sealed class AzureTableStorageJournalSettings
     {
-        public AzureTableStorageJournalSettings(string connectionString, string tableName, TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging)
+        public AzureTableStorageJournalSettings(string connectionString, string tableName, TimeSpan connectTimeout,
+            TimeSpan requestTimeout, bool verboseLogging)
         {
             ConnectionString = connectionString;
             TableName = tableName;
@@ -18,33 +25,33 @@ namespace Akka.Persistence.Azure.Journal
         }
 
         /// <summary>
-        /// The connection string for connecting to Windows Azure table storage.
+        ///     The connection string for connecting to Windows Azure table storage.
         /// </summary>
         public string ConnectionString { get; }
 
         /// <summary>
-        /// The table of the table we'll be connecting to.
+        ///     The table of the table we'll be connecting to.
         /// </summary>
         public string TableName { get; }
 
         /// <summary>
-        /// Initial timeout to use when connecting to Azure Table Storage for the first time.
+        ///     Initial timeout to use when connecting to Azure Table Storage for the first time.
         /// </summary>
         public TimeSpan ConnectTimeout { get; }
 
         /// <summary>
-        /// Timeouts for individual read, write, and delete requests to Azure Table Storage.
+        ///     Timeouts for individual read, write, and delete requests to Azure Table Storage.
         /// </summary>
         public TimeSpan RequestTimeout { get; }
 
         /// <summary>
-        /// For debugging purposes only. Logs every individual operation to Azure table storage.
+        ///     For debugging purposes only. Logs every individual operation to Azure table storage.
         /// </summary>
         public bool VerboseLogging { get; }
 
         /// <summary>
-        /// Creates an <see cref="AzureTableStorageJournalSettings"/> instance using the 
-        /// `akka.persistence.journal.azure-table` HOCON configuration section.
+        ///     Creates an <see cref="AzureTableStorageJournalSettings" /> instance using the
+        ///     `akka.persistence.journal.azure-table` HOCON configuration section.
         /// </summary>
         /// <param name="config">The `akka.persistence.journal.azure-table` HOCON section.</param>
         /// <returns>A new settings instance.</returns>
@@ -55,7 +62,8 @@ namespace Akka.Persistence.Azure.Journal
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
-            return new AzureTableStorageJournalSettings(connectionString, tableName, connectTimeout, requestTimeout, verbose);
+            return new AzureTableStorageJournalSettings(connectionString, tableName, connectTimeout, requestTimeout,
+                verbose);
         }
     }
 }

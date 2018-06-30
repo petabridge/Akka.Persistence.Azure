@@ -1,4 +1,10 @@
-﻿using Akka.Actor;
+﻿// -----------------------------------------------------------------------
+// <copyright file="AzurePersistence.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2018 Petabridge, LLC <https://petabridge.com>
+// </copyright>
+// -----------------------------------------------------------------------
+
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Snapshot;
@@ -6,14 +12,15 @@ using Akka.Persistence.Azure.Snapshot;
 namespace Akka.Persistence.Azure
 {
     /// <summary>
-    /// Used to configure the <see cref="AzureTableStorageJournal"/>
-    /// and <see cref="AzureBlobSnapshotStore"/>.
+    ///     Used to configure the <see cref="AzureTableStorageJournal" />
+    ///     and <see cref="AzureBlobSnapshotStore" />.
     /// </summary>
     public sealed class AzurePersistence : IExtension
     {
         private readonly ActorSystem _system;
 
-        public AzurePersistence(ActorSystem system, AzureTableStorageJournalSettings tableSettings, AzureBlobSnapshotStoreSettings blobSettings)
+        public AzurePersistence(ActorSystem system, AzureTableStorageJournalSettings tableSettings,
+            AzureBlobSnapshotStoreSettings blobSettings)
         {
             _system = system;
             TableSettings = tableSettings;
@@ -25,21 +32,27 @@ namespace Akka.Persistence.Azure
         public AzureBlobSnapshotStoreSettings BlobSettings { get; }
 
         /// <summary>
-        /// The default HOCON configuration for <see cref="AzurePersistence"/>.
+        ///     The default HOCON configuration for <see cref="AzurePersistence" />.
         /// </summary>
-        public static Config DefaultConfig => ConfigurationFactory.FromResource<AzurePersistence>("Akka.Persistence.Azure.reference.conf");
+        public static Config DefaultConfig =>
+            ConfigurationFactory.FromResource<AzurePersistence>("Akka.Persistence.Azure.reference.conf");
 
         /// <summary>
-        /// Returns the <see cref="AzurePersistence"/> instance for <see cref="system"/>.
+        ///     Returns the <see cref="AzurePersistence" /> instance for <see cref="system" />.
         /// </summary>
-        /// <param name="system">The current <see cref="ActorSystem"/>.</param>
-        /// <returns>If <see cref="AzurePersistence"/> has already been instantiated, gets the current instance. If not, creates a new instance, registers it, and returns it.</returns>
-        public static AzurePersistence Get(ActorSystem system) =>
-            system.WithExtension<AzurePersistence, AzurePersistenceProvider>();
+        /// <param name="system">The current <see cref="ActorSystem" />.</param>
+        /// <returns>
+        ///     If <see cref="AzurePersistence" /> has already been instantiated, gets the current instance. If not, creates a
+        ///     new instance, registers it, and returns it.
+        /// </returns>
+        public static AzurePersistence Get(ActorSystem system)
+        {
+            return system.WithExtension<AzurePersistence, AzurePersistenceProvider>();
+        }
     }
 
     /// <summary>
-    /// Used to instantiate the <see cref="AzurePersistence"/> <see cref="ActorSystem"/> extension.
+    ///     Used to instantiate the <see cref="AzurePersistence" /> <see cref="ActorSystem" /> extension.
     /// </summary>
     public sealed class AzurePersistenceProvider : ExtensionIdProvider<AzurePersistence>
     {

@@ -1,8 +1,13 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+// <copyright file="AzureTableStorageJournal.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2018 Petabridge, LLC <https://petabridge.com>
+// </copyright>
+// -----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -18,21 +23,19 @@ namespace Akka.Persistence.Azure.Journal
 {
     /// <inheritdoc />
     /// <summary>
-    /// Akka.Persistence Journal implementation that uses Azure Table Storage
-    /// as the backing store.
-    /// Designed to work against a single table and process operations in a manner
-    /// that is least taxing on the CPU and bandwidth by taking advantage of opportunities
-    /// for parallelism without doing it on an unbounded scale.
+    ///     Akka.Persistence Journal implementation that uses Azure Table Storage
+    ///     as the backing store.
+    ///     Designed to work against a single table and process operations in a manner
+    ///     that is least taxing on the CPU and bandwidth by taking advantage of opportunities
+    ///     for parallelism without doing it on an unbounded scale.
     /// </summary>
     public class AzureTableStorageJournal : AsyncWriteJournal
     {
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly SerializationHelper _serialization;
         private readonly AzureTableStorageJournalSettings _settings;
         private readonly CloudStorageAccount _storageAccount;
         private readonly Lazy<CloudTable> _tableStorage;
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-
-        public CloudTable Table => _tableStorage.Value;
 
         public AzureTableStorageJournal()
         {
@@ -43,6 +46,8 @@ namespace Akka.Persistence.Azure.Journal
             _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage().Result);
         }
 
+        public CloudTable Table => _tableStorage.Value;
+
         private async Task<CloudTable> InitCloudStorage()
         {
             var tableClient = _storageAccount.CreateCloudTableClient();
@@ -50,13 +55,9 @@ namespace Akka.Persistence.Azure.Journal
             var op = new OperationContext();
             var cts = new CancellationTokenSource(_settings.ConnectTimeout);
             if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
-            {
                 _log.Info("Created Azure Cloud Table", _settings.TableName);
-            }
             else
-            {
                 _log.Info("Successfully connected to existing table", _settings.TableName);
-            }
 
             return tableRef;
         }
@@ -74,38 +75,32 @@ namespace Akka.Persistence.Azure.Journal
             base.PreStart();
         }
 
-        public override async Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
+        public override async Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr,
+            long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
             if (max == 0)
                 return;
- 
+
             var replayQuery = ReplayQuery(persistenceId, fromSequenceNr, toSequenceNr, (int) max);
 
-            Task<TableQuerySegment<PersistentJournalEntry>> nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, null);
+            var nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, null);
 
             while (nextTask != null)
             {
                 var tableQueryResult = await nextTask;
-                
+
                 // we have results
                 if (tableQueryResult.Results.Count > 0)
                 {
                     // and we have more data waiting on the wire
                     if (tableQueryResult.ContinuationToken != null)
-                    {
-                        // kick off the next set of reads in parallel with our recovery efforts with the current persistent actor
                         nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, tableQueryResult.ContinuationToken);
-                    }
                     else
-                    {
                         nextTask = null; // query is finished
-                    }
 
                     foreach (var savedEvent in tableQueryResult.Results)
-                    {
                         recoveryCallback(_serialization.PersistentFromBytes(savedEvent.Payload));
-                    }
                 }
             }
         }
@@ -120,15 +115,16 @@ namespace Akka.Persistence.Azure.Journal
                         TableOperators.And,
                         TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual,
                             fromSequenceNumber.ToJournalRowKey())), TableOperators.And,
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual,
-                    toSequenceNumber.ToJournalRowKey()))).Take(max);
+                    TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual,
+                        toSequenceNumber.ToJournalRowKey()))).Take(max);
         }
 
         public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
             var result = await Table.ExecuteQuerySegmentedAsync(
                 new TableQuery<PersistentJournalEntry>()
-                    .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId)).Take(1),
+                    .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId))
+                    .Take(1),
                 null);
 
             if (result.Results.Count > 0)
@@ -147,7 +143,7 @@ namespace Akka.Persistence.Azure.Journal
 
                     var batch = new TableBatchOperation();
                     using (var persistentMsgs = atomicWrites.Current.Payload
-                            .AsInstanceOf<IImmutableList<IPersistentRepresentation>>().GetEnumerator())
+                        .AsInstanceOf<IImmutableList<IPersistentRepresentation>>().GetEnumerator())
                     {
                         while (persistentMsgs.MoveNext())
                         {
@@ -157,23 +153,21 @@ namespace Akka.Persistence.Azure.Journal
 
                             batch.Insert(
                                 new PersistentJournalEntry(currentMsg.PersistenceId,
-                                    currentMsg.SequenceNr, _serialization.PersistentToBytes(currentMsg), currentMsg.Manifest));
+                                    currentMsg.SequenceNr, _serialization.PersistentToBytes(currentMsg),
+                                    currentMsg.Manifest));
                         }
                     }
 
                     try
                     {
                         var results = await Table.ExecuteBatchAsync(batch,
-                            new TableRequestOptions() { MaximumExecutionTime = _settings.RequestTimeout },
+                            new TableRequestOptions {MaximumExecutionTime = _settings.RequestTimeout},
                             new OperationContext());
 
                         if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                        {
                             foreach (var r in results)
-                            {
-                                _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag, r.HttpStatusCode);
-                            }
-                        }
+                                _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag,
+                                    r.HttpStatusCode);
                     }
                     catch (Exception ex)
                     {
@@ -188,10 +182,12 @@ namespace Akka.Persistence.Azure.Journal
         protected override async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
             var deleteQuery = new TableQuery<PersistentJournalEntry>().Where(
-                        TableQuery.CombineFilters(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId),
-                                TableOperators.And,
-                                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, toSequenceNr.ToJournalRowKey())))
-                .Select(new []{ "PartitionKey", "RowKey" });
+                    TableQuery.CombineFilters(
+                        TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId),
+                        TableOperators.And,
+                        TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual,
+                            toSequenceNr.ToJournalRowKey())))
+                .Select(new[] {"PartitionKey", "RowKey"});
 
             async Task DeleteRows(Task<TableQuerySegment<PersistentJournalEntry>> queryTask)
             {
@@ -200,9 +196,7 @@ namespace Akka.Persistence.Azure.Journal
                 {
                     var tableBatchOperation = new TableBatchOperation();
                     foreach (var toBeDeleted in queryResults.Results)
-                    {
                         tableBatchOperation.Delete(toBeDeleted);
-                    }
 
                     var deleteTask = Table.ExecuteBatchAsync(tableBatchOperation);
                     if (queryResults.ContinuationToken != null) // more data on the wire
@@ -214,7 +208,7 @@ namespace Akka.Persistence.Azure.Journal
                     await deleteTask;
                 }
             }
-            
+
             await DeleteRows(Table.ExecuteQuerySegmentedAsync(deleteQuery, null));
         }
     }
