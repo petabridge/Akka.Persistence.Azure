@@ -6,9 +6,6 @@ namespace Akka.Persistence.Azure.Tests
 {
     public class AzureTableJournalSpec : JournalSpec
     {
-        [Fact]
-        public void TestMethod1()
-        {
-        }
+        
     }
 }

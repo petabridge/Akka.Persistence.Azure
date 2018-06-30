@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Snapshot;
-using Microsoft.IO;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -28,11 +27,11 @@ namespace Akka.Persistence.Azure.Snapshot
 
         public CloudBlobContainer Container => _container.Value;
 
-        public AzureBlobSnapshotStore(AzureBlobSnapshotStoreSettings settings)
+        public AzureBlobSnapshotStore()
         {
-            _settings = settings;
+            _settings = AzurePersistence.Get(Context.System).BlobSettings;
             _serialization = new SerializationHelper(Context.System);
-            _storageAccount = CloudStorageAccount.Parse(settings.ConnectionString);
+            _storageAccount = CloudStorageAccount.Parse(_settings.ConnectionString);
 
             _container = new Lazy<CloudBlobContainer>(() => InitCloudStorage().Result);
         }
@@ -85,26 +84,37 @@ namespace Akka.Persistence.Azure.Snapshot
 
             // if we made it down here, the initial request succeeded.
 
-            async Task<SelectedSnapshot[]> FilterAndFetch(BlobResultSegment segment)
+            async Task<SelectedSnapshot> FilterAndFetch(BlobResultSegment segment)
             {
                 // apply filter criteria
-                var filtered = segment.Results.Where(x => x is CloudBlockBlob)
+                var filtered = segment.Results
+                    .Where(x => x is CloudBlockBlob)
                     .Cast<CloudBlockBlob>()
                     .Where(x => FilterBlobSeqNo(criteria, x))
-                    .Where(x => FilterBlobTimestamp(criteria, x));
+                    .Where(x => FilterBlobTimestamp(criteria, x))
+                    .OrderByDescending(x => FetchBlobSeqNo(x)) // ordering matters - get highest seqNo item
+                    .ThenByDescending(x => FetchBlobTimestamp(x)) // if there are multiple snapshots taken at same SeqNo, need latest timestamp
+                    .FirstOrDefault();
 
-                var deleteTasks = new List<Task>();
-                using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
+                // couldn't find what we were looking for. Onto the next part of the query
+                // or return null to sender possibly.
+                if (filtered == null)
+                    return null;
+
+                using(var cts = new CancellationTokenSource(_settings.RequestTimeout))
+                using (var memoryStream = new MemoryStream())
                 {
-                    foreach (var blob in filtered)
-                    {
-                        deleteTasks.Add(blob.DeleteIfExistsAsync(DeleteSnapshotsOption.None, AccessCondition.GenerateIfExistsCondition(),
-                            GenerateOptions(), new OperationContext(), cts.Token));
-                    }
+                    await filtered.DownloadToStreamAsync(memoryStream, AccessCondition.GenerateIfExistsCondition(),
+                        GenerateOptions(), new OperationContext(), cts.Token);
 
-                    await Task.WhenAll(deleteTasks);
+                    var snapshot = _serialization.SnapshotFromBytes(memoryStream.ToArray());
+                    return new SelectedSnapshot(new SnapshotMetadata(persistenceId, FetchBlobSeqNo(filtered)), snapshot.Data);
                 }
             }
+
+            // TODO: see if there's ever a scenario where the most recent snapshots aren't in the beginning of the pagination list.
+            var result = await FilterAndFetch(results);
+            return result;
         }
 
         protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
@@ -204,15 +214,25 @@ namespace Akka.Persistence.Azure.Snapshot
 
         private static bool FilterBlobSeqNo(SnapshotSelectionCriteria criteria, CloudBlob x)
         {
-            var seqNo = long.Parse(x.Metadata[SeqNoMetaDataKey]);
+            var seqNo = FetchBlobSeqNo(x);
             return seqNo <= criteria.MaxSequenceNr && seqNo >= criteria.MinSequenceNr;
+        }
+
+        private static long FetchBlobSeqNo(CloudBlob x)
+        {
+            return long.Parse(x.Metadata[SeqNoMetaDataKey]);
         }
 
         private static bool FilterBlobTimestamp(SnapshotSelectionCriteria criteria, CloudBlob x)
         {
-            var ticks = long.Parse(x.Metadata[TimeStampMetaDataKey]);
+            var ticks = FetchBlobTimestamp(x);
             return ticks <= criteria.MaxTimeStamp.Ticks &&
                    (!criteria.MinTimestamp.HasValue || criteria.MinTimestamp.Value.Ticks >= ticks);
+        }
+
+        private static long FetchBlobTimestamp(CloudBlob x)
+        {
+            return long.Parse(x.Metadata[TimeStampMetaDataKey]);
         }
 
         private BlobRequestOptions GenerateOptions()

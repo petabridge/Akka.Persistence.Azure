@@ -34,11 +34,11 @@ namespace Akka.Persistence.Azure.Journal
 
         public CloudTable Table => _tableStorage.Value;
 
-        public AzureTableStorageJournal(AzureTableStorageJournalSettings settings)
+        public AzureTableStorageJournal()
         {
-            _settings = settings;
+            _settings = AzurePersistence.Get(Context.System).TableSettings;
             _serialization = new SerializationHelper(Context.System);
-            _storageAccount = CloudStorageAccount.Parse(settings.ConnectionString);
+            _storageAccount = CloudStorageAccount.Parse(_settings.ConnectionString);
 
             _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage().Result);
         }

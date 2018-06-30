@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace Akka.Persistence.Azure.TestHelpers
 {
@@ -12,9 +11,5 @@ namespace Akka.Persistence.Azure.TestHelpers
         Task Initialize();
 
         Task CleanUp();
-    }
-
-    public class WindowsAzureStorageEmulatorFixture : IAsyncFixture
-    {
     }
 }

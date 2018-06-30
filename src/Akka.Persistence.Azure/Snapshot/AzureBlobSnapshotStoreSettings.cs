@@ -4,7 +4,9 @@ using System;
 namespace Akka.Persistence.Azure.Snapshot
 {
     /// <summary>
-    /// Configuration settings for the <see cref="AzureBlobSnapshotStore"/>
+    /// Configuration settings for the <see cref="AzureBlobSnapshotStore"/>.
+    /// 
+    /// Loads settings from the `akka.persistence.snapshot-store.azure-blob-store` HOCON section.
     /// </summary>
     public sealed class AzureBlobSnapshotStoreSettings
     {
@@ -26,12 +28,12 @@ namespace Akka.Persistence.Azure.Snapshot
         public string ContainerName { get; }
 
         /// <summary>
-        /// Initial timeout to use when connecting to Azure Table Storage for the first time.
+        /// Initial timeout to use when connecting to Azure Container Storage for the first time.
         /// </summary>
         public TimeSpan ConnectTimeout { get; }
 
         /// <summary>
-        /// Timeouts for individual read, write, and delete requests to Azure Table Storage.
+        /// Timeouts for individual read, write, and delete requests to Azure Container Storage.
         /// </summary>
         public TimeSpan RequestTimeout { get; }
 
