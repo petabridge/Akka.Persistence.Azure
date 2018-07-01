@@ -45,6 +45,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
                     {
                         _target.Subscriber.Tell(TotalCount);
                     }
+                    TotalCount += i;
                 });
             });
 
@@ -52,7 +53,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
             {
                 if (TotalCount >= n.Target)
                 {
-                    _target.Subscriber.Tell(TotalCount);
+                    n.Subscriber.Tell(TotalCount);
                 }
                 _target = n;
             });

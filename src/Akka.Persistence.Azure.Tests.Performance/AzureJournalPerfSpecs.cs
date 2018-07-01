@@ -68,7 +68,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
             Console.WriteLine(ActorSystem.Settings.Config.ToString());
             foreach (var i in Enumerable.Range(0, PersistentActorCount))
             {
-                var id = "persistent" + i;
+                var id = "persistent" + Guid.NewGuid();
                 var actorRef =
                     ActorSystem.ActorOf(
                         Props.Create(() => new PersistentJournalBenchmarkActor(id, _recoveryCounter, _writeCounter)),
