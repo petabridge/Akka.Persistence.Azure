@@ -139,13 +139,10 @@ namespace Akka.Persistence.Azure.Journal
                     recoveryCallback(deserialized);
 
                 }
-
-
             }
 
 #if DEBUG
             _log.Debug("Leaving method ReplayMessagesAsync");
-            await Task.Delay(1);
 #endif
         }
 
@@ -280,11 +277,28 @@ namespace Akka.Persistence.Azure.Journal
                         TableOperators.And,
                         TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual,
                             toSequenceNr.ToJournalRowKey())))
-                .Select(new[] { "PartitionKey", "RowKey" });
+                ;
 
-            async Task DeleteRows(Task<TableQuerySegment<PersistentJournalEntry>> queryTask)
+            var nextQuery = Table.ExecuteQuerySegmentedAsync(deleteQuery, null);
+
+            while (nextQuery != null)
             {
-                var queryResults = await queryTask;
+                var queryResults = await nextQuery;
+
+                if (_log.IsDebugEnabled && _settings.VerboseLogging)
+                {
+                    _log.Debug("Have [{0}] messages to delete for entity [{1}]", queryResults.Results.Count, persistenceId);
+                }
+
+                if (queryResults.ContinuationToken != null) // more data on the wire
+                {
+                    nextQuery = Table.ExecuteQuerySegmentedAsync(deleteQuery, queryResults.ContinuationToken);
+                }
+                else
+                {
+                    nextQuery = null;
+                }
+
                 if (queryResults.Results.Count > 0)
                 {
                     var tableBatchOperation = new TableBatchOperation();
@@ -292,17 +306,15 @@ namespace Akka.Persistence.Azure.Journal
                         tableBatchOperation.Delete(toBeDeleted);
 
                     var deleteTask = Table.ExecuteBatchAsync(tableBatchOperation);
-                    if (queryResults.ContinuationToken != null) // more data on the wire
-                    {
-                        var nextQuery = Table.ExecuteQuerySegmentedAsync(deleteQuery, queryResults.ContinuationToken);
-                        await DeleteRows(nextQuery);
-                    }
+
+                   
 
                     await deleteTask;
                 }
             }
+            
 
-            await DeleteRows(Table.ExecuteQuerySegmentedAsync(deleteQuery, null));
+           
 
 #if DEBUG
             _log.Debug("Leaving method DeleteMessagesToAsync for persistentId [{0}] and up to seqNo [{1}]", persistenceId, toSequenceNr);
