@@ -89,7 +89,10 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
             foreach (var actor in _persistentActors)
             {
-                actor.Value.Tell(PersistedMessageCount);
+                foreach (var i in Enumerable.Range(0, PersistedMessageCount / 10))
+                {
+                    actor.Value.Tell(PersistedMessageCount/10);
+                }
             }
 
 
