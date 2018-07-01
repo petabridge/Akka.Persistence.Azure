@@ -8,6 +8,8 @@ using System;
 using Akka.Configuration;
 using Akka.Persistence.Azure.TestHelpers;
 using Akka.Persistence.TCK.Journal;
+using Akka.Util.Internal;
+using Microsoft.WindowsAzure.Storage;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,6 +18,9 @@ namespace Akka.Persistence.Azure.Tests
     [Collection("AzureJournal")]
     public class AzureTableJournalSpec : JournalSpec
     {
+        public static AtomicCounter TableVersionCounter = new AtomicCounter(0);
+        public static string TableName { get; private set; }
+
         public AzureTableJournalSpec(ITestOutputHelper output) : base(JournalConfig(), nameof(AzureTableJournalSpec),
             output)
         {
@@ -33,12 +38,31 @@ namespace Akka.Persistence.Azure.Tests
 
         public static Config JournalConfig(string connectionString)
         {
+            TableName = "TestTable" + TableVersionCounter.IncrementAndGet();
+
             return ConfigurationFactory.ParseString(
-                    @"
-                akka.loglevel = INFO
+                    @"akka.loglevel = DEBUG
                 akka.persistence.journal.plugin = ""akka.persistence.journal.azure-table""
-                akka.persistence.journal.azure-table.connection-string=""" + connectionString + @"""")
-                .WithFallback("akka.persistence.journal.azure-table.table-name=" + "akkatest");
+                akka.persistence.journal.azure-table.connection-string=""" + connectionString + @"""
+                akka.persistence.journal.azure-table.verbose-logging = on
+                akka.test.single-expect-default = 3s")
+                .WithFallback("akka.persistence.journal.azure-table.table-name=" + TableName);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            var connectionString = AzurePersistence.Get(Sys).TableSettings.ConnectionString;
+            var account = CloudStorageAccount.Parse(connectionString);
+            var table = account.CreateCloudTableClient().GetTableReference(TableName);
+            if (table.DeleteIfExistsAsync().Wait(TimeSpan.FromSeconds(3)))
+            {
+                Log.Info("Successfully deleted table [{0}] after test run.", TableName);
+            }
+            else
+            {
+                Log.Error("Unable to delete table [{0}] after test run.", TableName);
+            }
         }
     }
 }

@@ -9,7 +9,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Azure.Test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Azure.Tests.Performance", "src\Akka.Persistence.Azure.Tests.Performance\Akka.Persistence.Azure.Tests.Performance.csproj", "{CAE7CA7C-0D0C-4FDA-BDE9-BE16A27343EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Azure.TestHelpers", "src\Akka.Persistence.Azure.TestHelpers\Akka.Persistence.Azure.TestHelpers.csproj", "{FE4C3232-1DB9-40E5-B0BE-BD70ACB4C1F3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Azure.TestHelpers", "src\Akka.Persistence.Azure.TestHelpers\Akka.Persistence.Azure.TestHelpers.csproj", "{FE4C3232-1DB9-40E5-B0BE-BD70ACB4C1F3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{320BFA6C-930A-4B7F-9FA4-76CDD0F0E552}"
+	ProjectSection(SolutionItems) = preProject
+		build.cmd = build.cmd
+		build.fsx = build.fsx
+		build.ps1 = build.ps1
+		build.sh = build.sh
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
