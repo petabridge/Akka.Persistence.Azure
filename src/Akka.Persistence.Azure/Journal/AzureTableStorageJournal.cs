@@ -82,12 +82,12 @@ namespace Akka.Persistence.Azure.Journal
             Action<IPersistentRepresentation> recoveryCallback)
         {
 #if DEBUG
-            _log.Debug("Entering method ReplayMessagesAsync for persistentId [{0}]", persistenceId);
+            _log.Debug("Entering method ReplayMessagesAsync for persistentId [{0}] from seqNo range [{1}, {2}] and taking up to max [{3}]", persistenceId, fromSequenceNr, toSequenceNr, max);
 #endif
             if (max == 0)
                 return;
 
-            var replayQuery = ReplayQuery(persistenceId, fromSequenceNr, toSequenceNr, (int)max);
+            var replayQuery = ReplayQuery(persistenceId, fromSequenceNr, toSequenceNr);
 
             var nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, null);
 
@@ -95,14 +95,38 @@ namespace Akka.Persistence.Azure.Journal
             {
                 var tableQueryResult = await nextTask;
 
+#if DEBUG
+                if (_log.IsDebugEnabled && _settings.VerboseLogging)
+                {
+                    _log.Debug("Recovered [{0}] messages for entity [{1}]", tableQueryResult.Results.Count, persistenceId);
+                }
+#endif
+
                 // we have results
                 if (tableQueryResult.Results.Count > 0)
                 {
                     // and we have more data waiting on the wire
                     if (tableQueryResult.ContinuationToken != null)
+                    {
+#if DEBUG
+                        if (_log.IsDebugEnabled && _settings.VerboseLogging)
+                        {
+                            _log.Debug("Found additional messages for entity [{0}] on server. Continuing query...", persistenceId);
+                        }
+#endif
                         nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, tableQueryResult.ContinuationToken);
+                    }
                     else
+                    {
+#if DEBUG
+                        if (_log.IsDebugEnabled && _settings.VerboseLogging)
+                        {
+                            _log.Debug("Recovery completed for [{0}]. Terminating query...", persistenceId);
+                        }
+#endif
                         nextTask = null; // query is finished
+                    }
+                        
 
                     foreach (var savedEvent in tableQueryResult.Results)
                         recoveryCallback(_serialization.PersistentFromBytes(savedEvent.Payload));
@@ -115,7 +139,7 @@ namespace Akka.Persistence.Azure.Journal
         }
 
         private static TableQuery<PersistentJournalEntry> ReplayQuery(string persistentId, long fromSequenceNumber,
-            long toSequenceNumber, int max)
+            long toSequenceNumber)
         {
             return new TableQuery<PersistentJournalEntry>().Where(
                 TableQuery.CombineFilters(
@@ -125,7 +149,7 @@ namespace Akka.Persistence.Azure.Journal
                         TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual,
                             fromSequenceNumber.ToJournalRowKey())), TableOperators.And,
                     TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual,
-                        toSequenceNumber.ToJournalRowKey()))).Take(max);
+                        toSequenceNumber.ToJournalRowKey())));
         }
 
         public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
@@ -144,7 +168,7 @@ namespace Akka.Persistence.Azure.Journal
             if (result.Results.Count > 0)
                 seqNo = result.Results.First().SeqNo;
 #if DEBUG
-            _log.Debug("Leaving method ReadHighestSequenceNrAsync with SeqNo [{0}] for PersistentId [{1}}]", seqNo, persistenceId);
+            _log.Debug("Leaving method ReadHighestSequenceNrAsync with SeqNo [{0}] for PersistentId [{1}]", seqNo, persistenceId);
 #endif
 
             return seqNo;
