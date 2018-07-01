@@ -42,12 +42,14 @@ namespace Akka.Persistence.Azure.Tests.Performance
         public static Config JournalConfig(string connectionString)
         {
             TableName = "TestTable" + TableVersionCounter.IncrementAndGet();
-
+            
             return ConfigurationFactory.ParseString(
-                    @"akka.loglevel = WARNING
+                    @"akka.loglevel = DEBUG
+                akka.log-config-on-start = on
+                akka.persistence.journal.azure-table.class = ""Akka.Persistence.Azure.Journal.AzureTableStorageJournal, Akka.Persistence.Azure""
                 akka.persistence.journal.plugin = ""akka.persistence.journal.azure-table""
                 akka.persistence.journal.azure-table.connection-string=""" + connectionString + @"""
-                akka.persistence.journal.azure-table.verbose-logging = off")
+                akka.persistence.journal.azure-table.verbose-logging = on")
                 .WithFallback("akka.persistence.journal.azure-table.table-name=" + TableName);
         }
 
@@ -61,7 +63,9 @@ namespace Akka.Persistence.Azure.Tests.Performance
             _recoveryCounter = context.GetCounter(RecoveryCounterName);
             _writeCounter = context.GetCounter(WriteCounterName);
 
+            
             ActorSystem = Actor.ActorSystem.Create(nameof(AzureJournalPerfSpecs) + TableVersionCounter.Current, JournalConfig());
+            Console.WriteLine(ActorSystem.Settings.Config.ToString());
             foreach (var i in Enumerable.Range(0, PersistentActorCount))
             {
                 var id = "persistent" + i;
@@ -74,7 +78,8 @@ namespace Akka.Persistence.Azure.Tests.Performance
             }
         }
 
-        [PerfBenchmark(NumberOfIterations = 5, RunMode = RunMode.Iterations, Description = "Write performance spec by 20 persistent actors")]
+        [PerfBenchmark(NumberOfIterations = 5, RunMode = RunMode.Iterations, 
+            Description = "Write performance spec by 20 persistent actors", SkipWarmups = true)]
         [CounterMeasurement(RecoveryCounterName)]
         [CounterMeasurement(WriteCounterName)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
@@ -97,7 +102,16 @@ namespace Akka.Persistence.Azure.Tests.Performance
                     tasks.Add(actor.Value.Ask<int>(r =>
                         new PersistentBenchmarkMsgs.NotifyWhenCounterHits(PersistedMessageCount, r), null, cts.Token));
                 }
-                Task.WaitAll(tasks.ToArray(), cts.Token);
+
+                try
+                {
+                    Task.WaitAll(tasks.ToArray(), cts.Token);
+                }
+                catch(Exception ex)
+                {
+                    context.Trace.Error(ex, "Failed to process results after 1 minute");
+                    return;
+                }
             }
             
         }
@@ -105,13 +119,13 @@ namespace Akka.Persistence.Azure.Tests.Performance
         [PerfCleanup]
         public void CleanUp()
         {
+            ActorSystem.Terminate().Wait();
+
             try
             {
-                DbUtils.CleanupCloudTable(ActorSystem, TableName).Wait(TimeSpan.FromSeconds(3));
+                DbUtils.CleanupCloudTable(AzurePersistence.Get(ActorSystem).TableSettings.ConnectionString, TableName).Wait(TimeSpan.FromSeconds(3));
             }
             catch { }
-            
-            ActorSystem.Terminate().Wait();
         }
     }
 }

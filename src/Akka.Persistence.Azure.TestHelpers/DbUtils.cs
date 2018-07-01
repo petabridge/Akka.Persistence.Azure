@@ -6,9 +6,8 @@ namespace Akka.Persistence.Azure.TestHelpers
 {
     public class DbUtils
     {
-        public static Task<bool> CleanupCloudTable(ActorSystem sys, string tableName)
+        public static Task<bool> CleanupCloudTable(string connectionString, string tableName)
         {
-            var connectionString = AzurePersistence.Get(sys).TableSettings.ConnectionString;
             var account = CloudStorageAccount.Parse(connectionString);
             var table = account.CreateCloudTableClient().GetTableReference(tableName);
             return table.DeleteIfExistsAsync();
