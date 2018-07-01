@@ -28,8 +28,8 @@ namespace Akka.Persistence.Azure.Tests.Performance
         public static AtomicCounter TableVersionCounter = new AtomicCounter(0);
         public static string TableName { get; private set; }
 
-        public const int PersistentActorCount = 20;
-        public const int PersistedMessageCount = 1000;
+        public const int PersistentActorCount = 200;
+        public const int PersistedMessageCount = 100;
 
         public static Config JournalConfig()
         {
@@ -79,7 +79,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
         }
 
         [PerfBenchmark(NumberOfIterations = 5, RunMode = RunMode.Iterations, 
-            Description = "Write performance spec by 20 persistent actors", SkipWarmups = true)]
+            Description = "Write performance spec by 200 persistent actors", SkipWarmups = true)]
         [CounterMeasurement(RecoveryCounterName)]
         [CounterMeasurement(WriteCounterName)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]

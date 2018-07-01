@@ -41,7 +41,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
             Command<int>(i =>
             {
-                PersistAsync(i, i1 =>
+                Persist(i, i1 =>
                 {
                     _msgWriteCounter.Increment();
                     TotalCount += i1;
