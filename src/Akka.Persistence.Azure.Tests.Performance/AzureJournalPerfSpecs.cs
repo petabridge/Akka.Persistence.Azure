@@ -44,7 +44,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
             TableName = "TestTable" + TableVersionCounter.IncrementAndGet();
             
             return ConfigurationFactory.ParseString(
-                    @"akka.loglevel = WARNING
+                    @"akka.loglevel = INFO
                 akka.log-config-on-start = on
                 akka.persistence.journal.azure-table.class = ""Akka.Persistence.Azure.Journal.AzureTableStorageJournal, Akka.Persistence.Azure""
                 akka.persistence.journal.plugin = ""akka.persistence.journal.azure-table""
