@@ -203,11 +203,12 @@ namespace Akka.Persistence.Azure.Journal
                 var exceptions = ImmutableList<Exception>.Empty;
                 using (var atomicWrites = messages.GetEnumerator())
                 {
+                    var batch = new TableBatchOperation();
                     while (atomicWrites.MoveNext())
                     {
                         Debug.Assert(atomicWrites.Current != null, "atomicWrites.Current != null");
 
-                        var batch = new TableBatchOperation();
+                        
                         foreach(var currentMsg in atomicWrites.Current.Payload
                             .AsInstanceOf<IImmutableList<IPersistentRepresentation>>())
                         {
@@ -220,23 +221,25 @@ namespace Akka.Persistence.Azure.Journal
                                         currentMsg.Manifest));
                             
                         }
+                    }
 
-                        try
-                        {
+                    try
+                    {
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 _log.Debug("Attempting to write batch of {0} messages to Azure storage", batch.Count);
 
-                            var results = await Table.ExecuteBatchAsync(batch);
+                        var results = await Table.ExecuteBatchAsync(batch,
+                            new TableRequestOptions { MaximumExecutionTime = _settings.RequestTimeout },
+                            new OperationContext());
 
-                            if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                                foreach (var r in results)
-                                    _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag,
-                                        r.HttpStatusCode);
-                        }
-                        catch (Exception ex)
-                        {
-                            exceptions = exceptions.Add(ex);
-                        }
+                        if (_log.IsDebugEnabled && _settings.VerboseLogging)
+                            foreach (var r in results)
+                                _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag,
+                                    r.HttpStatusCode);
+                    }
+                    catch (Exception ex)
+                    {
+                        exceptions = exceptions.Add(ex);
                     }
                 }
 
