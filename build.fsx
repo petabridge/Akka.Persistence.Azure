@@ -122,7 +122,7 @@ Target "NBench" <| fun _ ->
     let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
     printfn "Using NBench.Runner: %s" nbenchTestPath
 
-    let nbenchTestAssemblies = !! "./src/**/*Tests.Performance.dll" // doesn't support .NET Core at the moment
+    let nbenchTestAssemblies = !! "./src/Akka.Persistence.Azure.Tests.Performance/bin/Release/**/*Tests.Performance.dll" // doesn't support .NET Core at the moment
 
     let runNBench assembly =
         let includes = getBuildParam "include"
@@ -264,7 +264,7 @@ Target "Nuget" DoNothing
 // all
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
-//"NBench" ==> "All"
+"NBench" ==> "All"
 "Nuget" ==> "All"
 
 RunTargetOrDefault "Help"
