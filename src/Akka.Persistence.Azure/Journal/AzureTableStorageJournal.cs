@@ -53,11 +53,13 @@ namespace Akka.Persistence.Azure.Journal
             var tableClient = _storageAccount.CreateCloudTableClient();
             var tableRef = tableClient.GetTableReference(_settings.TableName);
             var op = new OperationContext();
-            var cts = new CancellationTokenSource(_settings.ConnectTimeout);
-            if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
-                _log.Info("Created Azure Cloud Table", _settings.TableName);
-            else
-                _log.Info("Successfully connected to existing table", _settings.TableName);
+            using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
+            {
+                if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
+                    _log.Info("Created Azure Cloud Table", _settings.TableName);
+                else
+                    _log.Info("Successfully connected to existing table", _settings.TableName);
+            }
 
             return tableRef;
         }
@@ -79,10 +81,13 @@ namespace Akka.Persistence.Azure.Journal
             long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
+#if DEBUG
+            _log.Debug("Entering method ReplayMessagesAsync for persistentId [{0}]", persistenceId);
+#endif
             if (max == 0)
                 return;
 
-            var replayQuery = ReplayQuery(persistenceId, fromSequenceNr, toSequenceNr, (int) max);
+            var replayQuery = ReplayQuery(persistenceId, fromSequenceNr, toSequenceNr, (int)max);
 
             var nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, null);
 
@@ -103,6 +108,10 @@ namespace Akka.Persistence.Azure.Journal
                         recoveryCallback(_serialization.PersistentFromBytes(savedEvent.Payload));
                 }
             }
+
+#if DEBUG
+            _log.Debug("Leaving method ReplayMessagesAsync");
+#endif
         }
 
         private static TableQuery<PersistentJournalEntry> ReplayQuery(string persistentId, long fromSequenceNumber,
@@ -121,73 +130,111 @@ namespace Akka.Persistence.Azure.Journal
 
         public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
+#if DEBUG
+            _log.Debug("Entering method ReadHighestSequenceNrAsync");
+#endif
             var result = await Table.ExecuteQuerySegmentedAsync(
                 new TableQuery<PersistentJournalEntry>()
                     .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId))
                     .Take(1),
                 null);
 
+
+            long seqNo = 0L;
             if (result.Results.Count > 0)
-                return result.Results.First().SeqNo;
-            return 0L;
+                seqNo = result.Results.First().SeqNo;
+#if DEBUG
+            _log.Debug("Leaving method ReadHighestSequenceNrAsync with SeqNo [{0}] for PersistentId [{1}}]", seqNo, persistenceId);
+#endif
+
+            return seqNo;
         }
 
         protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
-            var exceptions = ImmutableList<Exception>.Empty;
-            using (var atomicWrites = messages.GetEnumerator())
+            try
             {
-                while (atomicWrites.MoveNext())
+#if DEBUG
+                _log.Debug("Entering method WriteMessagesAsync");
+#endif
+                var exceptions = ImmutableList<Exception>.Empty;
+                using (var atomicWrites = messages.GetEnumerator())
                 {
-                    Debug.Assert(atomicWrites.Current != null, "atomicWrites.Current != null");
-
-                    var batch = new TableBatchOperation();
-                    using (var persistentMsgs = atomicWrites.Current.Payload
-                        .AsInstanceOf<IImmutableList<IPersistentRepresentation>>().GetEnumerator())
+                    while (atomicWrites.MoveNext())
                     {
-                        while (persistentMsgs.MoveNext())
+                        Debug.Assert(atomicWrites.Current != null, "atomicWrites.Current != null");
+
+                        var batch = new TableBatchOperation();
+                        using (var persistentMsgs = atomicWrites.Current.Payload
+                            .AsInstanceOf<IImmutableList<IPersistentRepresentation>>().GetEnumerator())
                         {
-                            var currentMsg = persistentMsgs.Current;
+                            while (persistentMsgs.MoveNext())
+                            {
+                                var currentMsg = persistentMsgs.Current;
 
-                            Debug.Assert(currentMsg != null, nameof(currentMsg) + " != null");
+                                Debug.Assert(currentMsg != null, nameof(currentMsg) + " != null");
 
-                            batch.Insert(
-                                new PersistentJournalEntry(currentMsg.PersistenceId,
-                                    currentMsg.SequenceNr, _serialization.PersistentToBytes(currentMsg),
-                                    currentMsg.Manifest));
+                                batch.Insert(
+                                    new PersistentJournalEntry(currentMsg.PersistenceId,
+                                        currentMsg.SequenceNr, _serialization.PersistentToBytes(currentMsg),
+                                        currentMsg.Manifest));
+                            }
+                        }
+
+                        try
+                        {
+                            var results = await Table.ExecuteBatchAsync(batch,
+                                new TableRequestOptions {MaximumExecutionTime = _settings.RequestTimeout},
+                                new OperationContext());
+
+                            if (_log.IsDebugEnabled && _settings.VerboseLogging)
+                                foreach (var r in results)
+                                    _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag,
+                                        r.HttpStatusCode);
+                        }
+                        catch (Exception ex)
+                        {
+                            exceptions = exceptions.Add(ex);
                         }
                     }
-
-                    try
-                    {
-                        var results = await Table.ExecuteBatchAsync(batch,
-                            new TableRequestOptions {MaximumExecutionTime = _settings.RequestTimeout},
-                            new OperationContext());
-
-                        if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                            foreach (var r in results)
-                                _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag,
-                                    r.HttpStatusCode);
-                    }
-                    catch (Exception ex)
-                    {
-                        exceptions = exceptions.Add(ex);
-                    }
                 }
-            }
 
-            return exceptions;
+#if DEBUG
+                _log.Debug("Leaving method WriteMessagesAsync");
+                foreach (var ex in exceptions)
+                {
+                    _log.Error(ex, "recorded exception during write");
+                }
+#endif
+
+                /*
+                 * Part of the Akka.Persistence design.
+                 * 
+                 * Either return null or return an exception for each failed AtomicWrite.
+                 * 
+                 * Either everything fails or everything succeeds is the idea I guess.
+                 */
+                return exceptions.IsEmpty ? null : exceptions;
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "Error during WriteMessagesAsync");
+                throw;
+            }
         }
 
         protected override async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
+#if DEBUG
+            _log.Debug("Entering method DeleteMessagesToAsync for persistentId [{0}] and up to seqNo [{1}]", persistenceId, toSequenceNr);
+#endif
             var deleteQuery = new TableQuery<PersistentJournalEntry>().Where(
                     TableQuery.CombineFilters(
                         TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId),
                         TableOperators.And,
                         TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual,
                             toSequenceNr.ToJournalRowKey())))
-                .Select(new[] {"PartitionKey", "RowKey"});
+                .Select(new[] { "PartitionKey", "RowKey" });
 
             async Task DeleteRows(Task<TableQuerySegment<PersistentJournalEntry>> queryTask)
             {
@@ -210,6 +257,10 @@ namespace Akka.Persistence.Azure.Journal
             }
 
             await DeleteRows(Table.ExecuteQuerySegmentedAsync(deleteQuery, null));
+
+#if DEBUG
+            _log.Debug("Leaving method DeleteMessagesToAsync for persistentId [{0}] and up to seqNo [{1}]", persistenceId, toSequenceNr);
+#endif
         }
     }
 }
