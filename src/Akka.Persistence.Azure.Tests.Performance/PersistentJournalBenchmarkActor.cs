@@ -38,14 +38,15 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
             Command<int>(i =>
             {
-                Persist(i, i1 =>
+                PersistAsync(i, i1 =>
                 {
                     _msgWriteCounter.Increment();
+                    TotalCount += i;
                     if (_target != null && _target.Target >= TotalCount)
                     {
                         _target.Subscriber.Tell(TotalCount);
                     }
-                    TotalCount += i;
+                    
                 });
             });
 
