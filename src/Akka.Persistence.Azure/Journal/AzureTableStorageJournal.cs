@@ -206,9 +206,15 @@ namespace Akka.Persistence.Azure.Journal
                     _log.Error(ex, "recorded exception during write");
                 }
 #endif
-                if (exceptions.IsEmpty)
-                    return null;
-                return exceptions;
+
+                /*
+                 * Part of the Akka.Persistence design.
+                 * 
+                 * Either return null or return an exception for each failed AtomicWrite.
+                 * 
+                 * Either everything fails or everything succeeds is the idea I guess.
+                 */
+                return exceptions.IsEmpty ? null : exceptions;
             }
             catch (Exception ex)
             {
