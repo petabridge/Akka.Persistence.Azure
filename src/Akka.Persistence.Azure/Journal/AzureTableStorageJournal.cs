@@ -102,26 +102,24 @@ namespace Akka.Persistence.Azure.Journal
                 }
 #endif
 
-                // and we have more data waiting on the wire
                 if (tableQueryResult.ContinuationToken != null)
                 {
-#if DEBUG
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
                     {
-                        _log.Debug("Found additional messages for entity [{0}] on server. Continuing query...", persistenceId);
+                        _log.Debug("Have additional messages to download for entity [{0}]", persistenceId);
                     }
-#endif
+                    // start the next query while we process the results of this one
                     nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, tableQueryResult.ContinuationToken);
                 }
                 else
                 {
-#if DEBUG
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
                     {
-                        _log.Debug("Recovery completed for [{0}]. Terminating query...", persistenceId);
+                        _log.Debug("Completed download of messages for entity [{0}]", persistenceId);
                     }
-#endif
-                    nextTask = null; // query is finished
+
+                    // terminates the loop
+                    nextTask = null;
                 }
 
                 foreach (var savedEvent in tableQueryResult.Results)
@@ -170,21 +168,32 @@ namespace Akka.Persistence.Azure.Journal
 #if DEBUG
             _log.Debug("Entering method ReadHighestSequenceNrAsync");
 #endif
-            var result = await Table.ExecuteQuerySegmentedAsync(
-                new TableQuery<PersistentJournalEntry>()
-                    .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId))
-                    .Take(1),
-                null);
-
-
+            var sequenceNumberQuery = GenerateHighestSequenceNumberQuery(persistenceId, fromSequenceNr);
+            var result = await Table.ExecuteQuerySegmentedAsync(sequenceNumberQuery, null);
             long seqNo = 0L;
-            if (result.Results.Count > 0)
-                seqNo = result.Results.First().SeqNo;
+
+            do
+            {
+                if (result.Results.Count > 0)
+                    seqNo = Math.Max(seqNo, result.Results.Max(x => x.SeqNo));
+
+                if(result.ContinuationToken != null)
+                    result = await Table.ExecuteQuerySegmentedAsync(sequenceNumberQuery, result.ContinuationToken);
+            } while (result.ContinuationToken != null);
+
 #if DEBUG
             _log.Debug("Leaving method ReadHighestSequenceNrAsync with SeqNo [{0}] for PersistentId [{1}]", seqNo, persistenceId);
 #endif
 
             return seqNo;
+        }
+
+        private static TableQuery<PersistentJournalEntry> GenerateHighestSequenceNumberQuery(string persistenceId, long fromSequenceNr)
+        {
+            return new TableQuery<PersistentJournalEntry>()
+                .Where(TableQuery.CombineFilters(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId), 
+                    TableOperators.And, 
+                    TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, fromSequenceNr.ToJournalRowKey())));
         }
 
         protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
