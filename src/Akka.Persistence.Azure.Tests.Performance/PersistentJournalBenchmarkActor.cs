@@ -1,4 +1,5 @@
 using Akka.Actor;
+using Akka.Event;
 using NBench;
 
 namespace Akka.Persistence.Azure.Tests.Performance
@@ -7,6 +8,8 @@ namespace Akka.Persistence.Azure.Tests.Performance
     {
         private readonly Counter _recoveredMessageCounter;
         private readonly Counter _msgWriteCounter;
+
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         private PersistentBenchmarkMsgs.NotifyWhenCounterHits _target;
 
@@ -41,28 +44,31 @@ namespace Akka.Persistence.Azure.Tests.Performance
                 PersistAsync(i, i1 =>
                 {
                     _msgWriteCounter.Increment();
-                    TotalCount += i;
-                    if (_target != null && _target.Target >= TotalCount)
-                    {
-                        _target.Subscriber.Tell(TotalCount);
-                    }
+                    TotalCount += i1;
+                    TellTargetWhenReady();
                     
                 });
             });
 
             Command<PersistentBenchmarkMsgs.NotifyWhenCounterHits>(n =>
             {
-                if (TotalCount >= n.Target)
-                {
-                    n.Subscriber.Tell(TotalCount);
-                }
                 _target = n;
+                TellTargetWhenReady();
             });
 
             Command<PersistentBenchmarkMsgs.RecoveryComplete>(r =>
             {
                 Sender.Tell(r);
             });
+        }
+
+        private void TellTargetWhenReady()
+        {
+            if (_target != null && _target.Target <= TotalCount)
+            {
+                _log.Info("Notifying that we have hit or exceeded requested target of [{0}] with actual target of [{1}]", _target.Target, TotalCount);
+                _target.Subscriber.Tell(TotalCount);
+            }
         }
 
         public override string PersistenceId { get; }
