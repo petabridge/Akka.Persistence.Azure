@@ -1,3 +1,4 @@
+using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using NBench;
@@ -41,13 +42,10 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
             Command<int>(i =>
             {
-                Persist(i, i1 =>
+                foreach (var n in Enumerable.Range(0, i))
                 {
-                    _msgWriteCounter.Increment();
-                    TotalCount += i1;
-                    TellTargetWhenReady();
-                    
-                });
+                    Persist(n, i1 => { Increment(i1); });
+                }
             });
 
             Command<PersistentBenchmarkMsgs.NotifyWhenCounterHits>(n =>
@@ -60,6 +58,13 @@ namespace Akka.Persistence.Azure.Tests.Performance
             {
                 Sender.Tell(r);
             });
+        }
+
+        private void Increment(int i1)
+        {
+            _msgWriteCounter.Increment();
+            TotalCount += i1;
+            TellTargetWhenReady();
         }
 
         private void TellTargetWhenReady()

@@ -42,7 +42,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
         public static Config JournalConfig(string connectionString)
         {
             TableName = "TestTable" + TableVersionCounter.IncrementAndGet();
-            
+
             return ConfigurationFactory.ParseString(
                     @"akka.loglevel = DEBUG
                 akka.log-config-on-start = on
@@ -63,7 +63,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
             _recoveryCounter = context.GetCounter(RecoveryCounterName);
             _writeCounter = context.GetCounter(WriteCounterName);
 
-            
+
             ActorSystem = Actor.ActorSystem.Create(nameof(AzureJournalPerfSpecs) + TableVersionCounter.Current, JournalConfig());
             Console.WriteLine(ActorSystem.Settings.Config.ToString());
             foreach (var i in Enumerable.Range(0, PersistentActorCount))
@@ -78,7 +78,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
             }
         }
 
-        [PerfBenchmark(NumberOfIterations = 5, RunMode = RunMode.Iterations, 
+        [PerfBenchmark(NumberOfIterations = 5, RunMode = RunMode.Iterations,
             Description = "Write performance spec by 200 persistent actors", SkipWarmups = true)]
         [CounterMeasurement(RecoveryCounterName)]
         [CounterMeasurement(WriteCounterName)]
@@ -86,13 +86,12 @@ namespace Akka.Persistence.Azure.Tests.Performance
         [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
         public void BatchJournalWriteSpec(BenchmarkContext context)
         {
-            foreach (var i in Enumerable.Range(0, PersistedMessageCount))
+
+            foreach (var actor in _persistentActors)
             {
-                foreach (var actor in _persistentActors)
-                {
-                    actor.Value.Tell(i);
-                }
+                actor.Value.Tell(PersistedMessageCount);
             }
+
 
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
             {
@@ -107,13 +106,13 @@ namespace Akka.Persistence.Azure.Tests.Performance
                 {
                     Task.WaitAll(tasks.ToArray(), cts.Token);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     context.Trace.Error(ex, "Failed to process results after 1 minute");
                     return;
                 }
             }
-            
+
         }
 
         [PerfCleanup]
