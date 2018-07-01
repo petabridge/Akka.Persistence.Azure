@@ -90,7 +90,7 @@ namespace Akka.Persistence.Azure.Journal
             var replayQuery = ReplayQuery(persistenceId, fromSequenceNr, toSequenceNr);
 
             var nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, null);
-
+            var count = 0L;
             while (nextTask != null)
             {
                 var tableQueryResult = await nextTask;
@@ -102,39 +102,52 @@ namespace Akka.Persistence.Azure.Journal
                 }
 #endif
 
-                // we have results
-                if (tableQueryResult.Results.Count > 0)
+                // and we have more data waiting on the wire
+                if (tableQueryResult.ContinuationToken != null)
                 {
-                    // and we have more data waiting on the wire
-                    if (tableQueryResult.ContinuationToken != null)
-                    {
 #if DEBUG
-                        if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                        {
-                            _log.Debug("Found additional messages for entity [{0}] on server. Continuing query...", persistenceId);
-                        }
-#endif
-                        nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, tableQueryResult.ContinuationToken);
-                    }
-                    else
+                    if (_log.IsDebugEnabled && _settings.VerboseLogging)
                     {
-#if DEBUG
-                        if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                        {
-                            _log.Debug("Recovery completed for [{0}]. Terminating query...", persistenceId);
-                        }
-#endif
-                        nextTask = null; // query is finished
+                        _log.Debug("Found additional messages for entity [{0}] on server. Continuing query...", persistenceId);
                     }
-                        
-
-                    foreach (var savedEvent in tableQueryResult.Results)
-                        recoveryCallback(_serialization.PersistentFromBytes(savedEvent.Payload));
+#endif
+                    nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, tableQueryResult.ContinuationToken);
                 }
+                else
+                {
+#if DEBUG
+                    if (_log.IsDebugEnabled && _settings.VerboseLogging)
+                    {
+                        _log.Debug("Recovery completed for [{0}]. Terminating query...", persistenceId);
+                    }
+#endif
+                    nextTask = null; // query is finished
+                }
+
+                foreach (var savedEvent in tableQueryResult.Results)
+                {
+                    // check if we've hit max recovery
+                    if (count >= max)
+                        return;
+                    ++count;
+
+                    var deserialized = _serialization.PersistentFromBytes(savedEvent.Payload);
+#if DEBUG
+                    if (_log.IsDebugEnabled && _settings.VerboseLogging)
+                    {
+                        _log.Debug("Recovering [{0}] for entity [{1}].", deserialized, savedEvent.PartitionKey);
+                    }
+#endif
+                    recoveryCallback(deserialized);
+
+                }
+
+
             }
 
 #if DEBUG
             _log.Debug("Leaving method ReplayMessagesAsync");
+            await Task.Delay(1);
 #endif
         }
 
@@ -208,7 +221,7 @@ namespace Akka.Persistence.Azure.Journal
                         try
                         {
                             var results = await Table.ExecuteBatchAsync(batch,
-                                new TableRequestOptions {MaximumExecutionTime = _settings.RequestTimeout},
+                                new TableRequestOptions { MaximumExecutionTime = _settings.RequestTimeout },
                                 new OperationContext());
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)

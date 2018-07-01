@@ -23,7 +23,7 @@ namespace Akka.Persistence.Azure.Util
         /// </remarks>
         public static string ToJournalRowKey(this long seqNo)
         {
-            return $"{seqNo:d19}";
+            return $"{long.MaxValue-seqNo:d19}";
         }
 
         /// <summary>
