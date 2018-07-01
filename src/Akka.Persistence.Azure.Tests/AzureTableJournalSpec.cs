@@ -5,11 +5,14 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.TestHelpers;
 using Akka.Persistence.TCK.Journal;
 using Akka.Util.Internal;
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Table;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -52,10 +55,7 @@ namespace Akka.Persistence.Azure.Tests
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            var connectionString = AzurePersistence.Get(Sys).TableSettings.ConnectionString;
-            var account = CloudStorageAccount.Parse(connectionString);
-            var table = account.CreateCloudTableClient().GetTableReference(TableName);
-            if (table.DeleteIfExistsAsync().Wait(TimeSpan.FromSeconds(3)))
+            if (DbUtils.CleanupCloudTable(Sys, TableName).Wait(TimeSpan.FromSeconds(3)))
             {
                 Log.Info("Successfully deleted table [{0}] after test run.", TableName);
             }
