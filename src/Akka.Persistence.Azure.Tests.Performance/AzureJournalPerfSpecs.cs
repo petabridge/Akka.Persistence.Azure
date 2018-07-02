@@ -41,7 +41,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
         public static Config JournalConfig(string connectionString)
         {
-            TableName = "TestTable" + TableVersionCounter.IncrementAndGet();
+            TableName = "PerfTestTable" + TableVersionCounter.IncrementAndGet();
 
             return ConfigurationFactory.ParseString(
                     @"akka.loglevel = INFO
