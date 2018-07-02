@@ -94,22 +94,20 @@ namespace Akka.Persistence.Azure.Tests.Performance
                     _persistentActors[j].Tell(new PersistentBenchmarkMsgs.Store(1));
                 }
 
-            var finished = new Task[PersistentActorCount];
+            var finished = new Task<PersistentBenchmarkMsgs.Finished>[PersistentActorCount];
             for (int i = 0; i < PersistentActorCount; i++)
             {
                 var task = _persistentActors[i]
                     .Ask<PersistentBenchmarkMsgs.Finished>(PersistentBenchmarkMsgs.Finish.Instance);
 
                 finished[i] = task;
-
-                task.ContinueWith(
-                    tr =>
-                    {
-                        _writeCounter.Increment(tr.Result.State);
-                    });
             }
 
-            Task.WaitAll(finished);
+            Task.WaitAll(finished.Cast<Task>().ToArray());
+            foreach (var task in finished.Where(x => x.IsCompleted))
+            {
+                _writeCounter.Increment(task.Result.State);
+            }
             //if ()
             //{
             //    context.Trace.Info("Successfully processed all messages");
