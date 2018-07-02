@@ -29,7 +29,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
         public static string TableName { get; private set; }
 
         public const int PersistentActorCount = 200;
-        public const int PersistedMessageCount = 10;
+        public const int PersistedMessageCount = 20;
 
         public static Config JournalConfig()
         {
@@ -86,6 +86,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
         [CounterMeasurement(WriteCounterName)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
         [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
+        [TimingMeasurement]
         public void BatchJournalWriteSpec(BenchmarkContext context)
         {
             for (int i = 0; i < PersistedMessageCount; i++)
@@ -108,14 +109,6 @@ namespace Akka.Persistence.Azure.Tests.Performance
             {
                 _writeCounter.Increment(task.Result.State);
             }
-            //if ()
-            //{
-            //    context.Trace.Info("Successfully processed all messages");
-            //}
-            //else
-            //{
-            //    context.Trace.Error("Timeout after 60s. Ending test.");
-            //}
         }
 
         [PerfCleanup]
