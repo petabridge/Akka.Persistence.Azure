@@ -28,8 +28,8 @@ namespace Akka.Persistence.Azure.Tests.Performance
         public static AtomicCounter TableVersionCounter = new AtomicCounter(0);
         public static string TableName { get; private set; }
 
-        public const int PersistentActorCount = 200;
-        public const int PersistedMessageCount = 100;
+        public const int PersistentActorCount = 2000;
+        public const int PersistedMessageCount = 10;
 
         public static Config JournalConfig()
         {
@@ -45,7 +45,6 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
             return ConfigurationFactory.ParseString(
                     @"akka.loglevel = DEBUG
-                akka.log-config-on-start = on
                 akka.persistence.journal.azure-table.class = ""Akka.Persistence.Azure.Journal.AzureTableStorageJournal, Akka.Persistence.Azure""
                 akka.persistence.journal.plugin = ""akka.persistence.journal.azure-table""
                 akka.persistence.journal.azure-table.connection-string=""" + connectionString + @"""
@@ -55,7 +54,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
         private ActorSystem ActorSystem { get; set; }
 
-        private Dictionary<string, IActorRef> _persistentActors = new Dictionary<string, IActorRef>();
+        private List<IActorRef> _persistentActors = new List<IActorRef>(PersistentActorCount);
 
         [PerfSetup]
         public void Setup(BenchmarkContext context)
@@ -71,11 +70,14 @@ namespace Akka.Persistence.Azure.Tests.Performance
                 var id = "persistent" + Guid.NewGuid();
                 var actorRef =
                     ActorSystem.ActorOf(
-                        Props.Create(() => new PersistentJournalBenchmarkActor(id, _recoveryCounter, _writeCounter)),
+                        Props.Create(() => new PersistentJournalBenchmarkActor(id)),
                         id);
 
-                _persistentActors[id] = actorRef;
+                _persistentActors.Add(actorRef);
             }
+
+            // force the system to initialize
+            Task.WaitAll(_persistentActors.Select(a => a.Ask<Done>(PersistentBenchmarkMsgs.Init.Instance)).Cast<Task>().ToArray());
         }
 
         [PerfBenchmark(NumberOfIterations = 5, RunMode = RunMode.Iterations,
@@ -86,36 +88,30 @@ namespace Akka.Persistence.Azure.Tests.Performance
         [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
         public void BatchJournalWriteSpec(BenchmarkContext context)
         {
-
-            foreach (var actor in _persistentActors)
-            {
-                foreach (var i in Enumerable.Range(0, PersistedMessageCount / 10))
+            for (int i = 0; i < PersistedMessageCount; i++)
+                for (int j = 0; j < PersistentActorCount; j++)
                 {
-                    actor.Value.Tell(PersistedMessageCount/10);
+                    _persistentActors[j].Tell(new PersistentBenchmarkMsgs.Store(1));
                 }
+
+            var finished = new Task[PersistentActorCount];
+            for (int i = 0; i < PersistentActorCount; i++)
+            {
+                finished[i] = _persistentActors[i].Ask<PersistentBenchmarkMsgs.Finished>(PersistentBenchmarkMsgs.Finish.Instance).ContinueWith(
+                    tr =>
+                    {
+                        _writeCounter.Increment(PersistedMessageCount);
+                    });
             }
 
-
-            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+            if (Task.WhenAll(finished).Wait(TimeSpan.FromMinutes(1)))
             {
-                var tasks = new List<Task>();
-                foreach (var actor in _persistentActors)
-                {
-                    tasks.Add(actor.Value.Ask<int>(r =>
-                        new PersistentBenchmarkMsgs.NotifyWhenCounterHits(PersistedMessageCount, r), null, cts.Token));
-                }
-
-                try
-                {
-                    Task.WaitAll(tasks.ToArray(), cts.Token);
-                }
-                catch (Exception ex)
-                {
-                    context.Trace.Error(ex, "Failed to process results after 1 minute");
-                    return;
-                }
+                context.Trace.Info("Successfully processed all messages");
             }
-
+            else
+            {
+                context.Trace.Error("Timeout after 60s. Ending test.");
+            }
         }
 
         [PerfCleanup]
