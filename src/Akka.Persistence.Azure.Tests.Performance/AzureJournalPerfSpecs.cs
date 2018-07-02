@@ -44,11 +44,11 @@ namespace Akka.Persistence.Azure.Tests.Performance
             TableName = "TestTable" + TableVersionCounter.IncrementAndGet();
 
             return ConfigurationFactory.ParseString(
-                    @"akka.loglevel = DEBUG
+                    @"akka.loglevel = INFO
                 akka.persistence.journal.azure-table.class = ""Akka.Persistence.Azure.Journal.AzureTableStorageJournal, Akka.Persistence.Azure""
                 akka.persistence.journal.plugin = ""akka.persistence.journal.azure-table""
                 akka.persistence.journal.azure-table.connection-string=""" + connectionString + @"""
-                akka.persistence.journal.azure-table.verbose-logging = on")
+                akka.persistence.journal.azure-table.verbose-logging = off")
                 .WithFallback("akka.persistence.journal.azure-table.table-name=" + TableName);
         }
 
@@ -64,7 +64,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
 
             ActorSystem = Actor.ActorSystem.Create(nameof(AzureJournalPerfSpecs) + TableVersionCounter.Current, JournalConfig());
-            Console.WriteLine(ActorSystem.Settings.Config.ToString());
+
             foreach (var i in Enumerable.Range(0, PersistentActorCount))
             {
                 var id = "persistent" + Guid.NewGuid();
@@ -77,7 +77,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
             }
 
             // force the system to initialize
-            Task.WaitAll(_persistentActors.Select(a => a.Ask<Done>(PersistentBenchmarkMsgs.Init.Instance)).Cast<Task>().ToArray());
+            Task.WaitAll(_persistentActors.Select(a => a.Ask<PersistentBenchmarkMsgs.Done>(PersistentBenchmarkMsgs.Init.Instance)).Cast<Task>().ToArray());
         }
 
         [PerfBenchmark(NumberOfIterations = 5, RunMode = RunMode.Iterations,
@@ -97,10 +97,16 @@ namespace Akka.Persistence.Azure.Tests.Performance
             var finished = new Task[PersistentActorCount];
             for (int i = 0; i < PersistentActorCount; i++)
             {
-                finished[i] = _persistentActors[i].Ask<PersistentBenchmarkMsgs.Finished>(PersistentBenchmarkMsgs.Finish.Instance).ContinueWith(
+                var task = _persistentActors[i]
+                    .Ask<PersistentBenchmarkMsgs.Finished>(PersistentBenchmarkMsgs.Finish.Instance,
+                        TimeSpan.FromMinutes(1));
+
+                finished[i] = task;
+
+                task.ContinueWith(
                     tr =>
                     {
-                        _writeCounter.Increment(PersistedMessageCount);
+                        _writeCounter.Increment(tr.Result.State);
                     });
             }
 
