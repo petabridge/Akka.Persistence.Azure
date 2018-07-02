@@ -28,7 +28,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
         public static AtomicCounter TableVersionCounter = new AtomicCounter(0);
         public static string TableName { get; private set; }
 
-        public const int PersistentActorCount = 2000;
+        public const int PersistentActorCount = 200;
         public const int PersistedMessageCount = 10;
 
         public static Config JournalConfig()
@@ -98,8 +98,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
             for (int i = 0; i < PersistentActorCount; i++)
             {
                 var task = _persistentActors[i]
-                    .Ask<PersistentBenchmarkMsgs.Finished>(PersistentBenchmarkMsgs.Finish.Instance,
-                        TimeSpan.FromMinutes(1));
+                    .Ask<PersistentBenchmarkMsgs.Finished>(PersistentBenchmarkMsgs.Finish.Instance);
 
                 finished[i] = task;
 
@@ -110,14 +109,15 @@ namespace Akka.Persistence.Azure.Tests.Performance
                     });
             }
 
-            if (Task.WhenAll(finished).Wait(TimeSpan.FromMinutes(1)))
-            {
-                context.Trace.Info("Successfully processed all messages");
-            }
-            else
-            {
-                context.Trace.Error("Timeout after 60s. Ending test.");
-            }
+            Task.WaitAll(finished);
+            //if ()
+            //{
+            //    context.Trace.Info("Successfully processed all messages");
+            //}
+            //else
+            //{
+            //    context.Trace.Error("Timeout after 60s. Ending test.");
+            //}
         }
 
         [PerfCleanup]
