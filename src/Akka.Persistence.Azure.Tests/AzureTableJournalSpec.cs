@@ -45,6 +45,7 @@ namespace Akka.Persistence.Azure.Tests
 
             return ConfigurationFactory.ParseString(
                     @"akka.loglevel = DEBUG
+                akka.log-config-on-start = off
                 akka.persistence.journal.plugin = ""akka.persistence.journal.azure-table""
                 akka.persistence.journal.azure-table.connection-string=""" + connectionString + @"""
                 akka.persistence.journal.azure-table.verbose-logging = on

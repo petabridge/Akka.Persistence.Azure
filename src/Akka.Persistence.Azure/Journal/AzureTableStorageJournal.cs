@@ -226,9 +226,7 @@ namespace Akka.Persistence.Azure.Journal
 
                         try
                         {
-                            var results = await Table.ExecuteBatchAsync(batch,
-                                new TableRequestOptions { MaximumExecutionTime = _settings.RequestTimeout },
-                                new OperationContext());
+                            var results = await Table.ExecuteBatchAsync(batch);
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 foreach (var r in results)

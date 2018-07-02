@@ -29,7 +29,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
         public static string TableName { get; private set; }
 
         public const int PersistentActorCount = 200;
-        public const int PersistedMessageCount = 100;
+        public const int PersistedMessageCount = 20;
 
         public static Config JournalConfig()
         {
@@ -41,21 +41,20 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
         public static Config JournalConfig(string connectionString)
         {
-            TableName = "TestTable" + TableVersionCounter.IncrementAndGet();
-            
+            TableName = "PerfTestTable" + TableVersionCounter.IncrementAndGet();
+
             return ConfigurationFactory.ParseString(
-                    @"akka.loglevel = DEBUG
-                akka.log-config-on-start = on
+                    @"akka.loglevel = INFO
                 akka.persistence.journal.azure-table.class = ""Akka.Persistence.Azure.Journal.AzureTableStorageJournal, Akka.Persistence.Azure""
                 akka.persistence.journal.plugin = ""akka.persistence.journal.azure-table""
                 akka.persistence.journal.azure-table.connection-string=""" + connectionString + @"""
-                akka.persistence.journal.azure-table.verbose-logging = on")
+                akka.persistence.journal.azure-table.verbose-logging = off")
                 .WithFallback("akka.persistence.journal.azure-table.table-name=" + TableName);
         }
 
         private ActorSystem ActorSystem { get; set; }
 
-        private Dictionary<string, IActorRef> _persistentActors = new Dictionary<string, IActorRef>();
+        private List<IActorRef> _persistentActors = new List<IActorRef>(PersistentActorCount);
 
         [PerfSetup]
         public void Setup(BenchmarkContext context)
@@ -63,57 +62,53 @@ namespace Akka.Persistence.Azure.Tests.Performance
             _recoveryCounter = context.GetCounter(RecoveryCounterName);
             _writeCounter = context.GetCounter(WriteCounterName);
 
-            
+
             ActorSystem = Actor.ActorSystem.Create(nameof(AzureJournalPerfSpecs) + TableVersionCounter.Current, JournalConfig());
-            Console.WriteLine(ActorSystem.Settings.Config.ToString());
+
             foreach (var i in Enumerable.Range(0, PersistentActorCount))
             {
                 var id = "persistent" + Guid.NewGuid();
                 var actorRef =
                     ActorSystem.ActorOf(
-                        Props.Create(() => new PersistentJournalBenchmarkActor(id, _recoveryCounter, _writeCounter)),
+                        Props.Create(() => new PersistentJournalBenchmarkActor(id)),
                         id);
 
-                _persistentActors[id] = actorRef;
+                _persistentActors.Add(actorRef);
             }
+
+            // force the system to initialize
+            Task.WaitAll(_persistentActors.Select(a => a.Ask<PersistentBenchmarkMsgs.Done>(PersistentBenchmarkMsgs.Init.Instance)).Cast<Task>().ToArray());
         }
 
-        [PerfBenchmark(NumberOfIterations = 5, RunMode = RunMode.Iterations, 
+        [PerfBenchmark(NumberOfIterations = 5, RunMode = RunMode.Iterations,
             Description = "Write performance spec by 200 persistent actors", SkipWarmups = true)]
         [CounterMeasurement(RecoveryCounterName)]
         [CounterMeasurement(WriteCounterName)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
         [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
+        [TimingMeasurement]
         public void BatchJournalWriteSpec(BenchmarkContext context)
         {
-            foreach (var i in Enumerable.Range(0, PersistedMessageCount))
-            {
-                foreach (var actor in _persistentActors)
+            for (int i = 0; i < PersistedMessageCount; i++)
+                for (int j = 0; j < PersistentActorCount; j++)
                 {
-                    actor.Value.Tell(i);
-                }
-            }
-
-            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
-            {
-                var tasks = new List<Task>();
-                foreach (var actor in _persistentActors)
-                {
-                    tasks.Add(actor.Value.Ask<int>(r =>
-                        new PersistentBenchmarkMsgs.NotifyWhenCounterHits(PersistedMessageCount, r), null, cts.Token));
+                    _persistentActors[j].Tell(new PersistentBenchmarkMsgs.Store(1));
                 }
 
-                try
-                {
-                    Task.WaitAll(tasks.ToArray(), cts.Token);
-                }
-                catch(Exception ex)
-                {
-                    context.Trace.Error(ex, "Failed to process results after 1 minute");
-                    return;
-                }
+            var finished = new Task<PersistentBenchmarkMsgs.Finished>[PersistentActorCount];
+            for (int i = 0; i < PersistentActorCount; i++)
+            {
+                var task = _persistentActors[i]
+                    .Ask<PersistentBenchmarkMsgs.Finished>(PersistentBenchmarkMsgs.Finish.Instance);
+
+                finished[i] = task;
             }
-            
+
+            Task.WaitAll(finished.Cast<Task>().ToArray());
+            foreach (var task in finished.Where(x => x.IsCompleted))
+            {
+                _writeCounter.Increment(task.Result.State);
+            }
         }
 
         [PerfCleanup]

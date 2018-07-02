@@ -7,30 +7,50 @@ namespace Akka.Persistence.Azure.Tests.Performance
     /// </summary>
     public static class PersistentBenchmarkMsgs
     {
-        public sealed class RecoveryComplete : INoSerializationVerificationNeeded
+        public sealed class Init
         {
-            public static readonly RecoveryComplete Instance = new RecoveryComplete();
-            private RecoveryComplete() { }
+            public static readonly Init Instance = new Init();
+            private Init() { }
         }
 
-        public sealed class ResetCounter : INoSerializationVerificationNeeded
+        public sealed class Finish
         {
-            public static readonly ResetCounter Instance = new ResetCounter();
-
-            private ResetCounter() { }
+            public static readonly Finish Instance = new Finish();
+            private Finish() { }
         }
-
-        public sealed class NotifyWhenCounterHits
+        public sealed class Done
         {
-            public NotifyWhenCounterHits(int target, IActorRef subscriber)
+            public static readonly Done Instance = new Done();
+            private Done() { }
+        }
+        public sealed class Finished
+        {
+            public readonly long State;
+
+            public Finished(long state)
             {
-                Target = target;
-                Subscriber = subscriber;
+                State = state;
             }
+        }
 
-            public int Target { get; }
+        public sealed class Store
+        {
+            public readonly int Value;
 
-            public IActorRef Subscriber { get; }
+            public Store(int value)
+            {
+                Value = value;
+            }
+        }
+
+        public sealed class Stored
+        {
+            public readonly int Value;
+
+            public Stored(int value)
+            {
+                Value = value;
+            }
         }
     }
 }

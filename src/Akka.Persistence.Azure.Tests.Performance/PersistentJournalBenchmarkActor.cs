@@ -1,74 +1,51 @@
+using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using NBench;
+using static Akka.Persistence.Azure.Tests.Performance.PersistentBenchmarkMsgs;
 
 namespace Akka.Persistence.Azure.Tests.Performance
 {
     public class PersistentJournalBenchmarkActor : ReceivePersistentActor
     {
-        private readonly Counter _recoveredMessageCounter;
-        private readonly Counter _msgWriteCounter;
-
         private readonly ILoggingAdapter _log = Context.GetLogger();
-
-        private PersistentBenchmarkMsgs.NotifyWhenCounterHits _target;
 
         /// <summary>
         /// Our stored value
         /// </summary>
         private int TotalCount { get; set; }
 
-        public PersistentJournalBenchmarkActor(string persistenceId, Counter recoveredMessageCounter, Counter msgWriteCounter)
+        public PersistentJournalBenchmarkActor(string persistenceId)
         {
             PersistenceId = persistenceId;
-            _recoveredMessageCounter = recoveredMessageCounter;
-            _msgWriteCounter = msgWriteCounter;
 
-            Recover<SnapshotOffer>(offer =>
+            Recover<Stored>(i =>
             {
-                if (offer.Snapshot is int i)
-                {
-                    TotalCount = i;
-                }
-                _recoveredMessageCounter.Increment();
+                TotalCount += i.Value;
             });
 
-            Recover<int>(i =>
+            Command<Store>(store =>
             {
-                TotalCount += i;
-                _recoveredMessageCounter.Increment();
-            });
-
-            Command<int>(i =>
-            {
-                Persist(i, i1 =>
+                Persist(new Stored(store.Value), s =>
                 {
-                    _msgWriteCounter.Increment();
-                    TotalCount += i1;
-                    TellTargetWhenReady();
-                    
+                    TotalCount += s.Value;
                 });
             });
 
-            Command<PersistentBenchmarkMsgs.NotifyWhenCounterHits>(n =>
+            Command<Init>(i =>
             {
-                _target = n;
-                TellTargetWhenReady();
+                var sender = Sender;
+                Persist(new Stored(0), s =>
+                {
+                    TotalCount += s.Value;
+                    sender.Tell(PersistentBenchmarkMsgs.Done.Instance);
+                });
             });
 
-            Command<PersistentBenchmarkMsgs.RecoveryComplete>(r =>
+            Command<Finish>(r =>
             {
-                Sender.Tell(r);
+                Sender.Tell(new Finished(TotalCount));
             });
-        }
-
-        private void TellTargetWhenReady()
-        {
-            if (_target != null && _target.Target <= TotalCount)
-            {
-                _log.Info("Notifying that we have hit or exceeded requested target of [{0}] with actual target of [{1}]", _target.Target, TotalCount);
-                _target.Subscriber.Tell(TotalCount);
-            }
         }
 
         public override string PersistenceId { get; }
