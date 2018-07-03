@@ -174,7 +174,7 @@ namespace Akka.Persistence.Azure.Journal
                 if (result.Results.Count > 0)
                     seqNo = Math.Max(seqNo, result.Results.Max(x => x.SeqNo));
 
-                if(result.ContinuationToken != null)
+                if (result.ContinuationToken != null)
                     result = await Table.ExecuteQuerySegmentedAsync(sequenceNumberQuery, result.ContinuationToken);
             } while (result.ContinuationToken != null);
 
@@ -188,8 +188,8 @@ namespace Akka.Persistence.Azure.Journal
         private static TableQuery<PersistentJournalEntry> GenerateHighestSequenceNumberQuery(string persistenceId, long fromSequenceNr)
         {
             return new TableQuery<PersistentJournalEntry>()
-                .Where(TableQuery.CombineFilters(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId), 
-                    TableOperators.And, 
+                .Where(TableQuery.CombineFilters(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId),
+                    TableOperators.And,
                     TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, fromSequenceNr.ToJournalRowKey())));
         }
 
@@ -201,6 +201,7 @@ namespace Akka.Persistence.Azure.Journal
                 _log.Debug("Entering method WriteMessagesAsync");
 #endif
                 var exceptions = ImmutableList<Exception>.Empty;
+                var tasks = new List<Task<IList<TableResult>>>();
                 using (var atomicWrites = messages.GetEnumerator())
                 {
                     while (atomicWrites.MoveNext())
@@ -224,21 +225,26 @@ namespace Akka.Persistence.Azure.Journal
                             }
                         }
 
-                        try
-                        {
-                            var results = await Table.ExecuteBatchAsync(batch);
-
-                            if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                                foreach (var r in results)
-                                    _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag,
-                                        r.HttpStatusCode);
-                        }
-                        catch (Exception ex)
-                        {
-                            exceptions = exceptions.Add(ex);
-                        }
+                        tasks.Add(Table.ExecuteBatchAsync(batch));
                     }
                 }
+
+                await Task.WhenAll(tasks.ToArray());
+
+
+                foreach (var t in tasks)
+                {
+                    if (t.IsFaulted || t.IsCanceled)
+                    {
+                        exceptions = exceptions.Add(t.Exception);
+                    }
+                    else if (_log.IsDebugEnabled && _settings.VerboseLogging)
+                        foreach (var r in t.Result)
+                            _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag,
+                                r.HttpStatusCode);
+                }
+
+
 
 #if DEBUG
                 _log.Debug("Leaving method WriteMessagesAsync");
@@ -305,14 +311,14 @@ namespace Akka.Persistence.Azure.Journal
 
                     var deleteTask = Table.ExecuteBatchAsync(tableBatchOperation);
 
-                   
+
 
                     await deleteTask;
                 }
             }
-            
 
-           
+
+
 
 #if DEBUG
             _log.Debug("Leaving method DeleteMessagesToAsync for persistentId [{0}] and up to seqNo [{1}]", persistenceId, toSequenceNr);
