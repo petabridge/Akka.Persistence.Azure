@@ -16,6 +16,7 @@ using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Journal;
 using Akka.Util.Internal;
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.RetryPolicies;
 using Microsoft.WindowsAzure.Storage.Table;
 using Debug = System.Diagnostics.Debug;
 
@@ -42,7 +43,6 @@ namespace Akka.Persistence.Azure.Journal
             _settings = AzurePersistence.Get(Context.System).TableSettings;
             _serialization = new SerializationHelper(Context.System);
             _storageAccount = CloudStorageAccount.Parse(_settings.ConnectionString);
-
             _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage().Result);
         }
 
@@ -51,6 +51,7 @@ namespace Akka.Persistence.Azure.Journal
         private async Task<CloudTable> InitCloudStorage()
         {
             var tableClient = _storageAccount.CreateCloudTableClient();
+            tableClient.DefaultRequestOptions = new TableRequestOptions(){ LocationMode = LocationMode.PrimaryOnly};
             var tableRef = tableClient.GetTableReference(_settings.TableName);
             var op = new OperationContext();
             using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
