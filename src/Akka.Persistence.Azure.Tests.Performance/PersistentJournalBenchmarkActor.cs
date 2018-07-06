@@ -15,8 +15,11 @@ namespace Akka.Persistence.Azure.Tests.Performance
         /// </summary>
         private int TotalCount { get; set; }
 
-        public PersistentJournalBenchmarkActor(string persistenceId)
+        private int Target { get; set; }
+
+        public PersistentJournalBenchmarkActor(string persistenceId, int target)
         {
+            Target = target;
             PersistenceId = persistenceId;
 
             Recover<Stored>(i =>
@@ -26,16 +29,17 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
             Command<Store>(store =>
             {
-                Persist(new Stored(store.Value), s =>
+                PersistAsync(new Stored(store.Value), s =>
                 {
                     TotalCount += s.Value;
+                    Stash.Unstash();
                 });
             });
 
             Command<Init>(i =>
             {
                 var sender = Sender;
-                Persist(new Stored(0), s =>
+                PersistAsync(new Stored(0), s =>
                 {
                     TotalCount += s.Value;
                     sender.Tell(PersistentBenchmarkMsgs.Done.Instance);
@@ -44,7 +48,10 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
             Command<Finish>(r =>
             {
-                Sender.Tell(new Finished(TotalCount));
+                if(TotalCount >= Target)
+                    Sender.Tell(new Finished(TotalCount));
+                else
+                    Stash.Stash();
             });
         }
 

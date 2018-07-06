@@ -70,7 +70,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
                 var id = "persistent" + Guid.NewGuid();
                 var actorRef =
                     ActorSystem.ActorOf(
-                        Props.Create(() => new PersistentJournalBenchmarkActor(id)),
+                        Props.Create(() => new PersistentJournalBenchmarkActor(id, PersistedMessageCount)),
                         id);
 
                 _persistentActors.Add(actorRef);
