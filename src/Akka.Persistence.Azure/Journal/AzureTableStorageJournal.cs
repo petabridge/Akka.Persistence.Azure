@@ -208,12 +208,9 @@ namespace Akka.Persistence.Azure.Journal
                         Debug.Assert(atomicWrites.Current != null, "atomicWrites.Current != null");
 
                         var batch = new TableBatchOperation();
-                        using (var persistentMsgs = atomicWrites.Current.Payload
-                            .AsInstanceOf<IImmutableList<IPersistentRepresentation>>().GetEnumerator())
+                        foreach(var currentMsg in atomicWrites.Current.Payload
+                            .AsInstanceOf<IImmutableList<IPersistentRepresentation>>())
                         {
-                            while (persistentMsgs.MoveNext())
-                            {
-                                var currentMsg = persistentMsgs.Current;
 
                                 Debug.Assert(currentMsg != null, nameof(currentMsg) + " != null");
 
@@ -221,11 +218,14 @@ namespace Akka.Persistence.Azure.Journal
                                     new PersistentJournalEntry(currentMsg.PersistenceId,
                                         currentMsg.SequenceNr, _serialization.PersistentToBytes(currentMsg),
                                         currentMsg.Manifest));
-                            }
+                            
                         }
 
                         try
                         {
+                            if (_log.IsDebugEnabled && _settings.VerboseLogging)
+                                _log.Debug("Attempting to write batch of {0} messages to Azure storage", batch.Count);
+
                             var results = await Table.ExecuteBatchAsync(batch);
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
