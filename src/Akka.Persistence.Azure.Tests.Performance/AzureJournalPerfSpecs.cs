@@ -44,11 +44,11 @@ namespace Akka.Persistence.Azure.Tests.Performance
             TableName = "PerfTestTable" + TableVersionCounter.IncrementAndGet();
 
             return ConfigurationFactory.ParseString(
-                    @"akka.loglevel = INFO
+                    @"akka.loglevel = DEBUG
                 akka.persistence.journal.azure-table.class = ""Akka.Persistence.Azure.Journal.AzureTableStorageJournal, Akka.Persistence.Azure""
                 akka.persistence.journal.plugin = ""akka.persistence.journal.azure-table""
                 akka.persistence.journal.azure-table.connection-string=""" + connectionString + @"""
-                akka.persistence.journal.azure-table.verbose-logging = off")
+                akka.persistence.journal.azure-table.verbose-logging = on")
                 .WithFallback("akka.persistence.journal.azure-table.table-name=" + TableName);
         }
 
