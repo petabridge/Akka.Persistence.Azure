@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -59,6 +60,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
         [PerfSetup]
         public void Setup(BenchmarkContext context)
         {
+            ServicePointManager.UseNagleAlgorithm = false; // disable nagle
             _recoveryCounter = context.GetCounter(RecoveryCounterName);
             _writeCounter = context.GetCounter(WriteCounterName);
 
