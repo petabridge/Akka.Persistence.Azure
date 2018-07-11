@@ -3,15 +3,9 @@
 
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard1.6</TargetFramework>
     <Description>Akka.Persistence support for Windows Azure Table storage and Azure blob storage.</Description>
   </PropertyGroup>
-
-
-  <ItemGroup>
-    <None Remove="reference.conf" />
-  </ItemGroup>
-
 
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />

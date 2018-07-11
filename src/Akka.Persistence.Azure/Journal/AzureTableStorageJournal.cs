@@ -43,25 +43,46 @@ namespace Akka.Persistence.Azure.Journal
             _serialization = new SerializationHelper(Context.System);
             _storageAccount = CloudStorageAccount.Parse(_settings.ConnectionString);
 
-            _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage().Result);
+            _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage(5).Result);
         }
 
         public CloudTable Table => _tableStorage.Value;
 
-        private async Task<CloudTable> InitCloudStorage()
+        private static readonly Dictionary<int, TimeSpan> RetryInterval = new Dictionary<int, TimeSpan>()
         {
-            var tableClient = _storageAccount.CreateCloudTableClient();
-            var tableRef = tableClient.GetTableReference(_settings.TableName);
-            var op = new OperationContext();
-            using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
-            {
-                if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
-                    _log.Info("Created Azure Cloud Table", _settings.TableName);
-                else
-                    _log.Info("Successfully connected to existing table", _settings.TableName);
-            }
+            { 5, TimeSpan.FromMilliseconds(100) },
+            { 4, TimeSpan.FromMilliseconds(500) },
+            { 3, TimeSpan.FromMilliseconds(1000) },
+            { 2, TimeSpan.FromMilliseconds(2000) },
+            { 1, TimeSpan.FromMilliseconds(4000) },
+            { 0, TimeSpan.FromMilliseconds(8000) },
+        };
 
-            return tableRef;
+        private async Task<CloudTable> InitCloudStorage(int remainingTries)
+        {
+            try
+            {
+                var tableClient = _storageAccount.CreateCloudTableClient();
+                var tableRef = tableClient.GetTableReference(_settings.TableName);
+                var op = new OperationContext();
+                using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
+                {
+                    if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
+                        _log.Info("Created Azure Cloud Table", _settings.TableName);
+                    else
+                        _log.Info("Successfully connected to existing table", _settings.TableName);
+                }
+
+                return tableRef;
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "[{0}] more tries to initialize table storage remaining...", remainingTries);
+                if (remainingTries == 0)
+                    throw;
+                await Task.Delay(RetryInterval[remainingTries]);
+                return await InitCloudStorage(remainingTries - 1);
+            }
         }
 
         protected override void PreStart()

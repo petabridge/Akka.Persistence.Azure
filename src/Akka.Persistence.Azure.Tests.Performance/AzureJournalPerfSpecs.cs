@@ -32,6 +32,8 @@ namespace Akka.Persistence.Azure.Tests.Performance
         public const int PersistentActorCount = 200;
         public const int PersistedMessageCount = 20;
 
+        public static readonly TimeSpan MaxTimeout = TimeSpan.FromMinutes(6);
+
         public static Config JournalConfig()
         {
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR")))
@@ -45,11 +47,12 @@ namespace Akka.Persistence.Azure.Tests.Performance
             TableName = "PerfTestTable" + TableVersionCounter.IncrementAndGet();
 
             return ConfigurationFactory.ParseString(
-                    @"akka.loglevel = DEBUG
+                    @"akka.loglevel = INFO
+                akka.persistence.max-concurrent-recoveries = 25 # since Azure seems to have some trouble at 50
                 akka.persistence.journal.azure-table.class = ""Akka.Persistence.Azure.Journal.AzureTableStorageJournal, Akka.Persistence.Azure""
                 akka.persistence.journal.plugin = ""akka.persistence.journal.azure-table""
                 akka.persistence.journal.azure-table.connection-string=""" + connectionString + @"""
-                akka.persistence.journal.azure-table.verbose-logging = on")
+                akka.persistence.journal.azure-table.verbose-logging = off")
                 .WithFallback("akka.persistence.journal.azure-table.table-name=" + TableName);
         }
 
@@ -101,7 +104,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
             for (int i = 0; i < PersistentActorCount; i++)
             {
                 var task = _persistentActors[i]
-                    .Ask<PersistentBenchmarkMsgs.Finished>(PersistentBenchmarkMsgs.Finish.Instance);
+                    .Ask<PersistentBenchmarkMsgs.Finished>(PersistentBenchmarkMsgs.Finish.Instance, MaxTimeout);
 
                 finished[i] = task;
             }
