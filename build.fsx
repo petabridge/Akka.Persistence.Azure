@@ -22,7 +22,7 @@ let configuration = "Release"
 let solutionFile = FindFirstMatchingFile "*.sln" __SOURCE_DIRECTORY__  // dynamically look up the solution
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
 let hasTeamCity = (not (buildNumber = "0")) // check if we have the TeamCity environment variable for build # set
-let preReleaseVersionSuffix = (if (not (buildNumber = "0")) then (buildNumber) else "") + "-beta"
+let preReleaseVersionSuffix = "beta" + (if (not (buildNumber = "0")) then (buildNumber) else DateTime.UtcNow.Ticks.ToString())
 let versionSuffix = 
     match (getBuildParam "nugetprerelease") with
     | "dev" -> preReleaseVersionSuffix
@@ -104,8 +104,8 @@ Target "RunTests" (fun _ ->
     let runSingleProject project =
         let arguments =
             match (hasTeamCity) with
-            | true -> (sprintf "xunit -c Release -nobuild -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))
-            | false -> (sprintf "xunit -c Release -nobuild -parallel none -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))
+            | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --results-directory %s -- -parallel none-teamcity" (outputTests))
+            | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --results-directory %s -- -parallel none" (outputTests))
 
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
@@ -207,6 +207,19 @@ Target "DocFx" (fun _ ->
                     Timeout = TimeSpan.FromMinutes 30.0; 
                     WorkingDirectory  = docsPath; 
                     DocFxJson = docsPath @@ "docfx.json" })
+)
+
+//--------------------------------------------------------------------------------
+// Cleanup
+//--------------------------------------------------------------------------------
+
+FinalTarget "KillCreatedProcesses" (fun _ ->
+    log "Shutting down dotnet build-server"
+    let result = ExecProcess(fun info -> 
+            info.FileName <- "dotnet"
+            info.WorkingDirectory <- __SOURCE_DIRECTORY__
+            info.Arguments <- "build-server shutdown") (System.TimeSpan.FromMinutes 2.0)
+    if result <> 0 then failwithf "dotnet build-server shutdown failed"
 )
 
 //--------------------------------------------------------------------------------
