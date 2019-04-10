@@ -50,6 +50,9 @@ let workingDir = output @@ "build"
 let nugetExe = FullName @"./tools/nuget.exe"
 
 Target "Clean" (fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
+
+
     CleanDir output
     CleanDir outputTests
     CleanDir outputPerfTests
