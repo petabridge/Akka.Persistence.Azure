@@ -234,7 +234,7 @@ namespace Akka.Persistence.Azure.Snapshot
         {
             var ticks = FetchBlobTimestamp(x);
             return ticks <= criteria.MaxTimeStamp.Ticks &&
-                   (!criteria.MinTimestamp.HasValue || criteria.MinTimestamp.Value.Ticks >= ticks);
+                   (!criteria.MinTimestamp.HasValue || ticks >= criteria.MinTimestamp.Value.Ticks);
         }
 
         private static long FetchBlobTimestamp(CloudBlob x)
