@@ -10,32 +10,26 @@ using Akka.Persistence.Azure.TestHelpers;
 using Akka.Persistence.TCK.Snapshot;
 using Xunit;
 using Xunit.Abstractions;
+using static Akka.Persistence.Azure.Tests.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSnapshot")]
     public class AzureBlobStorageSpec : SnapshotStoreSpec
     {
-        public AzureBlobStorageSpec(ITestOutputHelper output) : base(SnapshotStoreConfig(),
+        public AzureBlobStorageSpec(ITestOutputHelper output) : base(Config(),
             nameof(AzureTableJournalSpec), output)
         {
             AzurePersistence.Get(Sys);
             Initialize();
         }
 
-        public static Config SnapshotStoreConfig()
+        public static Config Config()
         {
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR")))
-                return SnapshotStoreConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"));
+                return AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"));
 
-            return SnapshotStoreConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
-        }
-
-        public static Config SnapshotStoreConfig(string connectionString)
-        {
-            return ConfigurationFactory.ParseString(
-                    @"akka.persistence.snapshot-store.azure-blob-store.connection-string=""+ connectionString +""")
-                .WithFallback("akka.persistence.snapshot-store.azure-blob-store.container-name=" + Guid.NewGuid());
+            return AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
         }
     }
 }
