@@ -11,11 +11,6 @@ open Fake.DocFxHelper
 
 // Information about the project for Nuget and Assembly info files
 let product = "Akka.Persistence.Azure"
-let authors = [ "Your name here" ]
-let copyright = "Copyright © 2017"
-let company = "Your name here"
-let description = "Your description here"
-let tags = ["";]
 let configuration = "Release"
 
 // Metadata used when signing packages and DLLs
@@ -315,7 +310,7 @@ Target "Nuget" DoNothing
 // all
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
-"NBench" ==> "All"
+//"NBench" ==> "All"
 "Nuget" ==> "All"
 
 RunTargetOrDefault "Help"
