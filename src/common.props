@@ -3,7 +3,7 @@
     <Copyright>Copyright © 2017 Your Company</Copyright>
     <Authors>Your Authors</Authors>
     <VersionPrefix>0.1.0</VersionPrefix>
-    <PackageReleaseNotes>First release</PackageReleaseNotes>
+    <PackageReleaseNotes>Initial beta of Akka.Persistence.Azure</PackageReleaseNotes>
     <PackageIconUrl>
     </PackageIconUrl>
     <PackageProjectUrl>
