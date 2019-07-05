@@ -9,8 +9,8 @@ namespace Akka.Persistence.Azure.Tests
     {
         public static Config AzureConfig(string connectionString)
         {
-            var tableName = "TestTable" + Guid.NewGuid();
-            var containerName = "TestContainer" + Guid.NewGuid();
+            var tableName = "t" + Guid.NewGuid();
+            var containerName = "testcontainer" + Guid.NewGuid();
 
             return ConfigurationFactory.ParseString(
                     @"akka.loglevel = DEBUG
