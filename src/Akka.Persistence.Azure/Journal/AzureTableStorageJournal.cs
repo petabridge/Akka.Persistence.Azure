@@ -187,16 +187,18 @@ namespace Akka.Persistence.Azure.Journal
             _log.Debug("Entering method ReadHighestSequenceNrAsync");
 #endif
             var sequenceNumberQuery = GenerateHighestSequenceNumberQuery(persistenceId, fromSequenceNr);
-            var result = await Table.ExecuteQuerySegmentedAsync(sequenceNumberQuery, null);
+            TableQuerySegment<PersistentJournalEntry> result = null;
             long seqNo = 0L;
 
             do
             {
+                result = await Table.ExecuteQuerySegmentedAsync(sequenceNumberQuery, result?.ContinuationToken);
+                
                 if (result.Results.Count > 0)
+                {
                     seqNo = Math.Max(seqNo, result.Results.Max(x => x.SeqNo));
+                }
 
-                if(result.ContinuationToken != null)
-                    result = await Table.ExecuteQuerySegmentedAsync(sequenceNumberQuery, result.ContinuationToken);
             } while (result.ContinuationToken != null);
 
 #if DEBUG
