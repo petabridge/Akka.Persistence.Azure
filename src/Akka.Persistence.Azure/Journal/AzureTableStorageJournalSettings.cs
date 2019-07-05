@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using Akka.Configuration;
+using Microsoft.WindowsAzure.Storage;
 
 namespace Akka.Persistence.Azure.Journal
 {
@@ -14,9 +16,20 @@ namespace Akka.Persistence.Azure.Journal
     /// </summary>
     public sealed class AzureTableStorageJournalSettings
     {
+
+        private static readonly string[] ReservedTableNames = {"tables"};
+        
         public AzureTableStorageJournalSettings(string connectionString, string tableName, TimeSpan connectTimeout,
             TimeSpan requestTimeout, bool verboseLogging)
         {
+            NameValidator.ValidateTableName(tableName);
+            
+            if (ReservedTableNames.Contains(tableName))
+            {
+                throw new ArgumentException(
+                    "Reserved table name. Check MSDN for more information about valid table naming", nameof(tableName));
+            }
+            
             ConnectionString = connectionString;
             TableName = tableName;
             ConnectTimeout = connectTimeout;

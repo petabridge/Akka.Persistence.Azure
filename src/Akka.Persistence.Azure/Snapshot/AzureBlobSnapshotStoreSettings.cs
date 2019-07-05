@@ -6,6 +6,7 @@
 
 using System;
 using Akka.Configuration;
+using Microsoft.WindowsAzure.Storage;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
@@ -18,6 +19,7 @@ namespace Akka.Persistence.Azure.Snapshot
         public AzureBlobSnapshotStoreSettings(string connectionString, string containerName,
             TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging)
         {
+            NameValidator.ValidateContainerName(containerName);
             ConnectionString = connectionString;
             ContainerName = containerName;
             RequestTimeout = requestTimeout;
