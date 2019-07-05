@@ -9,7 +9,7 @@ namespace Akka.Persistence.Azure.Tests
     {
         public static Config AzureConfig(string connectionString)
         {
-            var tableName = "t" + Guid.NewGuid();
+            var tableName = "t" + Guid.NewGuid().ToString().Replace("-", "");
             var containerName = "testcontainer" + Guid.NewGuid();
 
             return ConfigurationFactory.ParseString(
