@@ -11,21 +11,22 @@ trigger:
       - refs/tags/*
 
 variables:
-  - group: signingSecrets #create this group with SECRET variables `signingUsername` and `signingPassword`
-  - group: nugetKeys #create this group with SECRET variables `nugetKey`
+  - group: Signing Keys #create this group with SECRET variables `signingUsername` and `signingPassword`
+  - group: NuGet Keys #create this group with SECRET variables `nugetKey`
   - name: githubConnectionName
-    value: yourConnection #replace this
+    value: petabridge #replace this
   - name: projectName
-    value: yourProjectName #replace this
+    value: Akka.Persistence.Azure #replace this
   - name: githubRepositoryName
-    value: yourOrganization/yourRepo #replace this
+    value: petabridge/Akka.Persistence.Azure #replace this
 
 steps:
 - task: BatchScript@1
   displayName: 'FAKE Build'
   inputs:
     filename: build.cmd
-    arguments: 'All SignClientUser=$(signingUsername) SignClientSecret=$(signingPassword) nugetpublishurl=https://www.nuget.org/api/v2/package nugetkey=$(nugetKey)'
+    arguments: 'All SignClientUser=$(signingUsername) SignClientSecret=$(signingPassword) nugetpublishurl=https://www.nuget.org/api/v2/package nugetkey=$(Akka.NET Tools NuGet
+)'
 
 - task: GitHubRelease@0
   displayName: 'GitHub release (create)'
