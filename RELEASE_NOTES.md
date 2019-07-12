@@ -1,2 +1,2 @@
-#### 0.1.0 August 14 2017 ####
-First release
+#### 0.1.0 July 12 2019 ####
+**Beta Release of Akka.Persistence.Azure**
