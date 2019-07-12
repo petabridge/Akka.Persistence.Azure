@@ -35,7 +35,7 @@ $DotNetVersion = "2.1.500";
 $DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/v$DotNetVersion/scripts/obtain/dotnet-install.ps1";
 $NugetVersion = "4.1.0";
 $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe"
-$ProtobufVersion = "3.2.0"
+$ProtobufVersion = "3.4.0"
 $DocfxVersion = "2.40.5"
 
 # Make sure tools folder exists
@@ -126,6 +126,20 @@ if (!(Test-Path $DocfxExePath)) {
     if ($LASTEXITCODE -ne 0) {
         Throw "An error occured while restoring docfx.console from NuGet."
     }
+}
+
+###########################################################################
+# SignTool
+###########################################################################
+
+# Make sure the SignClient has been installed
+if (Get-Command signclient -ErrorAction SilentlyContinue) {
+    Write-Host "Found SignClient. Skipping install."
+}
+else{
+    $SignClientFolder = Join-Path $ToolPath "signclient"
+    Write-Host "SignClient not found. Installing to ... $SignClientFolder"
+    dotnet tool install SignClient --version 1.0.82 --tool-path "$SignClientFolder"
 }
 
 ###########################################################################
