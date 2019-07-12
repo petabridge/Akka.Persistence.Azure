@@ -15,42 +15,28 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using Xunit;
 using Xunit.Abstractions;
+using static Akka.Persistence.Azure.Tests.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureJournal")]
     public class AzureTableJournalSpec : JournalSpec
     {
-        public static AtomicCounter TableVersionCounter = new AtomicCounter(0);
         public static string TableName { get; private set; }
 
-        public AzureTableJournalSpec(ITestOutputHelper output) : base(JournalConfig(), nameof(AzureTableJournalSpec),
+        public AzureTableJournalSpec(ITestOutputHelper output) : base(Config(), nameof(AzureTableJournalSpec),
             output)
         {
             AzurePersistence.Get(Sys);
             Initialize();
         }
 
-        public static Config JournalConfig()
+        public static Config Config()
         {
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR")))
-                return JournalConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"));
+                return AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"));
 
-            return JournalConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
-        }
-
-        public static Config JournalConfig(string connectionString)
-        {
-            TableName = "TestTable" + TableVersionCounter.IncrementAndGet();
-
-            return ConfigurationFactory.ParseString(
-                    @"akka.loglevel = DEBUG
-                akka.log-config-on-start = off
-                akka.persistence.journal.plugin = ""akka.persistence.journal.azure-table""
-                akka.persistence.journal.azure-table.connection-string=""" + connectionString + @"""
-                akka.persistence.journal.azure-table.verbose-logging = on
-                akka.test.single-expect-default = 3s")
-                .WithFallback("akka.persistence.journal.azure-table.table-name=" + TableName);
+            return AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
         }
 
         protected override void Dispose(bool disposing)
