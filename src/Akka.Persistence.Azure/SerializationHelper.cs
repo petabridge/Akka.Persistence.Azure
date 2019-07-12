@@ -44,7 +44,8 @@ namespace Akka.Persistence.Azure
              */
 
             var serializer = _actorSystem.Serialization.FindSerializerForType(_persistentRepresentation);
-            return serializer.FromBinary<IPersistentRepresentation>(bytes);
+            var msg = serializer.FromBinary<IPersistentRepresentation>(bytes);
+            return msg;
         }
 
         public IPersistentRepresentation PersistentFromBytesWithManifest(byte[] bytes, string manifest)

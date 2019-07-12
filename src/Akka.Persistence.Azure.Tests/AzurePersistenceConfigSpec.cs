@@ -9,6 +9,7 @@ using Akka.Configuration;
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Snapshot;
 using FluentAssertions;
+using FluentAssertions.Equivalency;
 using Xunit;
 
 namespace Akka.Persistence.Azure.Tests
@@ -57,6 +58,38 @@ namespace Akka.Persistence.Azure.Tests
             tableSettings.ConnectTimeout.Should().Be(TimeSpan.FromSeconds(3));
             tableSettings.RequestTimeout.Should().Be(TimeSpan.FromSeconds(3));
             tableSettings.VerboseLogging.Should().BeFalse();
+        }
+
+        [Theory]
+        [InlineData("fo", "Invalid table name length")]
+        [InlineData("1foo", "Invalid table name")]
+        [InlineData("tables", "Reserved table name")]
+        public void ShouldThrowArgumentExceptionForIllegalTableNames(string tableName, string reason)
+        {
+            Action createJournalSettings = () => AzureTableStorageJournalSettings.Create(
+                    ConfigurationFactory.ParseString(@"akka.persistence.journal.azure-table{
+                        connection-string = foo
+                        table-name = " + tableName + @" 
+                    }").WithFallback(AzurePersistence.DefaultConfig)
+                        .GetConfig("akka.persistence.journal.azure-table"));
+
+            createJournalSettings.Should().Throw<ArgumentException>(reason);
+        }
+        
+        [Theory]
+        [InlineData("ba", "Invalid container name length")]
+        [InlineData("bar--table", "Invalid container name")]
+        public void ShouldThrowArgumentExceptionForIllegalContainerNames(string containerName, string reason)
+        {
+            Action createSnapshotSettings = () =>
+                AzureBlobSnapshotStoreSettings.Create(
+                    ConfigurationFactory.ParseString(@"akka.persistence.snapshot-store.azure-blob-store{
+                        connection-string = foo
+                        container-name = " + containerName + @"
+                    }").WithFallback(AzurePersistence.DefaultConfig)
+                        .GetConfig("akka.persistence.snapshot-store.azure-blob-store"));
+
+            createSnapshotSettings.Should().Throw<ArgumentException>(reason);
         }
     }
 }
