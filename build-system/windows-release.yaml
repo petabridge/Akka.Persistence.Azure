@@ -14,7 +14,7 @@ variables:
   - group: Signing Keys #create this group with SECRET variables `signingUsername` and `signingPassword`
   - group: NuGet Keys #create this group with SECRET variables `nugetKey`
   - name: githubConnectionName
-    value: petabridge #replace this
+    value: Releases #replace this
   - name: projectName
     value: Akka.Persistence.Azure #replace this
   - name: githubRepositoryName
