@@ -10,9 +10,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.TestHelpers;
 using Akka.Persistence.TCK.Journal;
-using Akka.Util.Internal;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
 using Xunit;
 using Xunit.Abstractions;
 using static Akka.Persistence.Azure.Tests.AzureStorageConfigHelper;
@@ -33,10 +30,14 @@ namespace Akka.Persistence.Azure.Tests
 
         public static Config Config()
         {
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR")))
-                return AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"));
+            var config =
+                !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
+                    ? AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
+                    : AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
 
-            return AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+            TableName = config.GetString("akka.persistence.journal.azure-table.table-name");
+
+            return config;
         }
 
         protected override void Dispose(bool disposing)
