@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Akka.Configuration;
+using Akka.Persistence.Azure.TestHelpers;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,11 +13,22 @@ namespace Akka.Persistence.Azure.Tests
     {
         private readonly SerializationHelper _helper;
 
-        public SerializerHelperSpecs(ITestOutputHelper helper) : base(output: helper)
+        public SerializerHelperSpecs(ITestOutputHelper helper)
+            : base(Config(), nameof(SerializerHelperSpecs), output: helper)
         {
             // force Akka.Persistence serializers to be loaded
             AzurePersistence.Get(Sys);
             _helper = new SerializationHelper(Sys);
+        }
+
+        public static Config Config()
+        {
+            var azureConfig =
+                !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
+                    ? AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
+                    : AzureStorageConfigHelper.AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+
+            return azureConfig;
         }
 
         [Fact]
