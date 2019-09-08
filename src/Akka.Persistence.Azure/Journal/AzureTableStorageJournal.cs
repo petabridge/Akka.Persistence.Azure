@@ -108,7 +108,7 @@ namespace Akka.Persistence.Azure.Journal
             if (max == 0)
                 return;
 
-            var replayQuery = ReplayQuery(persistenceId, fromSequenceNr, toSequenceNr);
+            var replayQuery = GenerateReplayQuery(persistenceId, fromSequenceNr, toSequenceNr);
 
             var nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, null);
             var count = 0L;
@@ -167,18 +167,48 @@ namespace Akka.Persistence.Azure.Journal
 #endif
         }
 
-        private static TableQuery<PersistentJournalEntry> ReplayQuery(string persistentId, long fromSequenceNumber,
+        private static TableQuery<PersistentJournalEntry> GenerateReplayQuery(string persistentId, long fromSequenceNumber,
             long toSequenceNumber)
         {
-            return new TableQuery<PersistentJournalEntry>().Where(
+            var persistenceIdFilter =
+                TableQuery.GenerateFilterCondition(
+                    "PartitionKey",
+                    QueryComparisons.Equal,
+                    persistentId);
+
+            var highestSequenceNrFilter =
+                TableQuery.GenerateFilterCondition(
+                    "RowKey",
+                    QueryComparisons.NotEqual,
+                    HighestSequenceNrEntry.RowKeyValue);
+
+            var rowKeyGreaterThanFilter =
+                TableQuery.GenerateFilterCondition(
+                    "RowKey",
+                    QueryComparisons.GreaterThanOrEqual,
+                    fromSequenceNumber.ToJournalRowKey());
+
+            var rowKeyLessThanFilter =
+                TableQuery.GenerateFilterCondition(
+                    "RowKey",
+                    QueryComparisons.LessThanOrEqual,
+                    toSequenceNumber.ToJournalRowKey());
+
+            var filter =
                 TableQuery.CombineFilters(
                     TableQuery.CombineFilters(
-                        TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistentId),
+                        persistenceIdFilter,
                         TableOperators.And,
-                        TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual,
-                            fromSequenceNumber.ToJournalRowKey())), TableOperators.And,
-                    TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual,
-                        toSequenceNumber.ToJournalRowKey())));
+                        highestSequenceNrFilter),
+                    TableOperators.And,
+                    TableQuery.CombineFilters(
+                        rowKeyLessThanFilter,
+                        TableOperators.And,
+                        rowKeyGreaterThanFilter));
+
+            var returnValue = new TableQuery<PersistentJournalEntry>().Where(filter);
+
+            return returnValue;
         }
 
         public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
@@ -187,7 +217,7 @@ namespace Akka.Persistence.Azure.Journal
             _log.Debug("Entering method ReadHighestSequenceNrAsync");
 #endif
             var sequenceNumberQuery = GenerateHighestSequenceNumberQuery(persistenceId, fromSequenceNr);
-            TableQuerySegment<PersistentJournalEntry> result = null;
+            TableQuerySegment<HighestSequenceNrEntry> result = null;
             long seqNo = 0L;
 
             do
@@ -196,7 +226,7 @@ namespace Akka.Persistence.Azure.Journal
                 
                 if (result.Results.Count > 0)
                 {
-                    seqNo = Math.Max(seqNo, result.Results.Max(x => x.SeqNo));
+                    seqNo = Math.Max(seqNo, result.Results.Max(x => x.HighestSequenceNr));
                 }
 
             } while (result.ContinuationToken != null);
@@ -208,12 +238,23 @@ namespace Akka.Persistence.Azure.Journal
             return seqNo;
         }
 
-        private static TableQuery<PersistentJournalEntry> GenerateHighestSequenceNumberQuery(string persistenceId, long fromSequenceNr)
+        private static TableQuery<HighestSequenceNrEntry> GenerateHighestSequenceNumberQuery(string persistenceId, long fromSequenceNr)
         {
-            return new TableQuery<PersistentJournalEntry>()
-                .Where(TableQuery.CombineFilters(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, persistenceId), 
-                    TableOperators.And, 
-                    TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, fromSequenceNr.ToJournalRowKey())));
+            var filter =
+                TableQuery.CombineFilters(
+                    TableQuery.GenerateFilterCondition(
+                        "PartitionKey",
+                        QueryComparisons.Equal,
+                        persistenceId),
+                    TableOperators.And,
+                    TableQuery.GenerateFilterCondition(
+                        "RowKey",
+                        QueryComparisons.Equal,
+                        HighestSequenceNrEntry.RowKeyValue));
+
+            var returnValue = new TableQuery<HighestSequenceNrEntry>().Where(filter);
+
+            return returnValue;
         }
 
         protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
@@ -224,6 +265,9 @@ namespace Akka.Persistence.Azure.Journal
                 _log.Debug("Entering method WriteMessagesAsync");
 #endif
                 var exceptions = ImmutableList<Exception>.Empty;
+
+                var highSequenceNumbers = ImmutableDictionary<string, long>.Empty;
+
                 using (var atomicWrites = messages.GetEnumerator())
                 {
                     while (atomicWrites.MoveNext())
@@ -235,14 +279,24 @@ namespace Akka.Persistence.Azure.Journal
                             .AsInstanceOf<IImmutableList<IPersistentRepresentation>>())
                         {
 
-                                Debug.Assert(currentMsg != null, nameof(currentMsg) + " != null");
+                            Debug.Assert(currentMsg != null, nameof(currentMsg) + " != null");
 
-                                batch.Insert(
-                                    new PersistentJournalEntry(currentMsg.PersistenceId,
-                                        currentMsg.SequenceNr, _serialization.PersistentToBytes(currentMsg),
-                                        currentMsg.Manifest));
-                            
+                            batch.Insert(
+                                new PersistentJournalEntry(
+                                    currentMsg.PersistenceId,
+                                    currentMsg.SequenceNr, 
+                                    _serialization.PersistentToBytes(currentMsg),
+                                    currentMsg.Manifest));
+
+                            highSequenceNumbers =
+                                highSequenceNumbers.SetItem(
+                                    currentMsg.PersistenceId,
+                                    currentMsg.SequenceNr);
                         }
+
+                        highSequenceNumbers.ForEach(
+                            x => batch.InsertOrReplace(
+                                new HighestSequenceNrEntry(x.Key, x.Value)));
 
                         try
                         {
