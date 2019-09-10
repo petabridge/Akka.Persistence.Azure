@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.TestHelpers;
+using Akka.Persistence.Azure.Tests.Helper;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,7 +15,7 @@ namespace Akka.Persistence.Azure.Tests
     {
         private readonly SerializationHelper _helper;
 
-        public SerializerHelperSpecs(ITestOutputHelper helper)
+        public SerializerHelperSpecs(ITestOutputHelper helper) 
             : base(Config(), nameof(SerializerHelperSpecs), output: helper)
         {
             // force Akka.Persistence serializers to be loaded
@@ -31,6 +33,7 @@ namespace Akka.Persistence.Azure.Tests
             return azureConfig;
         }
 
+
         [Fact]
         public void ShouldSerializeAndDeserializePersistentRepresentation()
         {
@@ -42,6 +45,7 @@ namespace Akka.Persistence.Azure.Tests
             deserialized.Manifest.Should().Be(persistentRepresentation.Manifest);
             deserialized.SequenceNr.Should().Be(persistentRepresentation.SequenceNr);
             deserialized.PersistenceId.Should().Be(persistentRepresentation.PersistenceId);
+            deserialized.Sender.Should().Be(persistentRepresentation.Sender);
             deserialized.IsDeleted.Should().BeFalse();
         }
     }

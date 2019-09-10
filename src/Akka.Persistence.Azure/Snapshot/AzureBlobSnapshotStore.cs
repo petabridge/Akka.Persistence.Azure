@@ -115,12 +115,15 @@ namespace Akka.Persistence.Azure.Snapshot
                         GenerateOptions(), new OperationContext(), cts.Token);
 
                     var snapshot = _serialization.SnapshotFromBytes(memoryStream.ToArray());
-                    return new SelectedSnapshot(
-                        new SnapshotMetadata(
-                            persistenceId,
-                            FetchBlobSeqNo(filtered),
-                            new DateTime(FetchBlobTimestamp(filtered))),
-                        snapshot.Data);
+                    var returnValue =
+                        new SelectedSnapshot(
+                            new SnapshotMetadata(
+                                persistenceId,
+                                FetchBlobSeqNo(filtered),
+                                new DateTime(FetchBlobTimestamp(filtered))),
+                            snapshot.Data);
+
+                    return returnValue;
                 }
             }
 
@@ -146,9 +149,13 @@ namespace Akka.Persistence.Azure.Snapshot
                  */
                 blob.Metadata.Add(SeqNoMetaDataKey, metadata.SequenceNr.ToString());
 
-                await blob.UploadFromByteArrayAsync(snapshotData, 0, snapshotData.Length,
+                await blob.UploadFromByteArrayAsync(
+                    snapshotData, 
+                    0, 
+                    snapshotData.Length,
                     AccessCondition.GenerateEmptyCondition(),
-                    GenerateOptions(), new OperationContext(),
+                    GenerateOptions(), 
+                    new OperationContext(),
                     cts.Token);
             }
         }
