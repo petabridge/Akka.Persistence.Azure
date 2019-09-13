@@ -10,7 +10,6 @@ namespace Akka.Persistence.Azure.TableEntities
     {
         private const string ManifestKeyName = "manifest";
         public const string PartitionKeyValue = "allPersistenceIdsIdx";
-        public const string UtcTicksKeyName = "utcTicks";
 
         // In order to use this in a TableQuery a parameterless constructor is required
         public AllPersistenceIdsEntry()
@@ -26,8 +25,6 @@ namespace Akka.Persistence.Azure.TableEntities
             RowKey = persistenceId;
 
             Manifest = manifest;
-
-            UtcTicks = DateTime.UtcNow.Ticks;
         }
 
         public string ETag { get; set; }
@@ -40,8 +37,6 @@ namespace Akka.Persistence.Azure.TableEntities
 
         public DateTimeOffset Timestamp { get; set; }
 
-        public long UtcTicks { get; set; }
-
         public void ReadEntity(
             IDictionary<string, EntityProperty> properties,
             OperationContext operationContext)
@@ -50,8 +45,6 @@ namespace Akka.Persistence.Azure.TableEntities
                 properties.ContainsKey(ManifestKeyName)
                     ? properties[ManifestKeyName].StringValue
                     : string.Empty;
-
-            UtcTicks = properties[UtcTicksKeyName].Int64Value.Value;
         }
 
         public IDictionary<string, EntityProperty> WriteEntity(
@@ -61,7 +54,6 @@ namespace Akka.Persistence.Azure.TableEntities
                 new Dictionary<string, EntityProperty>
                 {
                     [ManifestKeyName] = EntityProperty.GeneratePropertyForString(Manifest),
-                    [UtcTicksKeyName] = EntityProperty.GeneratePropertyForLong(UtcTicks)
                 };
 
             return dict;

@@ -82,18 +82,10 @@ namespace Akka.Persistence.Azure.TableEntities
 
         public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
-            //var parts = RowKey.Split(new[] { Delimiter }, StringSplitOptions.RemoveEmptyEntries);
-
             Manifest =
                 properties.ContainsKey(ManifestKeyName)
                     ? properties[ManifestKeyName].StringValue
                     : string.Empty;
-
-            //IdxPartitionKey = parts[1];
-
-            //IdxRowKey = parts[2];
-
-            //IdxTag = parts[0];
 
             IdxPartitionKey = properties[IdxPartitionKeyKeyName].StringValue;
 
