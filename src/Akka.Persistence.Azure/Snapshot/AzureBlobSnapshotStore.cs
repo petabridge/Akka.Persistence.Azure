@@ -111,11 +111,15 @@ namespace Akka.Persistence.Azure.Snapshot
                 using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
                 using (var memoryStream = new MemoryStream())
                 {
-                    await filtered.DownloadToStreamAsync(memoryStream, AccessCondition.GenerateIfExistsCondition(),
+                    await filtered.DownloadToStreamAsync(memoryStream, AccessCondition.GenerateEmptyCondition(),
                         GenerateOptions(), new OperationContext(), cts.Token);
 
                     var snapshot = _serialization.SnapshotFromBytes(memoryStream.ToArray());
-                    return new SelectedSnapshot(new SnapshotMetadata(persistenceId, FetchBlobSeqNo(filtered)),
+                    return new SelectedSnapshot(
+                        new SnapshotMetadata(
+                            persistenceId,
+                            FetchBlobSeqNo(filtered),
+                            new DateTime(FetchBlobTimestamp(filtered))),
                         snapshot.Data);
                 }
             }
@@ -143,7 +147,7 @@ namespace Akka.Persistence.Azure.Snapshot
                 blob.Metadata.Add(SeqNoMetaDataKey, metadata.SequenceNr.ToString());
 
                 await blob.UploadFromByteArrayAsync(snapshotData, 0, snapshotData.Length,
-                    AccessCondition.GenerateIfNotExistsCondition(),
+                    AccessCondition.GenerateEmptyCondition(),
                     GenerateOptions(), new OperationContext(),
                     cts.Token);
             }
@@ -154,7 +158,7 @@ namespace Akka.Persistence.Azure.Snapshot
             var blob = Container.GetBlockBlobReference(metadata.ToSnapshotBlobId());
             using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
             {
-                await blob.DeleteIfExistsAsync(DeleteSnapshotsOption.None, AccessCondition.GenerateIfExistsCondition(),
+                await blob.DeleteIfExistsAsync(DeleteSnapshotsOption.None, AccessCondition.GenerateEmptyCondition(),
                     GenerateOptions(), new OperationContext(),
                     cts.Token);
             }
@@ -190,7 +194,7 @@ namespace Akka.Persistence.Azure.Snapshot
                 {
                     foreach (var blob in filtered)
                         deleteTasks.Add(blob.DeleteIfExistsAsync(DeleteSnapshotsOption.None,
-                            AccessCondition.GenerateIfExistsCondition(),
+                            AccessCondition.GenerateEmptyCondition(),
                             GenerateOptions(), new OperationContext(), cts.Token));
 
                     await Task.WhenAll(deleteTasks);
