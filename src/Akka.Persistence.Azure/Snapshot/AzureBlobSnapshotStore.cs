@@ -115,6 +115,7 @@ namespace Akka.Persistence.Azure.Snapshot
                         GenerateOptions(), new OperationContext(), cts.Token);
 
                     var snapshot = _serialization.SnapshotFromBytes(memoryStream.ToArray());
+
                     var returnValue =
                         new SelectedSnapshot(
                             new SnapshotMetadata(
