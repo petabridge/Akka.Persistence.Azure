@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-// <copyright file="AzureBlobStorageSpec.cs" company="Petabridge, LLC">
+// <copyright file="AzureBlobSnapshotStoreSpec.cs" company="Petabridge, LLC">
 //      Copyright (C) 2015 - 2018 Petabridge, LLC <https://petabridge.com>
 // </copyright>
 // -----------------------------------------------------------------------
@@ -10,14 +10,14 @@ using Akka.Persistence.Azure.TestHelpers;
 using Akka.Persistence.TCK.Snapshot;
 using Xunit;
 using Xunit.Abstractions;
-using static Akka.Persistence.Azure.Tests.AzureStorageConfigHelper;
+using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSnapshot")]
-    public class AzureBlobStorageSpec : SnapshotStoreSpec
+    public class AzureBlobSnapshotStoreSpec : SnapshotStoreSpec
     {
-        public AzureBlobStorageSpec(ITestOutputHelper output) : base(Config(),
+        public AzureBlobSnapshotStoreSpec(ITestOutputHelper output) : base(Config(),
             nameof(AzureTableJournalSpec), output)
         {
             AzurePersistence.Get(Sys);

@@ -4,13 +4,15 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
+using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Util;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
-namespace Akka.Persistence.Azure.Journal
+namespace Akka.Persistence.Azure.TableEntities
 {
     /// <summary>
     ///     INTERNAL API.
@@ -27,33 +29,47 @@ namespace Akka.Persistence.Azure.Journal
     /// </remarks>
     internal sealed class PersistentJournalEntry : ITableEntity
     {
-        private const string PayloadKeyName = "payload";
+        public const string TagsKeyName = "tags";
+        public const string UtcTicksKeyName = "utcTicks";
         private const string ManifestKeyName = "manifest";
+        private const string PayloadKeyName = "payload";
         private const string SeqNoKeyName = "seqno";
 
         public PersistentJournalEntry()
         {
         }
 
-        public PersistentJournalEntry(string persistentId, long seqNo, byte[] payload, string manifest)
+        public PersistentJournalEntry(
+            string persistentId,
+            long seqNo,
+            byte[] payload,
+            string manifest = "",
+            params string[] tags)
         {
             Payload = payload;
             Manifest = manifest;
-
+            Tags = tags ?? new string[]{};
             PartitionKey = persistentId;
             SeqNo = seqNo;
             RowKey = seqNo.ToJournalRowKey();
+            UtcTicks = DateTime.UtcNow.Ticks;
         }
+
+        public string ETag { get; set; }
 
         /// <summary>
         ///     The serialization manifest.
         /// </summary>
         public string Manifest { get; set; }
 
+        public string PartitionKey { get; set; }
+
         /// <summary>
         ///     The persistent payload
         /// </summary>
         public byte[] Payload { get; set; }
+
+        public string RowKey { get; set; }
 
         /// <summary>
         ///     The sequence number.
@@ -64,32 +80,49 @@ namespace Akka.Persistence.Azure.Journal
         /// </remarks>
         public long SeqNo { get; set; }
 
+        /// <summary>
+        ///     Tags associated with this entry, if any
+        /// </summary>
+        public string[] Tags { get; set; }
+
+        public DateTimeOffset Timestamp { get; set; }
+
+        /// <summary>
+        ///     Ticks of current UTC at the time the entry was created
+        /// </summary>
+        /// <remarks>
+        ///     Azure Table Storage does not index the Timestamp value so performing
+        ///     any query against it will be extremely slow
+        /// </remarks>
+        public long UtcTicks { get; set; }
+
         public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
-            if (properties.ContainsKey(ManifestKeyName))
-                Manifest = properties[ManifestKeyName].StringValue;
-            else
-                Manifest = string.Empty;
+            Manifest =
+                properties.ContainsKey(ManifestKeyName)
+                    ? properties[ManifestKeyName].StringValue
+                    : string.Empty;
 
             // an exception is fine here - means the data is corrupted anyway
             SeqNo = properties[SeqNoKeyName].Int64Value.Value;
             Payload = properties[PayloadKeyName].BinaryValue;
+            Tags = properties[TagsKeyName].StringValue.Split(new []{';'}, StringSplitOptions.RemoveEmptyEntries);
+            UtcTicks = properties[UtcTicksKeyName].Int64Value.Value;
         }
 
         public IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
         {
-            var dict = new Dictionary<string, EntityProperty>
-            {
-                [PayloadKeyName] = EntityProperty.GeneratePropertyForByteArray(Payload),
-                [ManifestKeyName] = EntityProperty.GeneratePropertyForString(Manifest),
-                [SeqNoKeyName] = EntityProperty.GeneratePropertyForLong(SeqNo)
-            };
+            var dict =
+                new Dictionary<string, EntityProperty>
+                {
+                    [PayloadKeyName] = EntityProperty.GeneratePropertyForByteArray(Payload),
+                    [ManifestKeyName] = EntityProperty.GeneratePropertyForString(Manifest),
+                    [SeqNoKeyName] = EntityProperty.GeneratePropertyForLong(SeqNo),
+                    [TagsKeyName] = EntityProperty.GeneratePropertyForString(string.Join(";", Tags)),
+                    [UtcTicksKeyName] = EntityProperty.GeneratePropertyForLong(UtcTicks)
+                };
+
             return dict;
         }
-
-        public string PartitionKey { get; set; }
-        public string RowKey { get; set; }
-        public DateTimeOffset Timestamp { get; set; }
-        public string ETag { get; set; }
     }
 }
