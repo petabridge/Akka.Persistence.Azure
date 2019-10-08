@@ -24,6 +24,12 @@ namespace Akka.Persistence.Azure.Tests
             output.WriteLine("Current table: {0}", TableName);
         }
 
+        [Fact(Skip= "https://github.com/akkadotnet/akka.net/issues/3965")]
+        public override void Journal_should_serialize_Persistent_with_EventAdapter_manifest()
+        {
+
+        }
+
         public static string TableName { get; private set; }
 
         public static Config Config()
