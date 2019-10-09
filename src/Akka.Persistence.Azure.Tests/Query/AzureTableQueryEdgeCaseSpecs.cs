@@ -20,7 +20,7 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Azure.Tests.Query
 {
     [Collection("AzureQuery")]
-    public class Bug61FixSpec : Akka.TestKit.Xunit2.TestKit
+    public class AzureTableQueryEdgeCaseSpecs : Akka.TestKit.Xunit2.TestKit
     {
         public static readonly AtomicCounter Counter = new AtomicCounter(0);
         private readonly ITestOutputHelper _output;
@@ -40,8 +40,8 @@ namespace Akka.Persistence.Azure.Tests.Query
 
         public const int MessageCount = 20;
 
-        public Bug61FixSpec(ITestOutputHelper output)
-            : base(Config(), nameof(Bug61FixSpec), output)
+        public AzureTableQueryEdgeCaseSpecs(ITestOutputHelper output)
+            : base(Config(), nameof(AzureTableQueryEdgeCaseSpecs), output)
         {
             _output = output;
             Materializer = Sys.Materializer();
