@@ -174,7 +174,7 @@ namespace Akka.Persistence.Azure.Query
         /// is completed immediately when it reaches the end of the "result set". Events that are
         /// stored after the query is completed are not included in the event stream.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset)
+        public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset = null)
         {
             offset = offset ?? new Sequence(0L);
             switch (offset)
