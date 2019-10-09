@@ -240,29 +240,32 @@ namespace Akka.Persistence.Azure.Journal
         protected override bool ReceivePluginInternal(
             object message)
         {
-            return message.Match()
-                .With<ReplayTaggedMessages>(replay =>
-                {
+            switch (message)
+            {
+                case ReplayTaggedMessages replay:
                     ReplayTaggedMessagesAsync(replay)
                         .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
-                })
-                .With<SubscribePersistenceId>(subscribe =>
-                {
+                    break;
+                case SubscribePersistenceId subscribe:
                     AddPersistenceIdSubscriber(Sender, subscribe.PersistenceId);
                     Context.Watch(Sender);
-                })
-                .With<SubscribeAllPersistenceIds>(subscribe =>
-                {
-                    AddAllPersistenceIdSubscriber(Sender).Wait();
+                    break;
+                case SubscribeAllPersistenceIds subscribe:
+                    AddAllPersistenceIdSubscriber(Sender);
                     Context.Watch(Sender);
-                })
-                .With<SubscribeTag>(subscribe =>
-                {
+                    break;
+                case SubscribeTag subscribe:
                     AddTagSubscriber(Sender, subscribe.Tag);
                     Context.Watch(Sender);
-                })
-                .With<Terminated>(terminated => RemoveSubscriber(terminated.ActorRef))
-                .WasHandled;
+                    break;
+                case Terminated terminated:
+                    RemoveSubscriber(terminated.ActorRef);
+                    break;
+                default:
+                    return false;
+            }
+
+            return true;
         }
 
         protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(
@@ -282,13 +285,13 @@ namespace Akka.Persistence.Azure.Journal
                     {
                         Debug.Assert(currentWrites.Current != null, "atomicWrites.Current != null");
 
-                        var list = currentWrites.Current.Payload.AsInstanceOf<IImmutableList<IPersistentRepresentation>>().ToArray();
+                        var list = currentWrites.Current.Payload.AsInstanceOf<IImmutableList<IPersistentRepresentation>>();
 
                         var batchItems = ImmutableList<ITableEntity>.Empty;
 
-                        for (var i = 0; i < list.Length; i++)
+                        foreach (var t in list)
                         {
-                            var item = list[i];
+                            var item = t;
 
                             Debug.Assert(item != null, nameof(item) + " != null");
 
@@ -307,32 +310,6 @@ namespace Akka.Persistence.Azure.Journal
                                 {
                                     tags = tagged.Tags.ToArray();
 
-                                    //foreach (var tag in tags)
-                                    //{
-                                    //    if (!taggedEntries.ContainsKey(tag))
-                                    //    {
-                                    //        taggedEntries = taggedEntries.SetItem(tag, new List<EventTagEntry>());
-                                    //    }
-
-                                    //    taggedEntries[tag].Add(
-                                    //        new EventTagEntry(
-                                    //            item.PersistenceId,
-                                    //            tag,
-                                    //            item.SequenceNr,
-                                    //            payloadBytes,
-                                    //            item.Manifest));
-                                    //}
-
-                                    //taggedEntries =
-                                    //    taggedEntries.AddRange(
-                                    //        tagged.Tags.Select(
-                                    //            x =>
-                                    //                new EventTagEntry(
-                                    //                    item.PersistenceId,
-                                    //                    x,
-                                    //                    item.SequenceNr,
-                                    //                    payloadBytes,
-                                    //                    item.Manifest)));
                                 }
                             }
 
@@ -421,27 +398,11 @@ namespace Akka.Persistence.Azure.Journal
 
                     if (taggedEntries.Count > 0)
                     {
-                        //var groupTags = ImmutableDictionary<string, List<EventTagEntry>>.Empty;
-
-                        //taggedEntries.ForEach(
-                        //    x =>
-                        //    {
-                        //        if (!groupTags.ContainsKey(x.IdxTag))
-                        //        {
-                        //            groupTags.SetItem(x.IdxTag, new List<EventTagEntry>());
-                        //        }
-
-                        //        groupTags[x.IdxTag].Add(x);
-                        //    });
-
                         var eventTagsBatch = new TableBatchOperation();
 
                         foreach (var kvp in taggedEntries)
                         {
                             eventTagsBatch.Clear();
-
-                            //taggedItem.Value.ForEach(
-                            //    x => eventTagsBatch.InsertOrReplace(x));
 
                             foreach (var item in kvp.Value)
                             {
@@ -456,8 +417,6 @@ namespace Akka.Persistence.Azure.Journal
 
                             if (HasTagSubscribers && taggedEntries.Count != 0)
                             {
-                                //var tags = taggedEntries.Select(x => x.IdxTag).Distinct().ToArray();
-
                                 foreach (var tag in taggedEntries.Keys)
                                 {
                                     NotifyTagChange(tag);
@@ -552,8 +511,6 @@ namespace Akka.Persistence.Azure.Journal
                     TableOperators.And,
                     rowKeyFilter);
 
-            //var returnValue = new TableQuery().Where(filter).Select(new[] { "RowKey" });
-
             var returnValue = new TableQuery<PersistentJournalEntry>().Where(filter);
 
             return returnValue;
@@ -605,8 +562,6 @@ namespace Akka.Persistence.Azure.Journal
                     partitionKeyFilter,
                     TableOperators.And,
                     idxRowKeyFilter);
-
-            //var returnValue = new TableQuery().Where(filter).Select(new[] { "RowKey" });
 
             var returnValue = new TableQuery<EventTagEntry>().Where(filter);
 
@@ -665,65 +620,6 @@ namespace Akka.Persistence.Azure.Journal
             return returnValue;
         }
 
-        //private static TableQuery<EventTagEntry> GenerateTaggedMessageQuery(
-        //    ReplayTaggedMessages replay)
-        //{
-        //    var partitionKeyFilter =
-        //        TableQuery.GenerateFilterCondition(
-        //            "PartitionKey",
-        //            QueryComparisons.Equal,
-        //            EventTagEntry.PartitionKeyValue);
-
-        //    var highestSequenceNrFilter =
-        //        TableQuery.GenerateFilterCondition(
-        //            "RowKey",
-        //            QueryComparisons.NotEqual,
-        //            HighestSequenceNrEntry.RowKeyValue);
-
-        //    var tagRangeFilter =
-        //        TableQuery.CombineFilters(
-        //            TableQuery.GenerateFilterCondition(
-        //                "RowKey",
-        //                QueryComparisons.GreaterThanOrEqual,
-        //                $"{replay.Tag}{EventTagEntry.Delimiter}"),
-        //            TableOperators.And,
-        //            TableQuery.GenerateFilterCondition(
-        //                "RowKey",
-        //                QueryComparisons.LessThan,
-        //                $"{replay.Tag}{EventTagEntry.AsciiIncrementedDelimiter}"));
-
-        //    var rowKeyFilter =
-        //        TableQuery.CombineFilters(
-        //            highestSequenceNrFilter,
-        //            TableOperators.And,
-        //            tagRangeFilter);
-
-        //    var utcTicksRangeFilter =
-        //        TableQuery.CombineFilters(
-        //            TableQuery.GenerateFilterConditionForLong(
-        //                EventTagEntry.UtcTicksKeyName,
-        //                QueryComparisons.GreaterThan,
-        //                replay.FromOffset),
-        //            TableOperators.And,
-        //            TableQuery.GenerateFilterConditionForLong(
-        //                EventTagEntry.UtcTicksKeyName,
-        //                QueryComparisons.LessThanOrEqual,
-        //                replay.ToOffset));
-
-        //    var filter =
-        //        TableQuery.CombineFilters(
-        //            TableQuery.CombineFilters(
-        //                partitionKeyFilter,
-        //                TableOperators.And,
-        //                rowKeyFilter),
-        //            TableOperators.And,
-        //            utcTicksRangeFilter);
-
-        //    var returnValue = new TableQuery<EventTagEntry>().Where(filter);
-
-        //    return returnValue;
-        //}
-
         private static TableQuery<EventTagEntry> GenerateTaggedMessageQuery(
             ReplayTaggedMessages replay)
         {
@@ -732,24 +628,6 @@ namespace Akka.Persistence.Azure.Journal
                     "PartitionKey",
                     QueryComparisons.Equal,
                     EventTagEntry.GetPartitionKey(replay.Tag));
-
-            //var highestSequenceNrFilter =
-            //    TableQuery.GenerateFilterCondition(
-            //        "RowKey",
-            //        QueryComparisons.NotEqual,
-            //        HighestSequenceNrEntry.RowKeyValue);
-
-            //var tagRangeFilter =
-            //    TableQuery.CombineFilters(
-            //        TableQuery.GenerateFilterCondition(
-            //            "RowKey",
-            //            QueryComparisons.GreaterThanOrEqual,
-            //            $"{replay.Tag}{EventTagEntry.Delimiter}"),
-            //        TableOperators.And,
-            //        TableQuery.GenerateFilterCondition(
-            //            "RowKey",
-            //            QueryComparisons.LessThan,
-            //            $"{replay.Tag}{EventTagEntry.AsciiIncrementedDelimiter}"));
 
             var utcTicksTRowKeyFilter =
                 TableQuery.CombineFilters(
@@ -768,15 +646,6 @@ namespace Akka.Persistence.Azure.Journal
                     partitionKeyFilter,
                     TableOperators.And,
                     utcTicksTRowKeyFilter);
-            
-            //var filter =
-            //    TableQuery.CombineFilters(
-            //        TableQuery.CombineFilters(
-            //            partitionKeyFilter,
-            //            TableOperators.And,
-            //            rowKeyFilter),
-            //        TableOperators.And,
-            //        utcTicksRangeFilter);
 
             var returnValue = new TableQuery<EventTagEntry>().Where(filter);
 
