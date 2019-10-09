@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using Akka.Persistence.Azure.Util;
 using FluentAssertions;
 using Xunit;
 
-namespace Akka.Persistence.Azure.Tests.Util
+namespace Akka.Persistence.Azure.Tests
 {
     public class SeqNoHelperSpecs
     {

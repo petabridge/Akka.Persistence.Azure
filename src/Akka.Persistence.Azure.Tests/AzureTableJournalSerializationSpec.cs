@@ -1,30 +1,33 @@
 // -----------------------------------------------------------------------
-// <copyright file="AzureTableJournalSpec.cs" company="Petabridge, LLC">
-//      Copyright (C) 2015 - 2018 Petabridge, LLC <https://petabridge.com>
+// <copyright file="AzureTableJournalSerializationSpec.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2019 Petabridge, LLC <https://petabridge.com>
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using Akka.Configuration;
 using Akka.Persistence.Azure.TestHelpers;
-using Akka.Persistence.TCK.Journal;
-using System;
+using Akka.Persistence.Azure.Tests.Helper;
+using Akka.Persistence.TCK.Serialization;
 using Xunit;
 using Xunit.Abstractions;
-using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureJournal")]
-    public class AzureTableJournalSpec : JournalSpec
+    public class AzureTableJournalSerializationSpec : JournalSerializationSpec
     {
-        public AzureTableJournalSpec(ITestOutputHelper output)
-            : base(Config(), nameof(AzureTableJournalSpec), output)
+        public AzureTableJournalSerializationSpec(ITestOutputHelper output)
+            : base(Config(), nameof(AzureTableJournalSerializationSpec), output)
         {
             AzurePersistence.Get(Sys);
-
-            Initialize();
-
             output.WriteLine("Current table: {0}", TableName);
+        }
+
+        [Fact(Skip= "https://github.com/akkadotnet/akka.net/issues/3965")]
+        public override void Journal_should_serialize_Persistent_with_EventAdapter_manifest()
+        {
+
         }
 
         public static string TableName { get; private set; }
@@ -33,8 +36,8 @@ namespace Akka.Persistence.Azure.Tests
         {
             var azureConfig =
                 !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    ? AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    : AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+                    ? AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
+                    : AzureStorageConfigHelper.AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
 
             TableName = azureConfig.GetString("akka.persistence.journal.azure-table.table-name");
 

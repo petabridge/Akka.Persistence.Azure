@@ -19,8 +19,12 @@ namespace Akka.Persistence.Azure.Journal
 
         private static readonly string[] ReservedTableNames = {"tables"};
         
-        public AzureTableStorageJournalSettings(string connectionString, string tableName, TimeSpan connectTimeout,
-            TimeSpan requestTimeout, bool verboseLogging)
+        public AzureTableStorageJournalSettings(
+            string connectionString, 
+            string tableName, 
+            TimeSpan connectTimeout,
+            TimeSpan requestTimeout, 
+            bool verboseLogging)
         {
             NameValidator.ValidateTableName(tableName);
             
@@ -75,7 +79,12 @@ namespace Akka.Persistence.Azure.Journal
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
-            return new AzureTableStorageJournalSettings(connectionString, tableName, connectTimeout, requestTimeout,
+
+            return new AzureTableStorageJournalSettings(
+                connectionString, 
+                tableName, 
+                connectTimeout, 
+                requestTimeout,
                 verbose);
         }
     }
