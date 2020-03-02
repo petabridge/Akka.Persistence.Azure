@@ -16,6 +16,6 @@ There are still some issues with respect to ordering and result sets from Akka.P
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.3.0</XunitVersion>
-    <TestSdkVersion>16.4.0</TestSdkVersion>
+    <TestSdkVersion>16.5.0</TestSdkVersion>
   </PropertyGroup>
 </Project>
