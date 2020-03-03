@@ -1,8 +1,6 @@
 # Akka.Persistence.Azure
 
-**Currently not released**
-
-We're still in the process of developing a high-throughput journal and snapshot store system around Azure Table and Blob storage. We expect this to be released soon, however.
+Akka.Persistence implementation that uses Windows Azure table and blob storage.
 
 ## Building this solution
 To run the build script associated with this solution, execute the following:

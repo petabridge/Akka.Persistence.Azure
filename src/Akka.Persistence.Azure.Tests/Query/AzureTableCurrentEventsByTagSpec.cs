@@ -6,6 +6,7 @@ using Akka.Persistence.Azure.TestHelpers;
 using Akka.Persistence.Azure.Tests.Helper;
 using Akka.Persistence.Query;
 using Akka.Persistence.TCK.Query;
+using Hocon;
 using Xunit;
 using Xunit.Abstractions;
 
