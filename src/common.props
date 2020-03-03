@@ -2,8 +2,10 @@
   <PropertyGroup>
     <Copyright>Copyright © 2017 Your Company</Copyright>
     <Authors>Your Authors</Authors>
-    <VersionPrefix>0.5.0</VersionPrefix>
+    <VersionPrefix>0.6.0</VersionPrefix>
     <PackageReleaseNotes>Beta Release of Akka.Persistence.Azure**
+Upgraded Akka.Persistence.Azure v0.5.0 to target [the new Akka.NET v1.4 interfaces](https://getakka.net/community/whats-new/akkadotnet-v1.4.html).
+----
 Akka.Persistence.Azure v0.5.0 is a major leap forward ahead of v0.1.0. It fully implements Akka.Persistence.Query and fully implements Akka.NET v1.4.0-compatible serialization techniques.
 There are still some issues with respect to ordering and result sets from Akka.Persistence.Query and those will be addressed in a future release of Akka.Persistence.Azure.</PackageReleaseNotes>
     <PackageIconUrl>
@@ -16,13 +18,13 @@ There are still some issues with respect to ordering and result sets from Akka.P
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.4.1</XunitVersion>
-    <AkkaVersion>1.3.17</AkkaVersion>
+    <AkkaVersion>1.4.1-rc1</AkkaVersion>
     <TestSdkVersion>16.5.0</TestSdkVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
   </PropertyGroup>
-   <PropertyGroup>
+  <PropertyGroup>
     <!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <!-- Optional: Embed source files that are not tracked by the source control manager in the PDB -->

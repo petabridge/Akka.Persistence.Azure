@@ -14,6 +14,7 @@ using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Util.Internal;
 using FluentAssertions;
+using Hocon;
 using Xunit;
 using Xunit.Abstractions;
 

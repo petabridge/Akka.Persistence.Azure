@@ -9,6 +9,7 @@ using Akka.Persistence.Journal;
 using Akka.Persistence.Query;
 using Akka.Persistence.TCK.Query;
 using Akka.Streams.TestKit;
+using Hocon;
 using Xunit;
 using Xunit.Abstractions;
 
