@@ -2,9 +2,11 @@
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Query.Publishers;
+using Akka.Persistence.Journal;
 using Akka.Persistence.Query;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
+using Hocon;
 
 namespace Akka.Persistence.Azure.Query
 {
