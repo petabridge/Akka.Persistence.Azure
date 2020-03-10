@@ -8,7 +8,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Snapshot;
-using Hocon;
 
 namespace Akka.Persistence.Azure
 {

@@ -6,7 +6,6 @@
 
 using System;
 using Akka.Configuration;
-using Hocon;
 using Microsoft.WindowsAzure.Storage;
 
 namespace Akka.Persistence.Azure.Snapshot
