@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
-    <Copyright>Copyright © 2017 Your Company</Copyright>
-    <Authors>Your Authors</Authors>
+    <Copyright>Copyright © 2017-2020 Petabridge</Copyright>
+    <Authors>Petabridge</Authors>
     <VersionPrefix>0.6.0</VersionPrefix>
     <PackageReleaseNotes>Beta Release of Akka.Persistence.Azure**
 Upgraded Akka.Persistence.Azure v0.5.0 to target [the new Akka.NET v1.4 interfaces](https://getakka.net/community/whats-new/akkadotnet-v1.4.html).
@@ -18,7 +18,7 @@ There are still some issues with respect to ordering and result sets from Akka.P
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.4.1</XunitVersion>
-    <AkkaVersion>1.4.1-rc1</AkkaVersion>
+    <AkkaVersion>1.4.1-rc3</AkkaVersion>
     <TestSdkVersion>16.5.0</TestSdkVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>

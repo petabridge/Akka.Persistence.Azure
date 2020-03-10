@@ -9,7 +9,6 @@ using Akka.Configuration;
 using Akka.Persistence.Azure.TestHelpers;
 using Akka.Persistence.Azure.Tests.Helper;
 using Akka.Persistence.TCK.Serialization;
-using Hocon;
 using Xunit;
 using Xunit.Abstractions;
 

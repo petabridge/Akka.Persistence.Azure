@@ -4,7 +4,6 @@ using Akka.Persistence.Azure.TestHelpers;
 using Akka.Persistence.Query;
 using Akka.Persistence.TCK.Query;
 using System;
-using Hocon;
 using Xunit;
 using Xunit.Abstractions;
 using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
