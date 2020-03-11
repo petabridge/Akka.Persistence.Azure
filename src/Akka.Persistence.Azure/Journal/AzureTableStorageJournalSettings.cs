@@ -7,7 +7,6 @@
 using System;
 using System.Linq;
 using Akka.Configuration;
-using Hocon;
 using Microsoft.WindowsAzure.Storage;
 
 namespace Akka.Persistence.Azure.Journal

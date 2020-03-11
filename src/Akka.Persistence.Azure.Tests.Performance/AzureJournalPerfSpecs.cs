@@ -13,7 +13,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.TestHelpers;
 using Akka.Util.Internal;
-using Hocon;
 using NBench;
 
 namespace Akka.Persistence.Azure.Tests.Performance

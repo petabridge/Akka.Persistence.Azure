@@ -1,6 +1,5 @@
 ﻿using System;
 using Akka.Configuration;
-using Hocon;
 
 namespace Akka.Persistence.Azure.Tests.Helper
 {
