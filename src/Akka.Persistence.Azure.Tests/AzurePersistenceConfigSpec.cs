@@ -53,7 +53,7 @@ namespace Akka.Persistence.Azure.Tests
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.snapshot-store.azure-blob-store"));
 
-            blobSettings.ContainerName.Should().Be(AzureBlobSnapshotStoreSettings.DefaultContainerName);
+            blobSettings.ContainerName.Should().Be("akka-persistence-default-container");
         }
 
         [Fact]
@@ -83,7 +83,7 @@ namespace Akka.Persistence.Azure.Tests
                         connection-string = foo
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.journal.azure-table"));
-            tableSettings.TableName.Should().Be(AzureTableStorageJournalSettings.DefaultTableName);
+            tableSettings.TableName.Should().Be("AkkaPersistenceDefaultTable");
         }
 
         [Fact]
