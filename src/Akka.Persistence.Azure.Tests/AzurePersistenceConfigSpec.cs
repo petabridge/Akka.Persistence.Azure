@@ -42,6 +42,19 @@ namespace Akka.Persistence.Azure.Tests
             blobSettings.RequestTimeout.Should().Be(TimeSpan.FromSeconds(3));
             blobSettings.VerboseLogging.Should().BeFalse();
         }
+        
+        [Fact]
+        public void ShouldProvideDefaultContainerNameValue()
+        {
+            var blobSettings =
+                AzureBlobSnapshotStoreSettings.Create(
+                    ConfigurationFactory.ParseString(@"akka.persistence.snapshot-store.azure-blob-store{
+                        connection-string = foo
+                    }").WithFallback(AzurePersistence.DefaultConfig)
+                        .GetConfig("akka.persistence.snapshot-store.azure-blob-store"));
+
+            blobSettings.ContainerName.Should().Be("akka-persistence-default-container");
+        }
 
         [Fact]
         public void ShouldParseTableConfig()
@@ -59,6 +72,18 @@ namespace Akka.Persistence.Azure.Tests
             tableSettings.ConnectTimeout.Should().Be(TimeSpan.FromSeconds(3));
             tableSettings.RequestTimeout.Should().Be(TimeSpan.FromSeconds(3));
             tableSettings.VerboseLogging.Should().BeFalse();
+        }
+
+        [Fact]
+        public void ShouldProvideDefaultTableNameValue()
+        {
+            var tableSettings =
+                AzureTableStorageJournalSettings.Create(
+                    ConfigurationFactory.ParseString(@"akka.persistence.journal.azure-table{
+                        connection-string = foo
+                    }").WithFallback(AzurePersistence.DefaultConfig)
+                        .GetConfig("akka.persistence.journal.azure-table"));
+            tableSettings.TableName.Should().Be("AkkaPersistenceDefaultTable");
         }
 
         [Fact]

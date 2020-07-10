@@ -61,11 +61,15 @@ namespace Akka.Persistence.Azure.Snapshot
         public static AzureBlobSnapshotStoreSettings Create(Config config)
         {
             var connectionString = config.GetString("connection-string");
-            var containerName = config.GetString("container-name");
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
-            return new AzureBlobSnapshotStoreSettings(connectionString, containerName, connectTimeout, requestTimeout,
+            var containerName = config.GetString("container-name");
+            return new AzureBlobSnapshotStoreSettings(
+                connectionString, 
+                containerName, 
+                connectTimeout, 
+                requestTimeout, 
                 verbose);
         }
     }
