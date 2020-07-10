@@ -359,6 +359,11 @@ namespace Akka.Persistence.Azure.Journal
                                 x => batchItems = batchItems.Add(
                                     new HighestSequenceNrEntry(x.Key, x.Value)));
 
+                            foreach (var tableEntity in batchItems)
+                            {
+                                
+                            }
+                            
                             batchItems.ForEach(x => persistenceBatch.InsertOrReplace(x));
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
