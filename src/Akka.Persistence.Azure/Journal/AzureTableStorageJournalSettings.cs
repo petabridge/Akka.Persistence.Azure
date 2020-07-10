@@ -16,7 +16,6 @@ namespace Akka.Persistence.Azure.Journal
     /// </summary>
     public sealed class AzureTableStorageJournalSettings
     {
-
         private static readonly string[] ReservedTableNames = {"tables"};
         
         public AzureTableStorageJournalSettings(
@@ -79,7 +78,6 @@ namespace Akka.Persistence.Azure.Journal
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
-
             return new AzureTableStorageJournalSettings(
                 connectionString, 
                 tableName, 
