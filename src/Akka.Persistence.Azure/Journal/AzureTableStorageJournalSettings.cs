@@ -16,11 +16,6 @@ namespace Akka.Persistence.Azure.Journal
     /// </summary>
     public sealed class AzureTableStorageJournalSettings
     {
-        /// <summary>
-        /// Name of the table used as a fallback configuration value
-        /// </summary>
-        public const string DefaultTableName = "AkkaPersistenceDefaultTable";
-
         private static readonly string[] ReservedTableNames = {"tables"};
         
         public AzureTableStorageJournalSettings(
@@ -79,15 +74,10 @@ namespace Akka.Persistence.Azure.Journal
         public static AzureTableStorageJournalSettings Create(Config config)
         {
             var connectionString = config.GetString("connection-string");
-            var tableName = config.GetString("table-name", DefaultTableName);
+            var tableName = config.GetString("table-name");
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
-            
-            // When value is not overriden after default config, still may have null/"" here
-            if (string.IsNullOrWhiteSpace(tableName))
-                tableName = DefaultTableName;
-
             return new AzureTableStorageJournalSettings(
                 connectionString, 
                 tableName, 
