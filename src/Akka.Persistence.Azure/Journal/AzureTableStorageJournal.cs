@@ -162,7 +162,7 @@ namespace Akka.Persistence.Azure.Journal
                         new Persistent(
                             deserialized.Payload,
                             deserialized.SequenceNr,
-                            deserialized.PersistenceId,
+                            PartitionKeyEscapeHelper.Unescape(deserialized.PersistenceId),
                             deserialized.Manifest,
                             deserialized.IsDeleted,
                             ActorRefs.NoSender,
@@ -359,9 +359,10 @@ namespace Akka.Persistence.Azure.Journal
                                 x => batchItems = batchItems.Add(
                                     new HighestSequenceNrEntry(x.Key, x.Value)));
 
+                            // Encode partition keys for writing
                             foreach (var tableEntity in batchItems)
                             {
-                                
+                                tableEntity.PartitionKey = PartitionKeyEscapeHelper.Escape(tableEntity.PartitionKey);
                             }
                             
                             batchItems.ForEach(x => persistenceBatch.InsertOrReplace(x));
@@ -386,9 +387,11 @@ namespace Akka.Persistence.Azure.Journal
                 {
                     var allPersistenceIdsBatch = new TableBatchOperation();
 
-                    highSequenceNumbers.ForEach(
-                        x => allPersistenceIdsBatch.InsertOrReplace(
-                            new AllPersistenceIdsEntry(x.Key)));
+                    highSequenceNumbers.ForEach(x =>
+                    {
+                        var encodedKey = PartitionKeyEscapeHelper.Escape(x.Key);
+                        allPersistenceIdsBatch.InsertOrReplace(new AllPersistenceIdsEntry(encodedKey));
+                    });
 
                     var allPersistenceResults = await Table.ExecuteBatchAsync(allPersistenceIdsBatch);
 
@@ -411,6 +414,7 @@ namespace Akka.Persistence.Azure.Journal
 
                             foreach (var item in kvp.Value)
                             {
+                                item.PartitionKey = PartitionKeyEscapeHelper.Escape(item.PartitionKey);
                                 eventTagsBatch.InsertOrReplace(item);
                             }
 
@@ -469,7 +473,7 @@ namespace Akka.Persistence.Azure.Journal
                     TableQuery.GenerateFilterCondition(
                         "PartitionKey",
                         QueryComparisons.Equal,
-                        persistenceId),
+                        PartitionKeyEscapeHelper.Escape(persistenceId)),
                     TableOperators.And,
                     TableQuery.GenerateFilterCondition(
                         "RowKey",
@@ -490,7 +494,7 @@ namespace Akka.Persistence.Azure.Journal
                 TableQuery.GenerateFilterCondition(
                     "PartitionKey",
                     QueryComparisons.Equal,
-                    persistenceId);
+                    PartitionKeyEscapeHelper.Escape(persistenceId));
 
             var highestSequenceNrFilter =
                 TableQuery.GenerateFilterCondition(
@@ -582,7 +586,7 @@ namespace Akka.Persistence.Azure.Journal
                 TableQuery.GenerateFilterCondition(
                     "PartitionKey",
                     QueryComparisons.Equal,
-                    persistentId);
+                    PartitionKeyEscapeHelper.Escape(persistentId));
 
             var highestSequenceNrFilter =
                 TableQuery.GenerateFilterCondition(
@@ -632,7 +636,7 @@ namespace Akka.Persistence.Azure.Journal
                 TableQuery.GenerateFilterCondition(
                     "PartitionKey",
                     QueryComparisons.Equal,
-                    EventTagEntry.GetPartitionKey(replay.Tag));
+                    PartitionKeyEscapeHelper.Escape(EventTagEntry.GetPartitionKey(replay.Tag)));
 
             var utcTicksTRowKeyFilter =
                 TableQuery.CombineFilters(
