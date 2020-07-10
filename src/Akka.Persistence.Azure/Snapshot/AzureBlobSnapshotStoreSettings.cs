@@ -19,7 +19,7 @@ namespace Akka.Persistence.Azure.Snapshot
         /// <summary>
         /// Container name used as a fallback configuration value
         /// </summary>
-        public const string DefaultContainerName = "AkkaPersistenceDefaultContainer";
+        public const string DefaultContainerName = "akka-persistence-default-container";
         
         public AzureBlobSnapshotStoreSettings(string connectionString, string containerName,
             TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging)
@@ -66,10 +66,15 @@ namespace Akka.Persistence.Azure.Snapshot
         public static AzureBlobSnapshotStoreSettings Create(Config config)
         {
             var connectionString = config.GetString("connection-string");
-            var containerName = config.GetString("container-name", DefaultContainerName);
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
+            var containerName = config.GetString("container-name", DefaultContainerName);
+            
+            // When value is not overriden after default config, still may have null/"" here
+            if (string.IsNullOrWhiteSpace(containerName))
+                containerName = DefaultContainerName;
+            
             return new AzureBlobSnapshotStoreSettings(
                 connectionString, 
                 containerName, 

@@ -83,6 +83,10 @@ namespace Akka.Persistence.Azure.Journal
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
+            
+            // When value is not overriden after default config, still may have null/"" here
+            if (string.IsNullOrWhiteSpace(tableName))
+                tableName = DefaultTableName;
 
             return new AzureTableStorageJournalSettings(
                 connectionString, 
