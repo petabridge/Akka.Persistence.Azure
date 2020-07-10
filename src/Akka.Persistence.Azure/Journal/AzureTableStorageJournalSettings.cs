@@ -75,7 +75,7 @@ namespace Akka.Persistence.Azure.Journal
         public static AzureTableStorageJournalSettings Create(Config config)
         {
             var connectionString = config.GetString("connection-string");
-            var tableName = config.GetString("table-name");
+            var tableName = config.GetString("table-name", "AkkaPersistenceDefaultTable");
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
