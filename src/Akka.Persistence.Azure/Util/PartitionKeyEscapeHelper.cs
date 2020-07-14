@@ -27,6 +27,8 @@ namespace Akka.Persistence.Azure.Util
         /// <returns>Escaped partition key</returns>
         public static string Escape(string partitionKey)
         {
+            return partitionKey;
+            
             var escapedKey = partitionKey;
             // First, replate escape sequence in case if it is used in original key
             escapedKey = escapedKey.Replace(EscapeSequence, EscapeSequence + EscapeSequence);
@@ -43,6 +45,8 @@ namespace Akka.Persistence.Azure.Util
         /// <returns>Original, unescaped partition key</returns>
         public static string Unescape(string escapedKey)
         {
+            return escapedKey;
+            
             var originalKey = escapedKey;
             var uuid = Guid.NewGuid().ToString("N");
             // Do not touch duplicated escape sequence - we will replace them later
