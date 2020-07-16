@@ -61,25 +61,6 @@ namespace Akka.Persistence.Azure.Tests
             tableSettings.VerboseLogging.Should().BeFalse();
         }
 
-        [Fact]
-        public void ShouldParseQueryConfig()
-        {
-            var querySettings =
-                AzureTableStorageQuerySettings.Create(
-                    ConfigurationFactory.ParseString(@"akka.persistence.query.journal.azure-table{
-                        class = ""classname""
-                        write-plugin = foo
-                        max-buffer-size = 100
-                        refresh-interval = 3s
-                    }").WithFallback(AzurePersistence.DefaultConfig)
-                        .GetConfig("akka.persistence.query.journal.azure-table"));
-
-            querySettings.Class.Should().Be("classname");
-            querySettings.WritePlugin.Should().Be("foo");
-            querySettings.MaxBufferSize.Should().Be("100");
-            querySettings.RefreshInterval.Should().Be(new TimeSpan(0, 0, 3));
-        }
-
         [Theory]
         [InlineData("fo", "Invalid table name length")]
         [InlineData("1foo", "Invalid table name")]
