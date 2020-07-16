@@ -36,8 +36,10 @@ namespace Akka.Persistence.Azure.Snapshot
         {
             _settings = AzurePersistence.Get(Context.System).BlobSettings;
             _serialization = new SerializationHelper(Context.System);
-            _storageAccount = CloudStorageAccount.Parse(_settings.ConnectionString);
 
+            _storageAccount = _settings.Development ? 
+                CloudStorageAccount.DevelopmentStorageAccount : 
+                CloudStorageAccount.Parse(_settings.ConnectionString);
             _container = new Lazy<CloudBlobContainer>(() => InitCloudStorage().Result);
         }
 

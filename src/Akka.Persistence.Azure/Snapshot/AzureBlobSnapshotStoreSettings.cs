@@ -17,14 +17,18 @@ namespace Akka.Persistence.Azure.Snapshot
     public sealed class AzureBlobSnapshotStoreSettings
     {
         public AzureBlobSnapshotStoreSettings(string connectionString, string containerName,
-            TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging)
+            TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging, bool development)
         {
+            if (string.IsNullOrWhiteSpace(containerName))
+                throw new ConfigurationException("[AzureBlobSnapshotStore] Container name is null or empty.");
+
             NameValidator.ValidateContainerName(containerName);
             ConnectionString = connectionString;
             ContainerName = containerName;
             RequestTimeout = requestTimeout;
             ConnectTimeout = connectTimeout;
             VerboseLogging = verboseLogging;
+            Development = development;
         }
 
         /// <summary>
@@ -52,6 +56,8 @@ namespace Akka.Persistence.Azure.Snapshot
         /// </summary>
         public bool VerboseLogging { get; }
 
+        public bool Development { get; }
+
         /// <summary>
         ///     Creates an <see cref="AzureBlobSnapshotStoreSettings" /> instance using the
         ///     `akka.persistence.snapshot-store.azure-blob-store` HOCON configuration section.
@@ -65,8 +71,15 @@ namespace Akka.Persistence.Azure.Snapshot
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
-            return new AzureBlobSnapshotStoreSettings(connectionString, containerName, connectTimeout, requestTimeout,
-                verbose);
+            var development = config.GetBoolean("development", false);
+
+            return new AzureBlobSnapshotStoreSettings(
+                connectionString, 
+                containerName, 
+                connectTimeout, 
+                requestTimeout,
+                verbose,
+                development);
         }
     }
 }

@@ -24,8 +24,12 @@ namespace Akka.Persistence.Azure.Journal
             string tableName, 
             TimeSpan connectTimeout,
             TimeSpan requestTimeout, 
-            bool verboseLogging)
+            bool verboseLogging,
+            bool development)
         {
+            if(string.IsNullOrWhiteSpace(tableName))
+                throw new ConfigurationException("[AzureTableStorageJournal] Table name is null or empty.");
+
             NameValidator.ValidateTableName(tableName);
             
             if (ReservedTableNames.Contains(tableName))
@@ -39,6 +43,7 @@ namespace Akka.Persistence.Azure.Journal
             ConnectTimeout = connectTimeout;
             RequestTimeout = requestTimeout;
             VerboseLogging = verboseLogging;
+            Development = development;
         }
 
         /// <summary>
@@ -66,6 +71,8 @@ namespace Akka.Persistence.Azure.Journal
         /// </summary>
         public bool VerboseLogging { get; }
 
+        public bool Development { get; }
+
         /// <summary>
         ///     Creates an <see cref="AzureTableStorageJournalSettings" /> instance using the
         ///     `akka.persistence.journal.azure-table` HOCON configuration section.
@@ -79,13 +86,15 @@ namespace Akka.Persistence.Azure.Journal
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
+            var development = config.GetBoolean("development", false);
 
             return new AzureTableStorageJournalSettings(
                 connectionString, 
                 tableName, 
                 connectTimeout, 
                 requestTimeout,
-                verbose);
+                verbose,
+                development);
         }
     }
 }

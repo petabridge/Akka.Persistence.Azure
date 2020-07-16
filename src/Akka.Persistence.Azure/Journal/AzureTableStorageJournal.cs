@@ -58,7 +58,10 @@ namespace Akka.Persistence.Azure.Journal
         {
             _settings = AzurePersistence.Get(Context.System).TableSettings;
             _serialization = new SerializationHelper(Context.System);
-            _storageAccount = CloudStorageAccount.Parse(_settings.ConnectionString);
+            _storageAccount = _settings.Development ?
+                CloudStorageAccount.DevelopmentStorageAccount : 
+                CloudStorageAccount.Parse(_settings.ConnectionString);
+
             _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage(5).Result);
         }
 
