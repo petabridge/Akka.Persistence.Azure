@@ -16,7 +16,6 @@ namespace Akka.Persistence.Azure.Journal
     /// </summary>
     public sealed class AzureTableStorageJournalSettings
     {
-
         private static readonly string[] ReservedTableNames = {"tables"};
         
         public AzureTableStorageJournalSettings(

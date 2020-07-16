@@ -2,6 +2,25 @@
 
 Akka.Persistence implementation that uses Windows Azure table and blob storage.
 
+## Configuration
+
+Here is a default configuration used by this plugin: https://github.com/petabridge/Akka.Persistence.Azure/blob/dev/src/Akka.Persistence.Azure/reference.conf
+
+You will need to provide connection string and Azure Table name for journal, and connection string with container name for Azure Blob Store:
+```
+# Need to enable plugin
+akka.persistence.journal.plugin = akka.persistence.journal.azure-table
+akka.persistence.snapshot-store.plugin = akka.persistence.snapshot-store.azure-blob-store
+
+# Configure journal
+akka.persistence.journal.azure-table.connection-string = "Your Azure Storage connection string"
+akka.persistence.journal.azure-table.table-name = "Your table name"
+
+# Configure snapshots
+akka.persistence.snapshot-store.azure-blob-store.connection-string = "Your Azure Storage connection string"
+akka.persistence.snapshot-store.azure-blob-store.container-name = "Your container name"
+```
+
 ## Building this solution
 To run the build script associated with this solution, execute the following:
 
