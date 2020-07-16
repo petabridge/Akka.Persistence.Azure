@@ -1,3 +1,10 @@
+#### 0.7.0 July 16 2020 ####
+**Release of Akka.Persistence.Azure**
+
+- Fix: Akka.Cluster.Sharding support (see https://github.com/petabridge/Akka.Persistence.Azure/issues/108)
+- Add: Azure Storage Emulator support for local development environment
+- Default configuration and documentation improvements
+
 #### 0.6.1 July 10 2020 ####
 **Release of Akka.Persistence.Azure**
 
