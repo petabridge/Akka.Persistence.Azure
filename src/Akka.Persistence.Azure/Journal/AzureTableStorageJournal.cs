@@ -19,6 +19,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Configuration;
 using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Persistence.Azure.Journal
@@ -54,9 +55,12 @@ namespace Akka.Persistence.Azure.Journal
         private readonly Lazy<CloudTable> _tableStorage;
         private readonly Dictionary<string, ISet<IActorRef>> _tagSubscribers = new Dictionary<string, ISet<IActorRef>>();
 
-        public AzureTableStorageJournal()
+        public AzureTableStorageJournal(Config config = null)
         {
-            _settings = AzurePersistence.Get(Context.System).TableSettings;
+            _settings = config is null ? 
+                AzurePersistence.Get(Context.System).TableSettings :
+                AzureTableStorageJournalSettings.Create(config);
+
             _serialization = new SerializationHelper(Context.System);
             _storageAccount = _settings.Development ?
                 CloudStorageAccount.DevelopmentStorageAccount : 
