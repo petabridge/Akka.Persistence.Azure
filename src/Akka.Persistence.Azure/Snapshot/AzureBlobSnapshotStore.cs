@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Snapshot;
@@ -32,12 +33,16 @@ namespace Akka.Persistence.Azure.Snapshot
         private readonly AzureBlobSnapshotStoreSettings _settings;
         private readonly CloudStorageAccount _storageAccount;
 
-        public AzureBlobSnapshotStore()
+        public AzureBlobSnapshotStore(Config config = null)
         {
-            _settings = AzurePersistence.Get(Context.System).BlobSettings;
             _serialization = new SerializationHelper(Context.System);
-            _storageAccount = CloudStorageAccount.Parse(_settings.ConnectionString);
+            _settings = config is null
+                ? AzurePersistence.Get(Context.System).BlobSettings
+                : AzureBlobSnapshotStoreSettings.Create(config);
 
+            _storageAccount = _settings.Development ? 
+                CloudStorageAccount.DevelopmentStorageAccount : 
+                CloudStorageAccount.Parse(_settings.ConnectionString);
             _container = new Lazy<CloudBlobContainer>(() => InitCloudStorage().Result);
         }
 
