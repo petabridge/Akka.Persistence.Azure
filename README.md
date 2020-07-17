@@ -21,6 +21,16 @@ akka.persistence.snapshot-store.azure-blob-store.connection-string = "Your Azure
 akka.persistence.snapshot-store.azure-blob-store.container-name = "Your container name"
 ```
 
+## Using the plugin in local development environment
+
+You can use this plugin with Azure Storage Emulator in a local development environment by setting the development flag in the configuration file:
+```
+akka.persistence.journal.azure-table.development = on
+akka.persistence.snapshot-store.azure-blob-store.development = on
+```
+
+you do **not** need to provide a connection string for this to work, it is handled automatically by the Microsoft Azure SDK.
+
 ## Building this solution
 To run the build script associated with this solution, execute the following:
 
