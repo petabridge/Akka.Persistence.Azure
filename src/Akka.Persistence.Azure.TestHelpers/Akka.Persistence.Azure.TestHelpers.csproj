@@ -5,7 +5,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Docker.DotNet" Version="3.125.2" />
+    <PackageReference Include="Docker.DotNet" Version="3.125.4" />
   </ItemGroup>
 
   <ItemGroup>
