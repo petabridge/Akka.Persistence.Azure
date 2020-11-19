@@ -3,8 +3,7 @@
     <Copyright>Copyright © 2017-2020 Petabridge</Copyright>
     <Authors>Petabridge</Authors>
     <VersionPrefix>0.6.0</VersionPrefix>
-    <PackageReleaseNotes>Release of Akka.Persistence.Azure**
-Updates Akka version to 1.4.1</PackageReleaseNotes>
+    <PackageReleaseNotes>Release of Akka.Persistence.Azure** Updates Akka version to 1.4.1</PackageReleaseNotes>
     <PackageIconUrl>
     </PackageIconUrl>
     <PackageProjectUrl>
@@ -15,7 +14,7 @@ Updates Akka version to 1.4.1</PackageReleaseNotes>
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.4.1</XunitVersion>
-    <AkkaVersion>1.4.9</AkkaVersion>
+    <AkkaVersion>1.4.12</AkkaVersion>
     <TestSdkVersion>16.6.1</TestSdkVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
