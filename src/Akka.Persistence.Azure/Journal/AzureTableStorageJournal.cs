@@ -11,8 +11,6 @@ using Akka.Persistence.Azure.TableEntities;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Journal;
 using Akka.Util.Internal;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -21,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Debug = System.Diagnostics.Debug;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Akka.Persistence.Azure.Journal
 {
@@ -115,7 +114,7 @@ namespace Akka.Persistence.Azure.Journal
             long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
-            NotifyNewPersistenceIdAdded(persistenceId);
+            //NotifyNewPersistenceIdAdded(persistenceId);
 
             _log.Debug("Entering method ReplayMessagesAsync for persistentId [{0}] from seqNo range [{1}, {2}] and taking up to max [{3}]", persistenceId, fromSequenceNr, toSequenceNr, max);
 
@@ -123,7 +122,7 @@ namespace Akka.Persistence.Azure.Journal
                 return;
 
             var replayQuery = GeneratePersistentJournalEntryReplayQuery(persistenceId, fromSequenceNr, toSequenceNr);
-
+            
             var nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, null);
             var count = 0L;
             while (nextTask != null)
@@ -708,7 +707,7 @@ namespace Akka.Persistence.Azure.Journal
         {
             var query = GenerateAllPersistenceIdsQuery();
 
-            TableQuerySegment result = null;
+            TableQuerySegment<DynamicTableEntity> result = null;
 
             var returnValue = ImmutableList<string>.Empty;
 

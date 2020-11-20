@@ -6,8 +6,7 @@
 
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Util;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 using System;
 using System.Collections.Generic;
 using System.Linq;
