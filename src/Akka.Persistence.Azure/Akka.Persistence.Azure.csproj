@@ -7,13 +7,6 @@
     <Description>Akka.Persistence support for Windows Azure Table storage and Azure blob storage.</Description>
   </PropertyGroup>
 
-
-  <ItemGroup>
-    <Compile Remove="Query\Stages\AllEventsSource.cs" />
-    <Compile Remove="Query\Stages\EventsByPersistenceIdSource.cs" />
-    <Compile Remove="Query\Stages\EventsByTagSource.cs" />
-  </ItemGroup>
-
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />
   </ItemGroup>
@@ -23,8 +16,6 @@
     <PackageReference Include="Akka.Persistence.Query" Version="$(AkkaVersion)" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.7.0" />
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
-    <PackageReference Include="Nito.AsyncEx.Tasks" Version="5.1.0" />
-    <PackageReference Include="System.Reactive" Version="5.0.0" />
   </ItemGroup>
 
 </Project>

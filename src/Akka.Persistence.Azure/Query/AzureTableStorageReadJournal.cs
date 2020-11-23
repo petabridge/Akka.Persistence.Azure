@@ -1,19 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Query.Publishers;
-using Akka.Persistence.Azure.Query.Stages;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Query;
-using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
-using Microsoft.Azure.Cosmos.Table;
-using Nito.AsyncEx;
 
 namespace Akka.Persistence.Azure.Query
 {
@@ -44,12 +37,6 @@ namespace Akka.Persistence.Azure.Query
         private readonly TimeSpan _refreshInterval;
         private readonly string _writeJournalPluginId;
 
-        private readonly AzureTableStorageJournalSettings _settings;
-        private readonly CloudStorageAccount _storageAccount;
-        private readonly Lazy<CloudTable> _tableStorage;
-
-        private readonly ExtendedActorSystem _system;
-
 
         /// <summary>
         /// Returns a default query configuration for akka persistence SQLite-based journals and snapshot stores.
@@ -62,28 +49,9 @@ namespace Akka.Persistence.Azure.Query
 
         public AzureTableStorageReadJournal(ExtendedActorSystem system, Config config)
         {
-            _system = system;
-            _log = system.Log;
             _maxBufferSize = config.GetInt("max-buffer-size");
             _refreshInterval = config.GetTimeSpan("refresh-interval");
             _writeJournalPluginId = config.GetString("write-plugin");
-
-            _settings = AzurePersistence.Get(system).TableSettings;
-            
-            /*_settings = config is null ?
-                AzurePersistence.Get(system).TableSettings :
-                AzureTableStorageJournalSettings.Create(config);*/
-
-            _storageAccount = _settings.Development ?
-                CloudStorageAccount.DevelopmentStorageAccount :
-                CloudStorageAccount.Parse(_settings.ConnectionString);
-
-            // possibility of deadlocking
-            // _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage(5).Result);
-
-            //trying to avoid deadlocking
-            _tableStorage = new Lazy<CloudTable>(() => SynchronizationContextSwitcher.NoContext(async () => await InitCloudStorage(5)).Result);
-
         }
 
 
@@ -108,9 +76,10 @@ namespace Akka.Persistence.Azure.Query
         /// </para>
         /// </summary>
         /// 
-
         public Source<string, NotUsed> PersistenceIds() =>
-            Source.FromGraph(new PersistenceIdsSource(_tableStorage.Value, _system));
+            Source.ActorPublisher<string>(AllPersistenceIdsPublisher.Props(true, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("AllPersistenceIds") as Source<string, NotUsed>;
 
         /// <summary>
         /// Same type of query as <see cref="PersistenceIds"/> but the stream
@@ -118,7 +87,9 @@ namespace Akka.Persistence.Azure.Query
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
         public Source<string, NotUsed> CurrentPersistenceIds() =>
-            Source.FromGraph(new CurrentPersistenceIdsSource(_tableStorage.Value, _system));
+            Source.ActorPublisher<string>(AllPersistenceIdsPublisher.Props(false, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("CurrentPersistenceIds") as Source<string, NotUsed>;
 
         /// <summary>
         /// <see cref="EventsByPersistenceId"/> is used for retrieving events for a specific
@@ -247,33 +218,6 @@ namespace Akka.Persistence.Azure.Query
             throw new NotImplementedException();
         }
 
-        private async Task<CloudTable> InitCloudStorage(
-           int remainingTries)
-        {
-            try
-            {
-                var tableClient = _storageAccount.CreateCloudTableClient();
-                var tableRef = tableClient.GetTableReference(_settings.TableName);
-                var op = new OperationContext();
-                using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
-                {
-                    if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
-                        _log.Info("Created Azure Cloud Table", _settings.TableName);
-                    else
-                        _log.Info("Successfully connected to existing table", _settings.TableName);
-                }
-
-                return tableRef;
-            }
-            catch (Exception ex)
-            {
-                _log.Error(ex, "[{0}] more tries to initialize table storage remaining...", remainingTries);
-                if (remainingTries == 0)
-                    throw;
-                await Task.Delay(RetryInterval[remainingTries]);
-                return await InitCloudStorage(remainingTries - 1);
-            }
-        }
     }
 
 }

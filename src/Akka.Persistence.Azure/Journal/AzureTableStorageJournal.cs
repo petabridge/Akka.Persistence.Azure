@@ -20,7 +20,6 @@ using System.Threading.Tasks;
 using Akka.Configuration;
 using Debug = System.Diagnostics.Debug;
 using Microsoft.Azure.Cosmos.Table;
-using Nito.AsyncEx;
 
 namespace Akka.Persistence.Azure.Journal
 {
