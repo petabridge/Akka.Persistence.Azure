@@ -43,6 +43,8 @@ namespace Akka.Persistence.Azure.Snapshot
                 ? AzurePersistence.Get(Context.System).BlobSettings
                 : AzureBlobSnapshotStoreSettings.Create(config);
 
+            _blobServiceClient = new BlobServiceClient(_settings.ConnectionString);
+
             _storageAccount = _settings.Development ? 
                 CloudStorageAccount.DevelopmentStorageAccount : 
                 CloudStorageAccount.Parse(_settings.ConnectionString);
