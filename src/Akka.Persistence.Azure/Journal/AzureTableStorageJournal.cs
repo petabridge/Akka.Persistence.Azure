@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using Akka.Configuration;
 using Debug = System.Diagnostics.Debug;
 using Microsoft.Azure.Cosmos.Table;
+using Nito.AsyncEx;
 
 namespace Akka.Persistence.Azure.Journal
 {
@@ -61,11 +62,13 @@ namespace Akka.Persistence.Azure.Journal
                 AzureTableStorageJournalSettings.Create(config);
 
             _serialization = new SerializationHelper(Context.System);
+
             _storageAccount = _settings.Development ?
                 CloudStorageAccount.DevelopmentStorageAccount : 
                 CloudStorageAccount.Parse(_settings.ConnectionString);
 
-            _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage(5).Result);
+          _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage(5).Result);
+        
         }
 
         public CloudTable Table => _tableStorage.Value;

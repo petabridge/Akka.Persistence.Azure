@@ -18,6 +18,7 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Azure.Cosmos.Table;
+using Nito.AsyncEx;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
@@ -46,6 +47,11 @@ namespace Akka.Persistence.Azure.Snapshot
             _storageAccount = _settings.Development ? 
                 CloudStorageAccount.DevelopmentStorageAccount : 
                 CloudStorageAccount.Parse(_settings.ConnectionString);
+
+
+            _blobServiceClient = new BlobServiceClient(_settings.ConnectionString);
+
+            // possibility of deadlocking
             _container = new Lazy<BlobContainerClient>(() => InitCloudStorage().Result);
         }
 
@@ -54,7 +60,6 @@ namespace Akka.Persistence.Azure.Snapshot
         private async Task<BlobContainerClient> InitCloudStorage()
         {
             var containerRef = _blobServiceClient.GetBlobContainerClient(_settings.ContainerName);
-            var op = new OperationContext();
 
             using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
             {

@@ -18,6 +18,7 @@ namespace Akka.Persistence.Azure.Tests.Query
             : base(Config(), nameof(AzureTablePersistenceIdsSpec), output)
         {
             AzurePersistence.Get(Sys);
+            var conf = AzurePersistence.DefaultConfig;
 
             ReadJournal =
                 Sys.ReadJournalFor<AzureTableStorageReadJournal>(

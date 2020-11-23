@@ -6,7 +6,7 @@
 
 using System;
 using Akka.Configuration;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
@@ -22,7 +22,7 @@ namespace Akka.Persistence.Azure.Snapshot
             if (string.IsNullOrWhiteSpace(containerName))
                 throw new ConfigurationException("[AzureBlobSnapshotStore] Container name is null or empty.");
 
-            NameValidator.ValidateContainerName(containerName);
+            NameValidator.ValidateTableName(containerName);
             ConnectionString = connectionString;
             ContainerName = containerName;
             RequestTimeout = requestTimeout;
@@ -68,6 +68,7 @@ namespace Akka.Persistence.Azure.Snapshot
         {
             var connectionString = config.GetString("connection-string");
             var containerName = config.GetString("container-name");
+            var tableName = config.GetString("table-name");
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
@@ -75,7 +76,7 @@ namespace Akka.Persistence.Azure.Snapshot
 
             return new AzureBlobSnapshotStoreSettings(
                 connectionString, 
-                containerName, 
+                tableName, 
                 connectTimeout, 
                 requestTimeout,
                 verbose,

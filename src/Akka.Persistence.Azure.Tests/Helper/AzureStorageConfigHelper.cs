@@ -8,7 +8,9 @@ namespace Akka.Persistence.Azure.Tests.Helper
         public static Config AzureConfig(string connectionString)
         {
             var tableName = "t" + Guid.NewGuid().ToString().Replace("-", "");
-            var containerName = "testcontainer" + Guid.NewGuid();
+            //var containerName = "testcontainer" + Guid.NewGuid(); => System.ArgumentException : Invalid table name. Check MSDN for more information about valid table naming.
+
+            var containerName = "test" + Guid.NewGuid().ToString().Replace("-", "");
 
             return ConfigurationFactory.ParseString(
                     @"
@@ -53,13 +55,16 @@ akka {
             
             azure-blob-store {
                 connection-string=""" + connectionString + @"""
-                request-timeout = 3s
+                container-name=""defaultContainer""
+                table-name = ""defaultTable""
+                request -timeout = 3s
             }
         }
     }
 }")
-                .WithFallback("akka.persistence.journal.azure-table.table-name=" + tableName)
-                .WithFallback("akka.persistence.snapshot-store.azure-blob-store.container-name=" + containerName);
+                .WithFallback("akka.persistence.journal.azure-table.table-name=" + tableName);
+                //.WithFallback("akka.persistence.snapshot-store.azure-blob-store.table-name=" + containerName);
+                //.WithFallback("akka.persistence.snapshot-store.azure-blob-store.container-name=" + containerName);
         }
 
     }
