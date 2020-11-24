@@ -12,9 +12,9 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests
 {
-    public class AzureTableJournalEscapePersistentIdSpec : AzureTableJournalSpec, IClassFixture<WindowsAzureStorageEmulatorFixture>
+    public class AzureTableJournalEscapePersistentIdSpec : AzureTableJournalSpec, IClassFixture<AzuriteEmulatorFixture>
     {
-        public AzureTableJournalEscapePersistentIdSpec(ITestOutputHelper output) : base(output)
+        public AzureTableJournalEscapePersistentIdSpec(AzuriteEmulatorFixture fixture, ITestOutputHelper output) : base(fixture, output)
         {
         }
 

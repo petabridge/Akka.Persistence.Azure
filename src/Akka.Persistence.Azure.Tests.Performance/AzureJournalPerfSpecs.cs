@@ -38,7 +38,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR")))
                 return JournalConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"));
 
-            return JournalConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+            return JournalConfig(AzuriteEmulatorFixture.GenerateConnStr());
         }
 
         public static Config JournalConfig(string connectionString)
@@ -121,7 +121,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
             try
             {
-                DbUtils.CleanupCloudTable(AzurePersistence.Get(ActorSystem).TableSettings.ConnectionString, TableName).Wait(TimeSpan.FromSeconds(3));
+                DbUtils.CleanupCloudTable(TableName).Wait(TimeSpan.FromSeconds(3));
             }
             catch { }
         }

@@ -15,11 +15,12 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSnapshot")]
-    public class AzureBlobSnapshotStoreSerializationSpec : SnapshotStoreSerializationSpec    
+    public class AzureBlobSnapshotStoreSerializationSpec : SnapshotStoreSerializationSpec, IClassFixture<AzuriteEmulatorFixture>
     {
-        public AzureBlobSnapshotStoreSerializationSpec(ITestOutputHelper output) : base(Config(),
+        public AzureBlobSnapshotStoreSerializationSpec(AzuriteEmulatorFixture fixture, ITestOutputHelper output) : base(Config(),
             nameof(AzureTableJournalSpec), output)
         {
+            DbUtils.Initialize(fixture);
             AzurePersistence.Get(Sys);
         }
 
@@ -28,7 +29,7 @@ namespace Akka.Persistence.Azure.Tests
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR")))
                 return AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"));
 
-            return AzureStorageConfigHelper.AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+            return AzureStorageConfigHelper.AzureConfig(AzuriteEmulatorFixture.GenerateConnStr());
         }
     }
 }

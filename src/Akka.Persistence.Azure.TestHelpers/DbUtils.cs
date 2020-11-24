@@ -4,11 +4,17 @@ using Microsoft.Azure.Cosmos.Table;
 
 namespace Akka.Persistence.Azure.TestHelpers
 {
-    public class DbUtils
+    public static class DbUtils
     {
-        public static Task<bool> CleanupCloudTable(string connectionString, string tableName)
+        public static string ConnectionString { get; private set; }
+
+        public static void Initialize(AzuriteEmulatorFixture fixture)
         {
-            var account = CloudStorageAccount.Parse(connectionString);
+            ConnectionString = fixture.ConnectionString;
+        }
+        public static Task<bool> CleanupCloudTable(string tableName)
+        {
+            var account = CloudStorageAccount.Parse(ConnectionString);
             var table = account.CreateCloudTableClient().GetTableReference(tableName);
             return table.DeleteIfExistsAsync();
         }

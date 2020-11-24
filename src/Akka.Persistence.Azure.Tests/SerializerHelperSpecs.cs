@@ -28,7 +28,7 @@ namespace Akka.Persistence.Azure.Tests
             var azureConfig =
                 !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
                     ? AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    : AzureStorageConfigHelper.AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+                    : AzureStorageConfigHelper.AzureConfig(AzuriteEmulatorFixture.GenerateConnStr());
 
             return azureConfig;
         }

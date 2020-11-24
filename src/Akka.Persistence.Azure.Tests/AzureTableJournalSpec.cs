@@ -19,10 +19,11 @@ namespace Akka.Persistence.Azure.Tests
     {
         private ITestOutputHelper _output;
 
-        public AzureTableJournalSpec(ITestOutputHelper output)
+        public AzureTableJournalSpec(AzuriteEmulatorFixture fixture,  ITestOutputHelper output)
             : base(TestConfig(), nameof(AzureTableJournalSpec), output)
         {
             AzurePersistence.Get(Sys);
+            DbUtils.Initialize(fixture);
             _output = output;
             Initialize();
 
@@ -36,7 +37,7 @@ namespace Akka.Persistence.Azure.Tests
             var azureConfig =
                 !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
                     ? AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    : AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+                    : AzureConfig(AzuriteEmulatorFixture.GenerateConnStr());
 
             TableName = azureConfig.GetString("akka.persistence.journal.azure-table.table-name");
 
@@ -46,7 +47,7 @@ namespace Akka.Persistence.Azure.Tests
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            if (DbUtils.CleanupCloudTable(AzurePersistence.Get(Sys).TableSettings.ConnectionString, TableName).Wait(TimeSpan.FromSeconds(3)))
+            if (DbUtils.CleanupCloudTable(TableName).Wait(TimeSpan.FromSeconds(3)))
             {
                 _output.WriteLine("Successfully deleted table [{0}] after test run.", TableName);
             }
