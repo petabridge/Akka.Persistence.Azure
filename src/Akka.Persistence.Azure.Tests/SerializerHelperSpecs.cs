@@ -32,7 +32,7 @@ namespace Akka.Persistence.Azure.Tests
                 cosmosString = AzureCosmosDbEmulatorFixture.GenerateConnStr();
 
             if (string.IsNullOrWhiteSpace(blobString))
-                blobString = AzuriteEmulatorFixture.GenerateConnStr();
+                blobString = AzureStorageEmulatorFixture.GenerateConnStr();
 
             return AzureStorageConfigHelper.AzureConfig(cosmosString, blobString);
         }

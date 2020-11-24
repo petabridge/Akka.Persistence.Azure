@@ -17,7 +17,6 @@ using Akka.Persistence.Snapshot;
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Microsoft.Azure.Cosmos.Table;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
@@ -155,8 +154,13 @@ namespace Akka.Persistence.Azure.Snapshot
                             SeqNoMetaDataKey, metadata.SequenceNr.ToString()
                         }
                     };
-
-                await blob.UploadAsync(new MemoryStream(snapshotData), metadata: meta);
+                var option = new BlobUploadOptions
+                {
+                    Metadata = meta
+                };
+                var response = await blob.UploadAsync(new MemoryStream(snapshotData), option, cts.Token);
+                //var response = blob.Upload(new MemoryStream(snapshotData), option);
+                var r = response;
             }
             catch (Exception ex)
             {

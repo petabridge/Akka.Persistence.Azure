@@ -62,9 +62,7 @@ namespace Akka.Persistence.Azure.Journal
 
             _serialization = new SerializationHelper(Context.System);
 
-            _storageAccount = _settings.Development ?
-                CloudStorageAccount.DevelopmentStorageAccount : 
-                CloudStorageAccount.Parse(_settings.ConnectionString);
+            _storageAccount = CloudStorageAccount.Parse(_settings.ConnectionString);
 
           _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage(5).Result);
         
@@ -726,21 +724,18 @@ namespace Akka.Persistence.Azure.Journal
             return returnValue;
         }
 
-        private async Task<CloudTable> InitCloudStorage(
-            int remainingTries)
+        private async Task<CloudTable> InitCloudStorage(int remainingTries)
         {
             try
             {
-                var tableClient = _storageAccount.CreateCloudTableClient();
+                var tableClient = _storageAccount.CreateCloudTableClient(new TableClientConfiguration {});
                 var tableRef = tableClient.GetTableReference(_settings.TableName);
-                var op = new OperationContext();
-                using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
-                {
-                    if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
-                        _log.Info("Created Azure Cloud Table", _settings.TableName);
-                    else
-                        _log.Info("Successfully connected to existing table", _settings.TableName);
-                }
+                using var cts = new CancellationTokenSource(_settings.ConnectTimeout);
+
+                if (await tableRef.CreateIfNotExistsAsync())
+                    _log.Info("Created Azure Cloud Table", _settings.TableName);
+                else
+                    _log.Info("Successfully connected to existing table", _settings.TableName);
 
                 return tableRef;
             }

@@ -31,8 +31,8 @@ namespace Akka.Persistence.Azure.Tests
             var blobSettings =
                 AzureBlobSnapshotStoreSettings.Create(
                     ConfigurationFactory.ParseString(@"akka.persistence.snapshot-store.azure-blob-store{
-                        connection-string = foo
-                        container-name = bar
+                        connection-string = ""foo""
+                        container-name = ""bar""
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.snapshot-store.azure-blob-store"));
 
@@ -111,7 +111,7 @@ namespace Akka.Persistence.Azure.Tests
                 AzureBlobSnapshotStoreSettings.Create(
                     ConfigurationFactory.ParseString(@"akka.persistence.snapshot-store.azure-blob-store{
                         connection-string = foo
-                        container-name = " + containerName + @"
+                        table-name = " + containerName + @"
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.snapshot-store.azure-blob-store"));
 

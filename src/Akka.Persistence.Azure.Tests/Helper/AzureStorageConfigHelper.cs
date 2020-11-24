@@ -30,6 +30,7 @@ akka {
                 connect-timeout = 3s
                 request-timeout = 3s
                 verbose-logging = on
+                development = on
 
                 event-adapters {
                     color-tagger = ""Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK""
@@ -55,9 +56,10 @@ akka {
             
             azure-blob-store {
                 connection-string=""" + blobConnectionString + @"""
-                container-name=""defaultContainer""
-                table-name = ""defaultTable""
+                container-name=""akka-persistence-default-container""
+                table-name = ""AkkaPersistenceDefaultTable""
                 request -timeout = 3s
+                development = on
             }
         }
     }

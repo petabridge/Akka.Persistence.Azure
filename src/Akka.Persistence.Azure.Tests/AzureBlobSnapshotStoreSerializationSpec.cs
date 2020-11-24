@@ -15,9 +15,9 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSnapshot")]
-    public class AzureBlobSnapshotStoreSerializationSpec : SnapshotStoreSerializationSpec, IClassFixture<AzuriteEmulatorFixture>
+    public class AzureBlobSnapshotStoreSerializationSpec : SnapshotStoreSerializationSpec, IClassFixture<AzureStorageEmulatorFixture>
     {
-        public AzureBlobSnapshotStoreSerializationSpec(AzuriteEmulatorFixture fixture, ITestOutputHelper output) : base(Config(),
+        public AzureBlobSnapshotStoreSerializationSpec(AzureStorageEmulatorFixture fixture, ITestOutputHelper output) : base(Config(),
             nameof(AzureTableJournalSpec), output)
         {
             DbUtils.Initialize(fixture);
@@ -33,7 +33,7 @@ namespace Akka.Persistence.Azure.Tests
                 cosmosString = AzureCosmosDbEmulatorFixture.GenerateConnStr();
 
             if (string.IsNullOrWhiteSpace(blobString))
-                blobString = AzuriteEmulatorFixture.GenerateConnStr();
+                blobString = AzureStorageEmulatorFixture.GenerateConnStr();
 
             return AzureStorageConfigHelper.AzureConfig(cosmosString, blobString);
 

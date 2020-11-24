@@ -19,7 +19,7 @@ namespace Akka.Persistence.Azure.Tests
     {
         private ITestOutputHelper _output;
 
-        public AzureTableJournalSpec(AzuriteEmulatorFixture fixture,  ITestOutputHelper output)
+        public AzureTableJournalSpec(AzureCosmosDbEmulatorFixture fixture,  ITestOutputHelper output)
             : base(TestConfig(), nameof(AzureTableJournalSpec), output)
         {
             AzurePersistence.Get(Sys);
@@ -41,7 +41,7 @@ namespace Akka.Persistence.Azure.Tests
                 cosmosString = AzureCosmosDbEmulatorFixture.GenerateConnStr();
 
             if (string.IsNullOrWhiteSpace(blobString))
-                blobString = AzuriteEmulatorFixture.GenerateConnStr();
+                blobString = AzureStorageEmulatorFixture.GenerateConnStr();
 
             var azureConfig = AzureConfig(cosmosString, blobString);
 

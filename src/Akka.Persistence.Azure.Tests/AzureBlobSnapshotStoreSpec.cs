@@ -15,9 +15,9 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSnapshot")]
-    public class AzureBlobSnapshotStoreSpec : SnapshotStoreSpec, IClassFixture<AzuriteEmulatorFixture>
+    public class AzureBlobSnapshotStoreSpec : SnapshotStoreSpec, IClassFixture<AzureStorageEmulatorFixture>
     {
-        public AzureBlobSnapshotStoreSpec(AzuriteEmulatorFixture fixture, ITestOutputHelper output) : base(Config(),
+        public AzureBlobSnapshotStoreSpec(AzureStorageEmulatorFixture fixture, ITestOutputHelper output) : base(Config(),
             nameof(AzureTableJournalSpec), output)
         {
 
@@ -35,7 +35,7 @@ namespace Akka.Persistence.Azure.Tests
                 cosmosString = AzureCosmosDbEmulatorFixture.GenerateConnStr();
 
             if (string.IsNullOrWhiteSpace(blobString))
-                blobString = AzuriteEmulatorFixture.GenerateConnStr();
+                blobString = AzureStorageEmulatorFixture.GenerateConnStr();
 
             return AzureConfig(cosmosString, blobString);
         }

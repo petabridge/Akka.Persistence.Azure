@@ -94,8 +94,7 @@ namespace Akka.Persistence.Azure.TestHelpers
 
         public static string GenerateConnStr(string ip = "127.0.0.1", int tableport = 8081)
         {
-            return
-                $"AccountEndpoint=https://{ip}:{tableport}/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
+            return $"DefaultEndpointsProtocol=http;AccountName=localhost;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;TableEndpoint=http://localhost:8902/;";
         }
     }
 }

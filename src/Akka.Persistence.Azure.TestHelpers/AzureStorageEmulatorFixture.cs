@@ -16,13 +16,13 @@ namespace Akka.Persistence.Azure.TestHelpers
 {
     /// <summary>
     ///     Integration testing fixture using the Windows Azure Storage Blob Emulator
-    ///     Docker image provided by Microsoft: https://hub.docker.com/_/microsoft-azure-storage-azurite/
+    ///     Docker image provided by Microsoft: https://hub.docker.com/r/akkadotnet/azure-storage-emulator/
     ///     Image is not supported on Windows Container
     /// </summary>
-    public class AzuriteEmulatorFixture : IAsyncLifetime
+    public class AzureStorageEmulatorFixture : IAsyncLifetime
     {
         //does not work on microsoft
-        private const string AzureStorageImageName = "mcr.microsoft.com/azure-storage/azurite";
+        private const string AzureStorageImageName = "akkadotnet/azure-storage-emulator:ltsc2019";
         private readonly string _azureStorageContainerName = $"azurestorage-{Guid.NewGuid():N}".Replace("-", "");
         private DockerClient _client;
 
@@ -102,6 +102,8 @@ namespace Akka.Persistence.Azure.TestHelpers
                     new ContainerRemoveParameters {Force = true});
                 _client.Dispose();
             }
+            
+            await Task.CompletedTask;
         }
 
         public static string GenerateConnStr(string ip = "127.0.0.1", int blobport = 10000, 

@@ -16,15 +16,16 @@ namespace Akka.Persistence.Azure.Snapshot
     /// </summary>
     public sealed class AzureBlobSnapshotStoreSettings
     {
-        public AzureBlobSnapshotStoreSettings(string connectionString, string containerName,
+        public AzureBlobSnapshotStoreSettings(string connectionString, string containerName, string tableName,
             TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging, bool development)
         {
             if (string.IsNullOrWhiteSpace(containerName))
                 throw new ConfigurationException("[AzureBlobSnapshotStore] Container name is null or empty.");
 
-            NameValidator.ValidateTableName(containerName);
+            NameValidator.ValidateTableName(tableName);
             ConnectionString = connectionString;
             ContainerName = containerName;
+            TableName = tableName;
             RequestTimeout = requestTimeout;
             ConnectTimeout = connectTimeout;
             VerboseLogging = verboseLogging;
@@ -40,6 +41,8 @@ namespace Akka.Persistence.Azure.Snapshot
         ///     The table of the container we'll be using to serialize these blobs.
         /// </summary>
         public string ContainerName { get; }
+
+        public string TableName { get; }
 
         /// <summary>
         ///     Initial timeout to use when connecting to Azure Container Storage for the first time.
@@ -75,7 +78,8 @@ namespace Akka.Persistence.Azure.Snapshot
             var development = config.GetBoolean("development", false);
 
             return new AzureBlobSnapshotStoreSettings(
-                connectionString, 
+                connectionString,
+                containerName,
                 tableName, 
                 connectTimeout, 
                 requestTimeout,

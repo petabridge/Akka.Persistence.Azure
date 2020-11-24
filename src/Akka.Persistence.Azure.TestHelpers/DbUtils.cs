@@ -8,7 +8,11 @@ namespace Akka.Persistence.Azure.TestHelpers
     {
         public static string ConnectionString { get; private set; }
 
-        public static void Initialize(AzuriteEmulatorFixture fixture)
+        public static void Initialize(AzureStorageEmulatorFixture fixture)
+        {
+            ConnectionString = fixture.ConnectionString;
+        }
+        public static void Initialize(AzureCosmosDbEmulatorFixture fixture)
         {
             ConnectionString = fixture.ConnectionString;
         }
