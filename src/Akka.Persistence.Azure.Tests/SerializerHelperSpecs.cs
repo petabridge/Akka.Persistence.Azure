@@ -25,12 +25,16 @@ namespace Akka.Persistence.Azure.Tests
 
         public static Config Config()
         {
-            var azureConfig =
-                !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    ? AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    : AzureStorageConfigHelper.AzureConfig(AzuriteEmulatorFixture.GenerateConnStr());
+            var cosmosString = Environment.GetEnvironmentVariable("AZURE_COSMOSDB_CONNECTION_STR");
+            var blobString = Environment.GetEnvironmentVariable("AZURE_BLOB_CONNECTION_STR");
 
-            return azureConfig;
+            if (string.IsNullOrWhiteSpace(cosmosString))
+                cosmosString = AzureCosmosDbEmulatorFixture.GenerateConnStr();
+
+            if (string.IsNullOrWhiteSpace(blobString))
+                blobString = AzuriteEmulatorFixture.GenerateConnStr();
+
+            return AzureStorageConfigHelper.AzureConfig(cosmosString, blobString);
         }
 
 

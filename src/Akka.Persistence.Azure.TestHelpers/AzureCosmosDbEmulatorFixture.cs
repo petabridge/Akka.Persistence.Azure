@@ -13,8 +13,14 @@ using Docker.DotNet.Models;
 
 namespace Akka.Persistence.Azure.TestHelpers
 {
+    /// <summary>
+    ///     Integration testing fixture using the Windows Azure CosmosDb Emulator
+    ///     Docker image provided by Microsoft: https://hub.docker.com/r/microsoft/azure-cosmosdb-emulator/
+    ///     Image is not supported on Linux Container
+    /// </summary>
     public class AzureCosmosDbEmulatorFixture : IAsyncFixture
     {
+        //does not work on linux
         private const string AzureCosmosDbImageName = "microsoft/azure-cosmosdb-emulator";
         private readonly string _azureStorageContainerName = $"cosmos-{Guid.NewGuid():N}".Replace("-", "");
         private DockerClient _client;
@@ -40,9 +46,8 @@ namespace Akka.Persistence.Azure.TestHelpers
                     new ImagesCreateParameters { FromImage = AzureCosmosDbImageName, Tag = "latest" }, null,
                     new Progress<JSONMessage>());
 
-            var azureBlobPort = 10000;
-            var azureQueuePort = 10001;
-            var azureTablePort = 10002;
+
+            var azureTablePort = 8081;
 
             // create the container
             await _client.Containers.CreateContainerAsync(new CreateContainerParameters
@@ -55,29 +60,7 @@ namespace Akka.Persistence.Azure.TestHelpers
                     PortBindings = new Dictionary<string, IList<PortBinding>>
                     {
                         {
-                            "10000/tcp",
-                            new List<PortBinding>
-                            {
-                                new PortBinding
-                                {
-                                    HostPort = $"{azureBlobPort}"
-                                }
-                            }
-                        },
-
-                        {
-                            "10001/tcp",
-                            new List<PortBinding>
-                            {
-                                new PortBinding
-                                {
-                                    HostPort = $"{azureQueuePort}"
-                                }
-                            }
-                        },
-
-                        {
-                            "10002/tcp",
+                            "8081/tcp",
                             new List<PortBinding>
                             {
                                 new PortBinding
@@ -109,11 +92,10 @@ namespace Akka.Persistence.Azure.TestHelpers
             }
         }
 
-        public static string GenerateConnStr(string ip = "127.0.0.1", int blobport = 10000, int queueport = 10001,
-            int tableport = 10002)
+        public static string GenerateConnStr(string ip = "127.0.0.1", int tableport = 8081)
         {
             return
-                $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{ip}:{blobport}/devstoreaccount1;TableEndpoint=http://{ip}:{tableport}/devstoreaccount1;QueueEndpoint=http://{ip}:{queueport}/devstoreaccount1;";
+                $"AccountEndpoint=https://{ip}:{tableport}/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
         }
     }
 }

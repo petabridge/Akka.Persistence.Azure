@@ -15,11 +15,13 @@ using Xunit;
 namespace Akka.Persistence.Azure.TestHelpers
 {
     /// <summary>
-    ///     Integration testing fixture using the Windows Azure Storage Emulator
-    ///     Docker image provided by Microsoft: https://hub.docker.com/r/microsoft/azure-storage-emulator/
+    ///     Integration testing fixture using the Windows Azure Storage Blob Emulator
+    ///     Docker image provided by Microsoft: https://hub.docker.com/_/microsoft-azure-storage-azurite/
+    ///     Image is not supported on Windows Container
     /// </summary>
     public class AzuriteEmulatorFixture : IAsyncLifetime
     {
+        //does not work on microsoft
         private const string AzureStorageImageName = "mcr.microsoft.com/azure-storage/azurite";
         private readonly string _azureStorageContainerName = $"azurestorage-{Guid.NewGuid():N}".Replace("-", "");
         private DockerClient _client;

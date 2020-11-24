@@ -5,7 +5,7 @@ namespace Akka.Persistence.Azure.Tests.Helper
 {
     public static class AzureStorageConfigHelper
     {
-        public static Config AzureConfig(string connectionString)
+        public static Config AzureConfig(string cosmosConnectionString, string blobConnectionString)
         {
             var tableName = "t" + Guid.NewGuid().ToString().Replace("-", "");
             //var containerName = "testcontainer" + Guid.NewGuid(); => System.ArgumentException : Invalid table name. Check MSDN for more information about valid table naming.
@@ -26,7 +26,7 @@ akka {
             plugin = ""akka.persistence.journal.azure-table""
 
             azure-table {
-                connection-string=""" + connectionString + @"""
+                connection-string=""" + cosmosConnectionString + @"""
                 connect-timeout = 3s
                 request-timeout = 3s
                 verbose-logging = on
@@ -54,7 +54,7 @@ akka {
             plugin = ""akka.persistence.snapshot-store.azure-blob-store""
             
             azure-blob-store {
-                connection-string=""" + connectionString + @"""
+                connection-string=""" + blobConnectionString + @"""
                 container-name=""defaultContainer""
                 table-name = ""defaultTable""
                 request -timeout = 3s
