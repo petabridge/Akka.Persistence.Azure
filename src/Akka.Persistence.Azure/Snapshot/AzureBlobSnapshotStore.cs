@@ -54,8 +54,8 @@ namespace Akka.Persistence.Azure.Snapshot
 
             using var cts = new CancellationTokenSource(_settings.ConnectTimeout);
 
-            var create = await containerRef.CreateIfNotExistsAsync(PublicAccessType.BlobContainer, cancellationToken: cts.Token);
-            //first try
+            var create = await containerRef.CreateIfNotExistsAsync(PublicAccessType.BlobContainer/*, cancellationToken: cts.Token*/);
+            
             if (create?.Value != null)
                 _log.Info("Created Azure Blob Container", _settings.ContainerName);
             else
@@ -158,7 +158,7 @@ namespace Akka.Persistence.Azure.Snapshot
                 {
                     Metadata = meta
                 };
-                var response = await blob.UploadAsync(new MemoryStream(snapshotData), option, cts.Token);
+                var response = await blob.UploadAsync(new MemoryStream(snapshotData), option);
                 //var response = blob.Upload(new MemoryStream(snapshotData), option);
                 var r = response;
             }

@@ -13,7 +13,7 @@ namespace Akka.Persistence.Azure.Tests.Query
 {
     [Collection("AzureQuery")]
     public sealed class AzureTableCurrentEventsByTagSpec
-        : CurrentEventsByTagSpec
+        : CurrentEventsByTagSpec, IClassFixture<EmulatorFixture>
     {
         public AzureTableCurrentEventsByTagSpec(ITestOutputHelper output)
             : base(Config(), nameof(AzureTablePersistenceIdsSpec), output)
@@ -40,10 +40,10 @@ namespace Akka.Persistence.Azure.Tests.Query
             var blobString = Environment.GetEnvironmentVariable("AZURE_BLOB_CONNECTION_STR");
 
             if (string.IsNullOrWhiteSpace(cosmosString))
-                cosmosString = AzureCosmosDbEmulatorFixture.GenerateConnStr();
+                cosmosString = EmulatorFixture.CosmosConnStr();
 
             if (string.IsNullOrWhiteSpace(blobString))
-                blobString = AzureStorageEmulatorFixture.GenerateConnStr();
+                blobString = EmulatorFixture.StorageConnStr();
 
             var azureConfig = AzureStorageConfigHelper.AzureConfig(cosmosString, blobString);
 

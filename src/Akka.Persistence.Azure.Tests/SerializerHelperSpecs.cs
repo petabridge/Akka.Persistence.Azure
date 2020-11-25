@@ -29,10 +29,10 @@ namespace Akka.Persistence.Azure.Tests
             var blobString = Environment.GetEnvironmentVariable("AZURE_BLOB_CONNECTION_STR");
 
             if (string.IsNullOrWhiteSpace(cosmosString))
-                cosmosString = AzureCosmosDbEmulatorFixture.GenerateConnStr();
+                cosmosString = EmulatorFixture.CosmosConnStr();
 
             if (string.IsNullOrWhiteSpace(blobString))
-                blobString = AzureStorageEmulatorFixture.GenerateConnStr();
+                blobString = EmulatorFixture.StorageConnStr();
 
             return AzureStorageConfigHelper.AzureConfig(cosmosString, blobString);
         }

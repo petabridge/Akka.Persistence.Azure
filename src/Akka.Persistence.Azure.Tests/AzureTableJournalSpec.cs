@@ -19,11 +19,10 @@ namespace Akka.Persistence.Azure.Tests
     {
         private ITestOutputHelper _output;
 
-        public AzureTableJournalSpec(AzureCosmosDbEmulatorFixture fixture,  ITestOutputHelper output)
+        public AzureTableJournalSpec(EmulatorFixture fixture,  ITestOutputHelper output)
             : base(TestConfig(), nameof(AzureTableJournalSpec), output)
         {
             AzurePersistence.Get(Sys);
-            DbUtils.Initialize(fixture);
             _output = output;
             Initialize();
 
@@ -38,10 +37,10 @@ namespace Akka.Persistence.Azure.Tests
             var blobString = Environment.GetEnvironmentVariable("AZURE_BLOB_CONNECTION_STR");
 
             if (string.IsNullOrWhiteSpace(cosmosString))
-                cosmosString = AzureCosmosDbEmulatorFixture.GenerateConnStr();
+                cosmosString = EmulatorFixture.CosmosConnStr();
 
             if (string.IsNullOrWhiteSpace(blobString))
-                blobString = AzureStorageEmulatorFixture.GenerateConnStr();
+                blobString = EmulatorFixture.StorageConnStr();
 
             var azureConfig = AzureConfig(cosmosString, blobString);
 
@@ -53,7 +52,7 @@ namespace Akka.Persistence.Azure.Tests
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            if (DbUtils.CleanupCloudTable(TableName).Wait(TimeSpan.FromSeconds(3)))
+            if (DbUtils.CleanupCloudTable(EmulatorFixture.ConnectionStrings["Cosmos"], TableName).Wait(TimeSpan.FromSeconds(3)))
             {
                 _output.WriteLine("Successfully deleted table [{0}] after test run.", TableName);
             }

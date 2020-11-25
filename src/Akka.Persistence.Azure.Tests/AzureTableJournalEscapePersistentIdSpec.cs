@@ -11,9 +11,9 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests
 {
-    public class AzureTableJournalEscapePersistentIdSpec : AzureTableJournalSpec, IClassFixture<AzureCosmosDbEmulatorFixture>
+    public class AzureTableJournalEscapePersistentIdSpec : AzureTableJournalSpec, IClassFixture<EmulatorFixture>
     {
-        public AzureTableJournalEscapePersistentIdSpec(AzureCosmosDbEmulatorFixture fixture, ITestOutputHelper output) : base(fixture, output)
+        public AzureTableJournalEscapePersistentIdSpec(EmulatorFixture fixture, ITestOutputHelper output) : base(fixture, output)
         {
         }
 

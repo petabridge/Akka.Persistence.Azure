@@ -6,19 +6,9 @@ namespace Akka.Persistence.Azure.TestHelpers
 {
     public static class DbUtils
     {
-        public static string ConnectionString { get; private set; }
-
-        public static void Initialize(AzureStorageEmulatorFixture fixture)
+        public static Task<bool> CleanupCloudTable(string connectionString, string tableName)
         {
-            ConnectionString = fixture.ConnectionString;
-        }
-        public static void Initialize(AzureCosmosDbEmulatorFixture fixture)
-        {
-            ConnectionString = fixture.ConnectionString;
-        }
-        public static Task<bool> CleanupCloudTable(string tableName)
-        {
-            var account = CloudStorageAccount.Parse(ConnectionString);
+            var account = CloudStorageAccount.Parse(connectionString);
             var table = account.CreateCloudTableClient().GetTableReference(tableName);
             return table.DeleteIfExistsAsync();
         }
