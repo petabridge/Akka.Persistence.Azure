@@ -15,7 +15,7 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureJournal")]
-    public class AzureTableJournalSerializationSpec : JournalSerializationSpec
+    public class AzureTableJournalSerializationSpec : JournalSerializationSpec, IClassFixture<AzureEmulatorFixture>
     {
         public AzureTableJournalSerializationSpec(ITestOutputHelper output)
             : base(Config(), nameof(AzureTableJournalSerializationSpec), output)
@@ -37,7 +37,7 @@ namespace Akka.Persistence.Azure.Tests
             var azureConfig =
                 !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
                     ? AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    : AzureStorageConfigHelper.AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+                    : AzureStorageConfigHelper.AzureConfig(AzureEmulatorFixture.GenerateConnStr());
 
             TableName = azureConfig.GetString("akka.persistence.journal.azure-table.table-name");
 

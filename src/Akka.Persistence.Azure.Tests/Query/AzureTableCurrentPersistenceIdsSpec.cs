@@ -17,7 +17,7 @@ namespace Akka.Persistence.Azure.Tests.Query
 {
     [Collection("AzureQuery")]
     public sealed class AzureTableCurrentPersistenceIdsSpec
-        : CurrentPersistenceIdsSpec
+        : CurrentPersistenceIdsSpec, IClassFixture<AzureEmulatorFixture>
     {
         private readonly ITestOutputHelper _output;
 
@@ -41,7 +41,7 @@ namespace Akka.Persistence.Azure.Tests.Query
             var azureConfig =
                 !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
                     ? AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    : AzureStorageConfigHelper.AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+                    : AzureStorageConfigHelper.AzureConfig(AzureEmulatorFixture.GenerateConnStr());
 
             TableName = azureConfig.GetString("akka.persistence.journal.azure-table.table-name");
 

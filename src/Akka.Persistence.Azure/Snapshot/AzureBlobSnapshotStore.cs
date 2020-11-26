@@ -14,8 +14,8 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Snapshot;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
@@ -32,6 +32,7 @@ namespace Akka.Persistence.Azure.Snapshot
         private readonly SerializationHelper _serialization;
         private readonly AzureBlobSnapshotStoreSettings _settings;
         private readonly CloudStorageAccount _storageAccount;
+        private readonly CloudBlobClient _blobClient;
 
         public AzureBlobSnapshotStore(Config config = null)
         {
@@ -43,6 +44,8 @@ namespace Akka.Persistence.Azure.Snapshot
             _storageAccount = _settings.Development ? 
                 CloudStorageAccount.DevelopmentStorageAccount : 
                 CloudStorageAccount.Parse(_settings.ConnectionString);
+
+            _blobClient = _storageAccount.CreateCloudBlobClient();
             _container = new Lazy<CloudBlobContainer>(() => InitCloudStorage().Result);
         }
 
@@ -50,14 +53,13 @@ namespace Akka.Persistence.Azure.Snapshot
 
         private async Task<CloudBlobContainer> InitCloudStorage()
         {
-            var blobClient = _storageAccount.CreateCloudBlobClient();
-            var containerRef = blobClient.GetContainerReference(_settings.ContainerName);
+            var containerRef = _blobClient.GetContainerReference(_settings.ContainerName);
             var op = new OperationContext();
 
             using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
             {
                 if (await containerRef.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Container,
-                    new BlobRequestOptions(), op, cts.Token))
+                    new BlobRequestOptions(), op/*, cts.Token*/))
                     _log.Info("Created Azure Blob Container", _settings.ContainerName);
                 else
                     _log.Info("Successfully connected to existing container", _settings.ContainerName);
@@ -89,7 +91,7 @@ namespace Akka.Persistence.Azure.Snapshot
             {
                 results = await Container.ListBlobsSegmentedAsync(SeqNoHelper.ToSnapshotSearchQuery(persistenceId),
                     true,
-                    BlobListingDetails.Metadata, null, null, requestOptions, new OperationContext(), cts.Token);
+                    BlobListingDetails.Metadata, null, null, requestOptions, new OperationContext()/*, cts.Token*/);
             }
 
             // if we made it down here, the initial request succeeded.
@@ -161,8 +163,8 @@ namespace Akka.Persistence.Azure.Snapshot
                     snapshotData.Length,
                     AccessCondition.GenerateEmptyCondition(),
                     GenerateOptions(), 
-                    new OperationContext(),
-                    cts.Token);
+                    new OperationContext()/*,
+                    cts.Token*/);
             }
         }
 

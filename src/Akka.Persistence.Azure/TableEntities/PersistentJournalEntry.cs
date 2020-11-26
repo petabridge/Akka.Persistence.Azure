@@ -6,8 +6,7 @@
 
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Util;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,7 +32,7 @@ namespace Akka.Persistence.Azure.TableEntities
         public const string UtcTicksKeyName = "utcTicks";
         private const string ManifestKeyName = "manifest";
         private const string PayloadKeyName = "payload";
-        private const string SeqNoKeyName = "seqno";
+        public const string SeqNoKeyName = "seqno";
 
         public PersistentJournalEntry()
         {

@@ -13,7 +13,7 @@ namespace Akka.Persistence.Azure.Tests.Query
 {
     [Collection("AzureQuery")]
     public sealed class AzureTableCurrentEventsByTagSpec
-        : CurrentEventsByTagSpec
+        : CurrentEventsByTagSpec, IClassFixture<AzureEmulatorFixture>
     {
         public AzureTableCurrentEventsByTagSpec(ITestOutputHelper output)
             : base(Config(), nameof(AzureTablePersistenceIdsSpec), output)
@@ -39,7 +39,7 @@ namespace Akka.Persistence.Azure.Tests.Query
             var azureConfig =
                 !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
                     ? AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    : AzureStorageConfigHelper.AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+                    : AzureStorageConfigHelper.AzureConfig(AzureEmulatorFixture.GenerateConnStr());
 
             TableName = azureConfig.GetString("akka.persistence.journal.azure-table.table-name");
 

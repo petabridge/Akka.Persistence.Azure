@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Docker.DotNet;
 using Docker.DotNet.Models;
+using Xunit;
 
 namespace Akka.Persistence.Azure.TestHelpers
 {
@@ -17,15 +18,15 @@ namespace Akka.Persistence.Azure.TestHelpers
     ///     Integration testing fixture using the Windows Azure Storage Emulator
     ///     Docker image provided by Microsoft: https://hub.docker.com/r/microsoft/azure-storage-emulator/
     /// </summary>
-    public class WindowsAzureStorageEmulatorFixture : IAsyncFixture
+    public class AzureEmulatorFixture : IAsyncLifetime
     {
-        private const string AzureStorageImageName = "microsoft/azure-storage-emulator";
+        private const string AzureStorageImageName = "farmer1992/azure-storage-emulator:latest";
         private readonly string _azureStorageContainerName = $"azurestorage-{Guid.NewGuid():N}";
         private DockerClient _client;
 
         public string ConnectionString { get; private set; }
 
-        public async Task Initialize()
+        public async Task InitializeAsync()
         {
             DockerClientConfiguration config;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -102,7 +103,7 @@ namespace Akka.Persistence.Azure.TestHelpers
             await Task.Delay(TimeSpan.FromSeconds(10));
         }
 
-        public async Task CleanUp()
+        public async Task DisposeAsync()
         {
             if (_client != null)
             {

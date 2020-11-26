@@ -11,8 +11,6 @@ using Akka.Persistence.Azure.TableEntities;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Journal;
 using Akka.Util.Internal;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -21,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Debug = System.Diagnostics.Debug;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Akka.Persistence.Azure.Journal
 {
@@ -46,14 +45,17 @@ namespace Akka.Persistence.Azure.Journal
         };
 
         private readonly HashSet<string> _allPersistenceIds = new HashSet<string>();
-        private readonly HashSet<IActorRef> _allPersistenceIdSubscribers = new HashSet<IActorRef>();
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private readonly Dictionary<string, ISet<IActorRef>> _persistenceIdSubscribers = new Dictionary<string, ISet<IActorRef>>();
+
+        private ImmutableDictionary<string, IImmutableSet<IActorRef>> _persistenceIdSubscribers = ImmutableDictionary.Create<string, IImmutableSet<IActorRef>>();
+        private ImmutableDictionary<string, IImmutableSet<IActorRef>> _tagSubscribers = ImmutableDictionary.Create<string, IImmutableSet<IActorRef>>();
+
         private readonly SerializationHelper _serialization;
         private readonly AzureTableStorageJournalSettings _settings;
         private readonly CloudStorageAccount _storageAccount;
         private readonly Lazy<CloudTable> _tableStorage;
-        private readonly Dictionary<string, ISet<IActorRef>> _tagSubscribers = new Dictionary<string, ISet<IActorRef>>();
+
+        private readonly HashSet<IActorRef> _newEventsSubscriber = new HashSet<IActorRef>();
 
         public AzureTableStorageJournal(Config config = null)
         {
@@ -71,9 +73,6 @@ namespace Akka.Persistence.Azure.Journal
 
         public CloudTable Table => _tableStorage.Value;
 
-        protected bool HasAllPersistenceIdSubscribers =>
-            _allPersistenceIdSubscribers.Count != 0;
-
         protected bool HasPersistenceIdSubscribers =>
             _persistenceIdSubscribers.Count != 0;
 
@@ -84,7 +83,6 @@ namespace Akka.Persistence.Azure.Journal
             string persistenceId,
             long fromSequenceNr)
         {
-            NotifyNewPersistenceIdAdded(persistenceId);
 
             _log.Debug("Entering method ReadHighestSequenceNrAsync");
 
@@ -115,8 +113,7 @@ namespace Akka.Persistence.Azure.Journal
             long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
-            NotifyNewPersistenceIdAdded(persistenceId);
-
+            
             _log.Debug("Entering method ReplayMessagesAsync for persistentId [{0}] from seqNo range [{1}, {2}] and taking up to max [{3}]", persistenceId, fromSequenceNr, toSequenceNr, max);
 
             if (max == 0)
@@ -191,7 +188,6 @@ namespace Akka.Persistence.Azure.Journal
             string persistenceId,
             long toSequenceNr)
         {
-            NotifyNewPersistenceIdAdded(persistenceId);
 
             _log.Debug("Entering method DeleteMessagesToAsync for persistentId [{0}] and up to seqNo [{1}]", persistenceId, toSequenceNr);
 
@@ -244,35 +240,41 @@ namespace Akka.Persistence.Azure.Journal
             base.PreStart();
         }
 
-        protected override bool ReceivePluginInternal(
-            object message)
+        protected override bool ReceivePluginInternal(object message)
         {
             switch (message)
             {
                 case ReplayTaggedMessages replay:
                     ReplayTaggedMessagesAsync(replay)
                         .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
-                    break;
+                    return true;
+                case ReplayAllEvents replay:
+                    ReplayAllEventsAsync(replay)
+                        .PipeTo(replay.ReplyTo, success: h => new EventReplaySuccess(h),
+                            failure: e => new EventReplayFailure(e));
+                    return true;
                 case SubscribePersistenceId subscribe:
                     AddPersistenceIdSubscriber(Sender, subscribe.PersistenceId);
                     Context.Watch(Sender);
-                    break;
-                case SubscribeAllPersistenceIds subscribe:
-                    AddAllPersistenceIdSubscriber(Sender);
-                    Context.Watch(Sender);
-                    break;
+                    return true;
+                case SelectCurrentPersistenceIds request:
+                    SelectAllPersistenceIdsAsync(request.Offset)
+                        .PipeTo(request.ReplyTo, success: result => new CurrentPersistenceIds(result.Ids, request.Offset));
+                    return true;
                 case SubscribeTag subscribe:
                     AddTagSubscriber(Sender, subscribe.Tag);
                     Context.Watch(Sender);
-                    break;
+                    return true;
+                case SubscribeNewEvents _:
+                    AddNewEventsSubscriber(Sender);
+                    Context.Watch(Sender);
+                    return true;
                 case Terminated terminated:
                     RemoveSubscriber(terminated.ActorRef);
-                    break;
+                    return true;
                 default:
                     return false;
             }
-
-            return true;
         }
 
         protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(
@@ -406,9 +408,9 @@ namespace Akka.Persistence.Azure.Journal
                         foreach (var r in allPersistenceResults)
                             _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag, r.HttpStatusCode);
 
-                    if (HasPersistenceIdSubscribers || HasAllPersistenceIdSubscribers)
-                    {
-                        highSequenceNumbers.ForEach(x => NotifyNewPersistenceIdAdded(x.Key));
+                    if (HasPersistenceIdSubscribers)
+                    {                        
+                        highSequenceNumbers.ForEach(x => NotifyPersistenceIdChange(x.Key));
                     }
 
                     if (taggedEntries.Count > 0)
@@ -471,7 +473,10 @@ namespace Akka.Persistence.Azure.Journal
 
             return returnValue;
         }
-
+        private void AddNewEventsSubscriber(IActorRef subscriber)
+        {
+            _newEventsSubscriber.Add(subscriber);
+        }
         private static TableQuery<HighestSequenceNrEntry> GenerateHighestSequenceNumberQuery(
             string persistenceId)
         {
@@ -490,6 +495,24 @@ namespace Akka.Persistence.Azure.Journal
             var returnValue = new TableQuery<HighestSequenceNrEntry>().Where(filter);
 
             return returnValue;
+        }
+
+        private static TableQuery<HighestSequenceNrEntry> GenerateMaxSequenceNumberQuery()
+        {
+            var filter =  TableQuery.GenerateFilterCondition(
+                        "RowKey",
+                        QueryComparisons.Equal,
+                        HighestSequenceNrEntry.RowKeyValue);
+
+            var returnValue = new TableQuery<HighestSequenceNrEntry>().Where(filter);
+
+            return returnValue;
+        }
+        private long ReadMaxSequenceNumber()
+        {
+            var max = Table.ExecuteQuery(GenerateMaxSequenceNumberQuery()).OrderBy(a => a.HighestSequenceNr).LastOrDefault();
+
+            return max.HighestSequenceNr;
         }
 
         //private static TableQuery GeneratePersistentJournalEntryDeleteQuery(
@@ -668,61 +691,130 @@ namespace Akka.Persistence.Azure.Journal
             return returnValue;
         }
 
-        private async Task AddAllPersistenceIdSubscriber(
-            IActorRef subscriber)
+        private static TableQuery<EventTagEntry> GenerateAllEventsMessageQuery(ReplayAllEvents replay)
         {
-            lock (_allPersistenceIdSubscribers)
-            {
-                _allPersistenceIdSubscribers.Add(subscriber);
-            }
-            subscriber.Tell(new CurrentPersistenceIds(await GetAllPersistenceIds()));
+            var filter =
+                TableQuery.CombineFilters(
+                    TableQuery.GenerateFilterCondition(
+                        "RowKey",
+                        QueryComparisons.GreaterThan,
+                        replay.FromOffset.ToJournalRowKey()),
+                    TableOperators.And,
+                    TableQuery.GenerateFilterCondition(
+                        "RowKey",
+                        QueryComparisons.LessThanOrEqual,
+                        replay.ToOffset.ToJournalRowKey()));
+
+            var returnValue = new TableQuery<EventTagEntry>().Where(filter);
+
+            return returnValue;
         }
 
-        private void AddPersistenceIdSubscriber(
-            IActorRef subscriber,
-            string persistenceId)
+        private void AddPersistenceIdSubscriber(IActorRef subscriber,  string persistenceId)
         {
             if (!_persistenceIdSubscribers.TryGetValue(persistenceId, out var subscriptions))
             {
-                subscriptions = new HashSet<IActorRef>();
-                _persistenceIdSubscribers.Add(persistenceId, subscriptions);
+                _persistenceIdSubscribers = _persistenceIdSubscribers.Add(persistenceId, ImmutableHashSet.Create(subscriber));
             }
-
-            subscriptions.Add(subscriber);
+            else
+            {
+                _persistenceIdSubscribers = _persistenceIdSubscribers.SetItem(persistenceId, subscriptions.Add(subscriber));
+            }
         }
 
-        private void AddTagSubscriber(
-            IActorRef subscriber,
-            string tag)
+        private void AddTagSubscriber(IActorRef subscriber, string tag)
         {
             if (!_tagSubscribers.TryGetValue(tag, out var subscriptions))
             {
-                subscriptions = new HashSet<IActorRef>();
-                _tagSubscribers.Add(tag, subscriptions);
+                _tagSubscribers = _tagSubscribers.Add(tag, ImmutableHashSet.Create(subscriber));
             }
-
-            subscriptions.Add(subscriber);
+            else
+            {
+                _tagSubscribers = _tagSubscribers.SetItem(tag, subscriptions.Add(subscriber));
+            }
         }
 
         private async Task<IEnumerable<string>> GetAllPersistenceIds()
         {
             var query = GenerateAllPersistenceIdsQuery();
-
-            TableQuerySegment result = null;
-
+            TableContinuationToken token = null;
             var returnValue = ImmutableList<string>.Empty;
+
+            do
+            {
+                var segment = await Table.ExecuteQuerySegmentedAsync(query, token);
+                token = segment.ContinuationToken;
+                if (segment.Results.Count > 0)
+                {
+                    returnValue = returnValue.AddRange(segment.Results.Select(x => x.RowKey));
+                }
+            } while (token != null);
+
+            return returnValue;
+        }
+        protected virtual async Task<(IEnumerable<string> Ids, long LastOrdering)> SelectAllPersistenceIdsAsync(long offset)
+        {
+            var maxSequence = ReadMaxSequenceNumber();
+            var ids = await GetAllPersistenceIds();
+            return (ids, maxSequence);
+        }
+        
+        protected virtual async Task<long> ReplayAllEventsAsync(ReplayAllEvents replay)
+        {
+            var query = GenerateAllEventsMessageQuery(replay);
+
+            // While we can specify the TakeCount, the CloudTable client does
+            //    not really respect this fact and will keep pulling results.
+            query.TakeCount =
+                replay.Max > int.MaxValue
+                    ? int.MaxValue
+                    : (int)replay.Max;
+
+            // In order to actually break at the limit we ask for we have to
+            //    keep a separate counter and track it ourselves.
+            var counter = 0;
+
+            TableQuerySegment<EventTagEntry> result = null;
+
+            var maxOrderingId = 0L;
 
             do
             {
                 result = await Table.ExecuteQuerySegmentedAsync(query, result?.ContinuationToken);
 
-                if (result.Results.Count > 0)
+                foreach (var entry in result.Results.OrderBy(x => x.UtcTicks))
                 {
-                    returnValue = returnValue.AddRange(result.Results.Select(x => x.RowKey));
+                    var deserialized = _serialization.PersistentFromBytes(entry.Payload);
+
+                    var persistent =
+                        new Persistent(
+                            deserialized.Payload,
+                            deserialized.SequenceNr,
+                            deserialized.PersistenceId,
+                            deserialized.Manifest,
+                            deserialized.IsDeleted,
+                            ActorRefs.NoSender,
+                            deserialized.WriterGuid);
+
+                    foreach (var adapted in AdaptFromJournal(persistent))
+                    {
+                        _log.Debug("Sending replayed message: persistenceId:{0} - sequenceNr:{1} - event:{2}",
+                            deserialized.PersistenceId, deserialized.SequenceNr, deserialized.Payload);
+                        replay.ReplyTo.Tell(new ReplayedEvent(adapted, entry.UtcTicks), ActorRefs.NoSender);
+
+                        counter++;
+                    }
+
+                    maxOrderingId = Math.Max(maxOrderingId, entry.UtcTicks);
+                }
+
+                if (counter >= replay.Max)
+                {
+                    break;
                 }
             } while (result.ContinuationToken != null);
 
-            return returnValue;
+            return maxOrderingId;
         }
 
         private async Task<CloudTable> InitCloudStorage(
@@ -753,20 +845,7 @@ namespace Akka.Persistence.Azure.Journal
             }
         }
 
-        private void NotifyNewPersistenceIdAdded(
-            string persistenceId)
-        {
-            var isNew = TryAddPersistenceId(persistenceId);
-            if (isNew && HasAllPersistenceIdSubscribers)
-            {
-                var added = new PersistenceIdAdded(persistenceId);
-                foreach (var subscriber in _allPersistenceIdSubscribers)
-                    subscriber.Tell(added);
-            }
-        }
-
-        private void NotifyTagChange(
-            string tag)
+        private void NotifyTagChange(string tag)
         {
             if (_tagSubscribers.TryGetValue(tag, out var subscribers))
             {
@@ -779,15 +858,15 @@ namespace Akka.Persistence.Azure.Journal
         private void RemoveSubscriber(
             IActorRef subscriber)
         {
-            var pidSubscriptions = _persistenceIdSubscribers.Values.Where(x => x.Contains(subscriber));
-            foreach (var subscription in pidSubscriptions)
-                subscription.Remove(subscriber);
+            _persistenceIdSubscribers = _persistenceIdSubscribers.SetItems(_persistenceIdSubscribers
+                .Where(kv => kv.Value.Contains(subscriber))
+                .Select(kv => new KeyValuePair<string, IImmutableSet<IActorRef>>(kv.Key, kv.Value.Remove(subscriber))));
 
-            var tagSubscriptions = _tagSubscribers.Values.Where(x => x.Contains(subscriber));
-            foreach (var subscription in tagSubscriptions)
-                subscription.Remove(subscriber);
+            _tagSubscribers = _tagSubscribers.SetItems(_tagSubscribers
+                .Where(kv => kv.Value.Contains(subscriber))
+                .Select(kv => new KeyValuePair<string, IImmutableSet<IActorRef>>(kv.Key, kv.Value.Remove(subscriber))));
 
-            _allPersistenceIdSubscribers.Remove(subscriber);
+            _newEventsSubscriber.Remove(subscriber);
         }
 
         /// <summary>
@@ -863,5 +942,15 @@ namespace Akka.Persistence.Azure.Journal
                 return _allPersistenceIds.Add(persistenceId);
             }
         }
+        private void NotifyPersistenceIdChange(string persistenceId)
+        {
+            if (_persistenceIdSubscribers.TryGetValue(persistenceId, out var subscribers))
+            {
+                var changed = new EventAppended(persistenceId);
+                foreach (var subscriber in subscribers)
+                    subscriber.Tell(changed);
+            }
+        }
+
     }
 }

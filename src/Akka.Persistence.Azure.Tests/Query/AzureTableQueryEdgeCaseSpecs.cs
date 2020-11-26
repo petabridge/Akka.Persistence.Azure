@@ -20,7 +20,7 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Azure.Tests.Query
 {
     [Collection("AzureQuery")]
-    public class AzureTableQueryEdgeCaseSpecs : Akka.TestKit.Xunit2.TestKit
+    public class AzureTableQueryEdgeCaseSpecs : Akka.TestKit.Xunit2.TestKit, IClassFixture<AzureEmulatorFixture>
     {
         public static readonly AtomicCounter Counter = new AtomicCounter(0);
         private readonly ITestOutputHelper _output;
@@ -180,7 +180,7 @@ namespace Akka.Persistence.Azure.Tests.Query
             var azureConfig =
                 !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
                     ? AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    : AzureStorageConfigHelper.AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+                    : AzureStorageConfigHelper.AzureConfig(AzureEmulatorFixture.GenerateConnStr());
 
             TableName = azureConfig.GetString("akka.persistence.journal.azure-table.table-name");
 

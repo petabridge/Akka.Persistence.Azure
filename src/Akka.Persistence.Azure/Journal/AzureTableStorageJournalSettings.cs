@@ -7,7 +7,7 @@
 using System;
 using System.Linq;
 using Akka.Configuration;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Akka.Persistence.Azure.Journal
 {

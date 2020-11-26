@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
-using Akka.Actor;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Akka.Persistence.Azure.TestHelpers
 {
