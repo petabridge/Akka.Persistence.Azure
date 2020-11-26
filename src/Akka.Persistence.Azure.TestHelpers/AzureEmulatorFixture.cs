@@ -25,9 +25,9 @@ namespace Akka.Persistence.Azure.TestHelpers
         private DockerClient _client;
 
         public string ConnectionString { get; private set; }
-
-        public async Task InitializeAsync()
+        public AzureEmulatorFixture()
         {
+
             DockerClientConfiguration config;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 config = new DockerClientConfiguration(new Uri("unix:///var/run/docker.sock"));
@@ -37,13 +37,19 @@ namespace Akka.Persistence.Azure.TestHelpers
                 throw new NotSupportedException($"Unsupported OS [{RuntimeInformation.OSDescription}]");
 
             _client = config.CreateClient();
-
-            var images =
-                await _client.Images.ListImagesAsync(new ImagesListParameters {MatchName = AzureStorageImageName});
+        }
+        public async Task InitializeAsync()
+        {
+            var images = await _client.Images.ListImagesAsync(new ImagesListParameters { MatchName = AzureStorageImageName });
             if (images.Count == 0)
                 await _client.Images.CreateImageAsync(
-                    new ImagesCreateParameters {FromImage = AzureStorageImageName, Tag = "latest"}, null,
-                    new Progress<JSONMessage>());
+                    new ImagesCreateParameters { FromImage = AzureStorageImageName, Tag = "latest" }, null,
+                    new Progress<JSONMessage>(message =>
+                    {
+                        Console.WriteLine(!string.IsNullOrEmpty(message.ErrorMessage)
+                            ? message.ErrorMessage
+                            : $"{message.ID} {message.Status} {message.ProgressMessage}");
+                    }));
 
             var azureBlobPort = 10000;
             var azureQueuePort = 10001;

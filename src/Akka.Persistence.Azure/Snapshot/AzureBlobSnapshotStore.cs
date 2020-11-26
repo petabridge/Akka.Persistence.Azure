@@ -91,7 +91,7 @@ namespace Akka.Persistence.Azure.Snapshot
             {
                 results = await Container.ListBlobsSegmentedAsync(SeqNoHelper.ToSnapshotSearchQuery(persistenceId),
                     true,
-                    BlobListingDetails.Metadata, null, null, requestOptions, new OperationContext()/*, cts.Token*/);
+                    BlobListingDetails.Metadata, null, null, requestOptions, new OperationContext(), cts.Token);
             }
 
             // if we made it down here, the initial request succeeded.
@@ -163,8 +163,8 @@ namespace Akka.Persistence.Azure.Snapshot
                     snapshotData.Length,
                     AccessCondition.GenerateEmptyCondition(),
                     GenerateOptions(), 
-                    new OperationContext()/*,
-                    cts.Token*/);
+                    new OperationContext(),
+                    cts.Token);
             }
         }
 

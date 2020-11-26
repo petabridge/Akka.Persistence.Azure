@@ -499,13 +499,12 @@ namespace Akka.Persistence.Azure.Journal
 
         private static TableQuery<HighestSequenceNrEntry> GenerateMaxSequenceNumberQuery()
         {
-            var filter =  TableQuery.GenerateFilterCondition(
+            var filter = TableQuery.GenerateFilterCondition(
                         "RowKey",
                         QueryComparisons.Equal,
                         HighestSequenceNrEntry.RowKeyValue);
 
             var returnValue = new TableQuery<HighestSequenceNrEntry>().Where(filter);
-
             return returnValue;
         }
         private long ReadMaxSequenceNumber()
@@ -691,21 +690,21 @@ namespace Akka.Persistence.Azure.Journal
             return returnValue;
         }
 
-        private static TableQuery<EventTagEntry> GenerateAllEventsMessageQuery(ReplayAllEvents replay)
+        private static TableQuery<PersistentJournalEntry> GenerateAllEventsMessageQuery(ReplayAllEvents replay)
         {
             var filter =
                 TableQuery.CombineFilters(
                     TableQuery.GenerateFilterCondition(
-                        "RowKey",
-                        QueryComparisons.GreaterThan,
+                        PersistentJournalEntry.SeqNoKeyName,
+                        QueryComparisons.GreaterThanOrEqual,
                         replay.FromOffset.ToJournalRowKey()),
                     TableOperators.And,
                     TableQuery.GenerateFilterCondition(
-                        "RowKey",
+                        PersistentJournalEntry.SeqNoKeyName,
                         QueryComparisons.LessThanOrEqual,
                         replay.ToOffset.ToJournalRowKey()));
 
-            var returnValue = new TableQuery<EventTagEntry>().Where(filter);
+            var returnValue = new TableQuery<PersistentJournalEntry>().Where(filter);
 
             return returnValue;
         }
@@ -763,6 +762,7 @@ namespace Akka.Persistence.Azure.Journal
         {
             var query = GenerateAllEventsMessageQuery(replay);
 
+            //query.Where(x => x.RowKey > replay.FromOffset);
             // While we can specify the TakeCount, the CloudTable client does
             //    not really respect this fact and will keep pulling results.
             query.TakeCount =
@@ -774,15 +774,15 @@ namespace Akka.Persistence.Azure.Journal
             //    keep a separate counter and track it ourselves.
             var counter = 0;
 
-            TableQuerySegment<EventTagEntry> result = null;
-
+            TableQuerySegment<PersistentJournalEntry> result = null;
+            TableContinuationToken token = null;
             var maxOrderingId = 0L;
 
             do
             {
-                result = await Table.ExecuteQuerySegmentedAsync(query, result?.ContinuationToken);
-
-                foreach (var entry in result.Results.OrderBy(x => x.UtcTicks))
+                result = await Table.ExecuteQuerySegmentedAsync(query, token);
+                token = result.ContinuationToken;
+                foreach (var entry in result.Results.OrderBy(x => x.SeqNo))
                 {
                     var deserialized = _serialization.PersistentFromBytes(entry.Payload);
 
@@ -798,21 +798,23 @@ namespace Akka.Persistence.Azure.Journal
 
                     foreach (var adapted in AdaptFromJournal(persistent))
                     {
+                        var s = deserialized.SequenceNr;
+                        var no = entry.SeqNo;
                         _log.Debug("Sending replayed message: persistenceId:{0} - sequenceNr:{1} - event:{2}",
                             deserialized.PersistenceId, deserialized.SequenceNr, deserialized.Payload);
-                        replay.ReplyTo.Tell(new ReplayedEvent(adapted, entry.UtcTicks), ActorRefs.NoSender);
+                        replay.ReplyTo.Tell(new ReplayedEvent(adapted, entry.SeqNo), ActorRefs.NoSender);
 
                         counter++;
                     }
 
-                    maxOrderingId = Math.Max(maxOrderingId, entry.UtcTicks);
+                    maxOrderingId = Math.Max(maxOrderingId, entry.SeqNo);
                 }
 
                 if (counter >= replay.Max)
                 {
                     break;
                 }
-            } while (result.ContinuationToken != null);
+            } while (token != null);
 
             return maxOrderingId;
         }
@@ -827,7 +829,7 @@ namespace Akka.Persistence.Azure.Journal
                 var op = new OperationContext();
                 using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
                 {
-                    if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
+                    if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op/*, cts.Token*/))
                         _log.Info("Created Azure Cloud Table", _settings.TableName);
                     else
                         _log.Info("Successfully connected to existing table", _settings.TableName);
