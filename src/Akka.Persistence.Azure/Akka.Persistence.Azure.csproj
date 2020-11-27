@@ -3,7 +3,7 @@
 
 
   <PropertyGroup>
-    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <Description>Akka.Persistence support for Windows Azure Table storage and Azure blob storage.</Description>
   </PropertyGroup>
 
