@@ -38,7 +38,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR")))
                 return JournalConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"));
 
-            return JournalConfig(AzureEmulatorFixture.ConnectionString);
+            return JournalConfig(AzureEmulatorFixture.GenerateConnStr());
         }
 
         public static Config JournalConfig(string connectionString)
