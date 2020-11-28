@@ -7,7 +7,7 @@ namespace Akka.Persistence.Azure.Util
     internal static class EventMetaExtension
     {
         /// <summary>
-        /// 
+        /// NOT IN USE CURRENTLY
         /// </summary>
         public static IEnumerable<EventMeta> ToRowKeys(this List<EventMetaEntry> eventMetaEntries)
         {
@@ -29,6 +29,7 @@ namespace Akka.Persistence.Azure.Util
             {
                 yield return new EventMeta
                 {
+                    RowKey = long.Parse(e.RowKey),
                     PersistenceId = e.PersistenceId,
                     FromSeqNo = e.SeqNo,
                     ToSeqNo = e .SeqNo
@@ -39,6 +40,7 @@ namespace Akka.Persistence.Azure.Util
 
     public class EventMeta
     {
+        public long RowKey { get; set; }
         public string PersistenceId { get; set; }
         public long FromSeqNo { get; set; }
         public long ToSeqNo { get; set; }

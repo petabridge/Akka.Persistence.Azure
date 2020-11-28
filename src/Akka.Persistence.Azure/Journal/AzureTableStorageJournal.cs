@@ -71,7 +71,7 @@ namespace Akka.Persistence.Azure.Journal
                 CloudStorageAccount.Parse(_settings.ConnectionString);
 
             _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage(5).Result);
-            var rowKey = ReadMaxRowKey();
+            var rowKey = ReadMaxOrderingId();
             _lastEventMetaRowKey = rowKey + 1;
         }
 
@@ -538,7 +538,7 @@ namespace Akka.Persistence.Azure.Journal
         }
 
 
-        private static TableQuery<EventMetaEntry> GenerateMaxSequenceNumberQuery()
+        private static TableQuery<EventMetaEntry> GenerateMaxOrderingIdQuery()
         {
             var filter = TableQuery.GenerateFilterCondition(
                         "PartitionKey",
@@ -548,15 +548,9 @@ namespace Akka.Persistence.Azure.Journal
             var returnValue = new TableQuery<EventMetaEntry>().Where(filter);
             return returnValue;
         }
-        private long ReadMaxSequenceNumber()
+        private long ReadMaxOrderingId()
         {
-            var max = Table.ExecuteQuery(GenerateMaxSequenceNumberQuery()).Max(x => x.SeqNo);
-
-            return max;
-        }
-        private long ReadMaxRowKey()
-        {
-            var max = Table.ExecuteQuery(GenerateMaxSequenceNumberQuery()).Max(x => x.RowKey);
+            var max = Table.ExecuteQuery(GenerateMaxOrderingIdQuery()).Max(x => x.RowKey);
             max = max is null ? "0" : max;
             return long.Parse(max);
         }
@@ -795,7 +789,8 @@ namespace Akka.Persistence.Azure.Journal
 
         private async Task<IEnumerable<string>> GetAllPersistenceIds()
         {
-            var query = GenerateAllPersistenceIdsQuery();
+            //We are now reading from a single partition
+            var query = GenerateMaxOrderingIdQuery();
             TableContinuationToken token = null;
             var returnValue = ImmutableList<string>.Empty;
 
@@ -805,29 +800,28 @@ namespace Akka.Persistence.Azure.Journal
                 token = segment.ContinuationToken;
                 if (segment.Results.Count > 0)
                 {
-                    returnValue = returnValue.AddRange(segment.Results.Select(x => x.RowKey));
+                    returnValue = returnValue.AddRange(segment.Results.Select(x => x.PersistenceId));
                 }
             } while (token != null);
 
-            return returnValue;
+            return returnValue.Distinct();
         }
         protected virtual async Task<(IEnumerable<string> Ids, long LastOrdering)> SelectAllPersistenceIdsAsync(long offset)
         {
-            var maxSequence = ReadMaxSequenceNumber();
+            var maxOderingId = ReadMaxOrderingId();
             var ids = await GetAllPersistenceIds();
-            return (ids, maxSequence);
+            return (ids, maxOderingId);
         }
         
         protected virtual async Task<long> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
-            var maxOrderingId = ReadMaxRowKey();
+            var maxOrderingId = ReadMaxOrderingId();
 
             await foreach (var meta in GetEventMeta(replay.FromOffset, replay.ToOffset))
             {
                 await foreach(var entry in ReplayAsync(meta.PersistenceId, meta.FromSeqNo, meta.ToSeqNo, replay.Max))
                 {
                     var deserialized = _serialization.PersistentFromBytes(entry.Payload);
-
                     var persistent =
                         new Persistent(
                             deserialized.Payload,
@@ -842,11 +836,11 @@ namespace Akka.Persistence.Azure.Journal
                     {
                         _log.Debug("Sending replayed message: persistenceId:{0} - sequenceNr:{1} - event:{2}",
                             deserialized.PersistenceId, deserialized.SequenceNr, deserialized.Payload);
-                        replay.ReplyTo.Tell(new ReplayedEvent(adapted, entry.SeqNo), ActorRefs.NoSender);
+                        replay.ReplyTo.Tell(new ReplayedEvent(adapted, meta.RowKey), ActorRefs.NoSender);
 
                     }
 
-                    //maxOrderingId = Math.Max(maxOrderingId, entry.SeqNo);
+                    maxOrderingId = Math.Max(maxOrderingId, meta.RowKey);
                 }
             }
             return maxOrderingId;
