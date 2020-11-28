@@ -602,8 +602,8 @@ namespace Akka.Persistence.Azure.Journal
             do
             {
                 result = await Table.ExecuteQuerySegmentedAsync(query, result?.ContinuationToken);
-                var orderedByTimestamp = result.Results.OrderBy(x => x.RowKey).ToList();
-                foreach (var r in orderedByTimestamp)
+                var ordered = result.Results.OrderBy(x => x.RowKey);
+                foreach (var r in ordered)
                     yield return r;
 
             } while (result.ContinuationToken != null);
