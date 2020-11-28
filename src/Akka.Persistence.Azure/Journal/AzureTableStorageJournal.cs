@@ -910,7 +910,7 @@ namespace Akka.Persistence.Azure.Journal
                 var op = new OperationContext();
                 using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
                 {
-                    if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op/*, cts.Token*/))
+                    if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
                         _log.Info("Created Azure Cloud Table", _settings.TableName);
                     else
                         _log.Info("Successfully connected to existing table", _settings.TableName);

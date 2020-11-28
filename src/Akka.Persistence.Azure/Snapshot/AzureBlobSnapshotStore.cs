@@ -59,7 +59,7 @@ namespace Akka.Persistence.Azure.Snapshot
             using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
             {
                 if (await containerRef.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Container,
-                    new BlobRequestOptions(), op/*, cts.Token*/))
+                    new BlobRequestOptions(), op, cts.Token))
                     _log.Info("Created Azure Blob Container", _settings.ContainerName);
                 else
                     _log.Info("Successfully connected to existing container", _settings.ContainerName);
