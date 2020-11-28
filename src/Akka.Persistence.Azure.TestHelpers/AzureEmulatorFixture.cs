@@ -21,9 +21,9 @@ namespace Akka.Persistence.Azure.TestHelpers
     /// </summary>
     public class AzureEmulatorFixture : IAsyncLifetime
     {
-        //private const string AzureStorageImageName = "farmer1992/azure-storage-emulator:latest";
+        private const string AzureStorageImageName = "farmer1992/azure-storage-emulator:latest";
         //private const string AzureStorageImageName = "eabanonu/legacy-azurite:latest";
-        private const string AzureStorageImageName = "akkadotnet/azure-storage-emulator:ltsc2019";
+        //private const string AzureStorageImageName = "akkadotnet/azure-storage-emulator:ltsc2019";
         private readonly string _azureStorageContainerName = $"azurestorage-{Guid.NewGuid():N}";
         private DockerClient _client;
 

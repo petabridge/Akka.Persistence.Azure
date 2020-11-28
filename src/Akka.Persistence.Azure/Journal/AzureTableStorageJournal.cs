@@ -594,7 +594,7 @@ namespace Akka.Persistence.Azure.Journal
             return returnValue;
         }
         //changed to netstandard 2.1
-        private async IAsyncEnumerable<EventMeta> GetEventMeta(long fromSequence, long toSequence)
+        private async IAsyncEnumerable<EventMetaEntry> GetEventMeta(long fromSequence, long toSequence)
         {
             var query = GenerateEventMetaEntryQuery(fromSequence, toSequence);
             TableQuerySegment<EventMetaEntry> result = null;
@@ -603,7 +603,7 @@ namespace Akka.Persistence.Azure.Journal
             {
                 result = await Table.ExecuteQuerySegmentedAsync(query, result?.ContinuationToken);
                 var orderedByTimestamp = result.Results.OrderBy(x => x.RowKey).ToList();
-                foreach (var r in orderedByTimestamp.ToEventMeta())
+                foreach (var r in orderedByTimestamp)
                     yield return r;
 
             } while (result.ContinuationToken != null);
@@ -819,8 +819,9 @@ namespace Akka.Persistence.Azure.Journal
 
             await foreach (var meta in GetEventMeta(replay.FromOffset, replay.ToOffset))
             {
-                await foreach(var entry in ReplayAsync(meta.PersistenceId, meta.FromSeqNo, meta.ToSeqNo, replay.Max))
+                await foreach(var entry in ReplayAsync(meta.PersistenceId, meta.SeqNo, meta.SeqNo, replay.Max))
                 {
+                    var rowKey = long.Parse(meta.RowKey);
                     var deserialized = _serialization.PersistentFromBytes(entry.Payload);
                     var persistent =
                         new Persistent(
@@ -836,11 +837,11 @@ namespace Akka.Persistence.Azure.Journal
                     {
                         _log.Debug("Sending replayed message: persistenceId:{0} - sequenceNr:{1} - event:{2}",
                             deserialized.PersistenceId, deserialized.SequenceNr, deserialized.Payload);
-                        replay.ReplyTo.Tell(new ReplayedEvent(adapted, meta.RowKey), ActorRefs.NoSender);
+                        replay.ReplyTo.Tell(new ReplayedEvent(adapted, rowKey), ActorRefs.NoSender);
 
                     }
 
-                    maxOrderingId = Math.Max(maxOrderingId, meta.RowKey);
+                    maxOrderingId = Math.Max(maxOrderingId, rowKey);
                 }
             }
             return maxOrderingId;
