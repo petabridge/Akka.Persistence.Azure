@@ -29,7 +29,7 @@ namespace Akka.Persistence.Azure.Tests
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR")))
                 return AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"));
 
-            return AzureConfig(AzureEmulatorFixture.GenerateConnStr());
+            return AzureConfig(AzureEmulatorFixture.ConnectionString);
         }
     }
 }

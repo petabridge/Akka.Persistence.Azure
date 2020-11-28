@@ -37,7 +37,7 @@ namespace Akka.Persistence.Azure.Tests
             var azureConfig =
                 !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
                     ? AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    : AzureStorageConfigHelper.AzureConfig(AzureEmulatorFixture.GenerateConnStr());
+                    : AzureStorageConfigHelper.AzureConfig(AzureEmulatorFixture.ConnectionString);
 
             TableName = azureConfig.GetString("akka.persistence.journal.azure-table.table-name");
 

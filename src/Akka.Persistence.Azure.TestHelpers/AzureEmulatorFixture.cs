@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Akka.Util;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Xunit;
@@ -24,7 +25,7 @@ namespace Akka.Persistence.Azure.TestHelpers
         private readonly string _azureStorageContainerName = $"azurestorage-{Guid.NewGuid():N}";
         private DockerClient _client;
 
-        public string ConnectionString { get; private set; }
+        public static string ConnectionString { get; private set; }
         public AzureEmulatorFixture()
         {
 
@@ -51,9 +52,9 @@ namespace Akka.Persistence.Azure.TestHelpers
                             : $"{message.ID} {message.Status} {message.ProgressMessage}");
                     }));
 
-            var azureBlobPort = 10000;
-            var azureQueuePort = 10001;
-            var azureTablePort = 10002;
+            var azureBlobPort = ThreadLocalRandom.Current.Next(9000, 10000);
+            var azureQueuePort = ThreadLocalRandom.Current.Next(9000, 10000);
+            var azureTablePort = ThreadLocalRandom.Current.Next(9000, 10000);
 
             // create the container
             await _client.Containers.CreateContainerAsync(new CreateContainerParameters
@@ -104,7 +105,7 @@ namespace Akka.Persistence.Azure.TestHelpers
             // start the container
             await _client.Containers.StartContainerAsync(_azureStorageContainerName, new ContainerStartParameters());
 
-            ConnectionString = GenerateConnStr();
+            ConnectionString = GenerateConnStr(blobport: azureBlobPort, queueport: azureQueuePort, tableport: azureTablePort);
 
             await Task.Delay(TimeSpan.FromSeconds(10));
         }
@@ -120,7 +121,7 @@ namespace Akka.Persistence.Azure.TestHelpers
             }
         }
 
-        public static string GenerateConnStr(string ip = "127.0.0.1", int blobport = 10000, int queueport = 10001,
+        private static string GenerateConnStr(string ip = "127.0.0.1", int blobport = 10000, int queueport = 10001,
             int tableport = 10002)
         {
             return
