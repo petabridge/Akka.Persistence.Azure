@@ -11,8 +11,6 @@ using Akka.Persistence.Azure.TableEntities;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Journal;
 using Akka.Util.Internal;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -21,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Debug = System.Diagnostics.Debug;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Akka.Persistence.Azure.Journal
 {

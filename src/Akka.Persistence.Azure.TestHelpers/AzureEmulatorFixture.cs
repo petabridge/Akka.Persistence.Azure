@@ -17,7 +17,7 @@ namespace Akka.Persistence.Azure.TestHelpers
     ///     Integration testing fixture using the Windows Azure Storage Emulator
     ///     Docker image provided by Microsoft: https://hub.docker.com/r/microsoft/azure-storage-emulator/
     /// </summary>
-    public class WindowsAzureStorageEmulatorFixture : IAsyncFixture
+    public class AzureEmulatorFixture : IAsyncFixture
     {
         private const string AzureStorageImageName = "microsoft/azure-storage-emulator";
         private readonly string _azureStorageContainerName = $"azurestorage-{Guid.NewGuid():N}";

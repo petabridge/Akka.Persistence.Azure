@@ -9,13 +9,15 @@ using Akka.Streams.Dsl;
 
 namespace Akka.Persistence.Azure.Query
 {
-    public class AzureTableStorageReadJournal : IReadJournal,
+    public class AzureTableStorageReadJournal:
         IPersistenceIdsQuery,
         ICurrentPersistenceIdsQuery,
         IEventsByPersistenceIdQuery,
         ICurrentEventsByPersistenceIdQuery,
         IEventsByTagQuery,
-        ICurrentEventsByTagQuery
+        ICurrentEventsByTagQuery,
+        IAllEventsQuery,
+        ICurrentAllEventsQuery
     {
         public static string Identifier = "akka.persistence.query.journal.azure-table";
 
@@ -189,6 +191,16 @@ namespace Akka.Persistence.Azure.Query
                 default:
                     throw new ArgumentException($"{GetType().Name} does not support {offset.GetType().Name} offsets");
             }
+        }
+
+        public Source<EventEnvelope, NotUsed> AllEvents(Offset offset)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Source<EventEnvelope, NotUsed> CurrentAllEvents(Offset offset)
+        {
+            throw new NotImplementedException();
         }
     }
 

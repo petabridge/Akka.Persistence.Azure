@@ -14,8 +14,8 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Snapshot;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
@@ -32,6 +32,7 @@ namespace Akka.Persistence.Azure.Snapshot
         private readonly SerializationHelper _serialization;
         private readonly AzureBlobSnapshotStoreSettings _settings;
         private readonly CloudStorageAccount _storageAccount;
+        private readonly CloudBlobClient _blobClient;
 
         public AzureBlobSnapshotStore(Config config = null)
         {
@@ -40,9 +41,11 @@ namespace Akka.Persistence.Azure.Snapshot
                 ? AzurePersistence.Get(Context.System).BlobSettings
                 : AzureBlobSnapshotStoreSettings.Create(config);
 
-            _storageAccount = _settings.Development ? 
-                CloudStorageAccount.DevelopmentStorageAccount : 
+            _storageAccount = _settings.Development ?
+                CloudStorageAccount.DevelopmentStorageAccount :
                 CloudStorageAccount.Parse(_settings.ConnectionString);
+
+            _blobClient = _storageAccount.CreateCloudBlobClient();
             _container = new Lazy<CloudBlobContainer>(() => InitCloudStorage().Result);
         }
 
@@ -50,8 +53,7 @@ namespace Akka.Persistence.Azure.Snapshot
 
         private async Task<CloudBlobContainer> InitCloudStorage()
         {
-            var blobClient = _storageAccount.CreateCloudBlobClient();
-            var containerRef = blobClient.GetContainerReference(_settings.ContainerName);
+            var containerRef = _blobClient.GetContainerReference(_settings.ContainerName);
             var op = new OperationContext();
 
             using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
@@ -156,11 +158,11 @@ namespace Akka.Persistence.Azure.Snapshot
                 blob.Metadata.Add(SeqNoMetaDataKey, metadata.SequenceNr.ToString());
 
                 await blob.UploadFromByteArrayAsync(
-                    snapshotData, 
-                    0, 
+                    snapshotData,
+                    0,
                     snapshotData.Length,
                     AccessCondition.GenerateEmptyCondition(),
-                    GenerateOptions(), 
+                    GenerateOptions(),
                     new OperationContext(),
                     cts.Token);
             }
@@ -266,7 +268,7 @@ namespace Akka.Persistence.Azure.Snapshot
 
         private static BlobRequestOptions GenerateOptions(AzureBlobSnapshotStoreSettings settings)
         {
-            return new BlobRequestOptions {MaximumExecutionTime = settings.RequestTimeout};
+            return new BlobRequestOptions { MaximumExecutionTime = settings.RequestTimeout };
         }
     }
 }
