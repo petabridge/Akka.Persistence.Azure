@@ -21,6 +21,7 @@ using Akka.Configuration;
 using Debug = System.Diagnostics.Debug;
 using Microsoft.Azure.Cosmos.Table;
 
+//https://medium.com/@willvelida/getting-started-with-the-table-api-in-azure-cosmos-db-1509fd52e46b
 namespace Akka.Persistence.Azure.Journal
 {
     /// <inheritdoc />
@@ -90,7 +91,6 @@ namespace Akka.Persistence.Azure.Journal
             var sequenceNumberQuery = GenerateHighestSequenceNumberQuery(persistenceId);
             TableQuerySegment<HighestSequenceNrEntry> result = null;
             long seqNo = 0L;
-
             do
             {
                 result = await Table.ExecuteQuerySegmentedAsync(sequenceNumberQuery, result?.ContinuationToken);
