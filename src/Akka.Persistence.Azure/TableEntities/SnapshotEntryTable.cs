@@ -75,10 +75,6 @@ namespace Akka.Persistence.Azure.TableEntities
         /// <summary>
         ///     The sequence number.
         /// </summary>
-        /// <remarks>
-        ///     We store this as a separate field since we may pad the <see cref="RowKey" />
-        ///     in order to get the rows for each partition to sort in descending order.
-        /// </remarks>
         public long SeqNo { get; set; }
         public long Timestamp { get; set; }
         public string PersistenceId { get; set; }
