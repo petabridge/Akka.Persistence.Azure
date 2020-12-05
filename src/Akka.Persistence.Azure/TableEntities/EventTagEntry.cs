@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Persistence.Azure.Util;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Akka.Persistence.Azure.TableEntities
 {

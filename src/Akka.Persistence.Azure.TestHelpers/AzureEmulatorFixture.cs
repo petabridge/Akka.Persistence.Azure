@@ -17,7 +17,7 @@ namespace Akka.Persistence.Azure.TestHelpers
     ///     Integration testing fixture using the Windows Azure Storage Emulator
     ///     Docker image provided by Microsoft: https://hub.docker.com/r/microsoft/azure-storage-emulator/
     /// </summary>
-    public class WindowsAzureStorageEmulatorFixture : IAsyncFixture
+    public class AzureEmulatorFixture : IAsyncFixture
     {
         private const string AzureStorageImageName = "microsoft/azure-storage-emulator";
         private readonly string _azureStorageContainerName = $"azurestorage-{Guid.NewGuid():N}";
@@ -116,8 +116,7 @@ namespace Akka.Persistence.Azure.TestHelpers
         public static string GenerateConnStr(string ip = "127.0.0.1", int blobport = 10000, int queueport = 10001,
             int tableport = 10002)
         {
-            return
-                $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{ip}:{blobport}/devstoreaccount1;TableEndpoint=http://{ip}:{tableport}/devstoreaccount1;QueueEndpoint=http://{ip}:{queueport}/devstoreaccount1;";
+            return $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
         }
     }
 }

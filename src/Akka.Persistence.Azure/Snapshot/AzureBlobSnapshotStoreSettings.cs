@@ -6,7 +6,7 @@
 
 using System;
 using Akka.Configuration;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
@@ -74,9 +74,9 @@ namespace Akka.Persistence.Azure.Snapshot
             var development = config.GetBoolean("development", false);
 
             return new AzureBlobSnapshotStoreSettings(
-                connectionString, 
-                containerName, 
-                connectTimeout, 
+                connectionString,
+                containerName,
+                connectTimeout,
                 requestTimeout,
                 verbose,
                 development);
