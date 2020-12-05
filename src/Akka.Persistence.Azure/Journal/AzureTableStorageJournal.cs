@@ -707,7 +707,7 @@ namespace Akka.Persistence.Azure.Journal
         {
             var query = GenerateAllPersistenceIdsQuery();
 
-            TableQuerySegment result = null;
+            TableQuerySegment<DynamicTableEntity> result = null;
 
             var returnValue = ImmutableList<string>.Empty;
 
