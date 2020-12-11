@@ -24,6 +24,17 @@ namespace Akka.Persistence.Azure.Snapshot
     /// </summary>
     public class AzureBlobSnapshotStore : SnapshotStore
     {
+        private static readonly Dictionary<int, TimeSpan> RetryInterval =
+            new Dictionary<int, TimeSpan>()
+            {
+                { 6, TimeSpan.FromMilliseconds(100) },
+                { 5, TimeSpan.FromMilliseconds(500) },
+                { 4, TimeSpan.FromMilliseconds(1000) },
+                { 3, TimeSpan.FromMilliseconds(2000) },
+                { 2, TimeSpan.FromMilliseconds(4000) },
+                { 1, TimeSpan.FromMilliseconds(8000) },
+            };
+
         private const string TimeStampMetaDataKey = "Timestamp";
         private const string SeqNoMetaDataKey = "SeqNo";
 
@@ -43,6 +54,7 @@ namespace Akka.Persistence.Azure.Snapshot
             _storageAccount = _settings.Development ? 
                 CloudStorageAccount.DevelopmentStorageAccount : 
                 CloudStorageAccount.Parse(_settings.ConnectionString);
+
             _container = new Lazy<CloudBlobContainer>(() => InitCloudStorage().Result);
         }
 
@@ -50,19 +62,34 @@ namespace Akka.Persistence.Azure.Snapshot
 
         private async Task<CloudBlobContainer> InitCloudStorage()
         {
-            var blobClient = _storageAccount.CreateCloudBlobClient();
-            var containerRef = blobClient.GetContainerReference(_settings.ContainerName);
-            var op = new OperationContext();
+            var retry = 5;
+            var exceptions = new List<Exception>();
 
-            using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
+            while (true)
             {
-                if (await containerRef.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Container,
-                    new BlobRequestOptions(), op, cts.Token))
-                    _log.Info("Created Azure Blob Container", _settings.ContainerName);
-                else
-                    _log.Info("Successfully connected to existing container", _settings.ContainerName);
+                try
+                {
+                    var blobClient = _storageAccount.CreateCloudBlobClient();
+                    var containerRef = blobClient.GetContainerReference(_settings.ContainerName);
+                    var op = new OperationContext();
 
-                return containerRef;
+                    if (await containerRef.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Container, new BlobRequestOptions(), op))
+                        _log.Info("Created Azure Blob Container", _settings.ContainerName);
+                    else
+                        _log.Info("Successfully connected to existing container", _settings.ContainerName);
+
+                    return containerRef;
+                }
+                catch (Exception ex)
+                {
+                    retry--;
+                    if (retry < 0)
+                        throw new AggregateException(exceptions);
+
+                    exceptions.Add(ex);
+                    _log.Error(ex, $"[{retry}] more tries to initialize blob storage remaining...");
+                    await Task.Delay(RetryInterval[retry]);
+                }
             }
         }
 
