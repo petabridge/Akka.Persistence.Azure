@@ -27,12 +27,12 @@ namespace Akka.Persistence.Azure.Snapshot
         private static readonly Dictionary<int, TimeSpan> RetryInterval =
             new Dictionary<int, TimeSpan>()
             {
-                { 6, TimeSpan.FromMilliseconds(100) },
-                { 5, TimeSpan.FromMilliseconds(500) },
-                { 4, TimeSpan.FromMilliseconds(1000) },
-                { 3, TimeSpan.FromMilliseconds(2000) },
-                { 2, TimeSpan.FromMilliseconds(4000) },
-                { 1, TimeSpan.FromMilliseconds(8000) },
+                { 5, TimeSpan.FromMilliseconds(100) },
+                { 4, TimeSpan.FromMilliseconds(500) },
+                { 3, TimeSpan.FromMilliseconds(1000) },
+                { 2, TimeSpan.FromMilliseconds(2000) },
+                { 1, TimeSpan.FromMilliseconds(4000) },
+                { 0, TimeSpan.FromMilliseconds(8000) },
             };
 
         private const string TimeStampMetaDataKey = "Timestamp";
@@ -51,45 +51,41 @@ namespace Akka.Persistence.Azure.Snapshot
                 ? AzurePersistence.Get(Context.System).BlobSettings
                 : AzureBlobSnapshotStoreSettings.Create(config);
 
-            _storageAccount = _settings.Development ? 
-                CloudStorageAccount.DevelopmentStorageAccount : 
+            _storageAccount = _settings.Development ?
+                CloudStorageAccount.DevelopmentStorageAccount :
                 CloudStorageAccount.Parse(_settings.ConnectionString);
 
-            _container = new Lazy<CloudBlobContainer>(() => InitCloudStorage().Result);
+            _container = new Lazy<CloudBlobContainer>(() => InitCloudStorage(5).Result);
         }
 
         public CloudBlobContainer Container => _container.Value;
 
-        private async Task<CloudBlobContainer> InitCloudStorage()
+        private async Task<CloudBlobContainer> InitCloudStorage(int remainingTries)
         {
-            var retry = 5;
-            var exceptions = new List<Exception>();
-
-            while (true)
+            try
             {
-                try
-                {
-                    var blobClient = _storageAccount.CreateCloudBlobClient();
-                    var containerRef = blobClient.GetContainerReference(_settings.ContainerName);
-                    var op = new OperationContext();
+                var blobClient = _storageAccount.CreateCloudBlobClient();
+                var containerRef = blobClient.GetContainerReference(_settings.ContainerName);
+                var op = new OperationContext();
 
-                    if (await containerRef.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Container, new BlobRequestOptions(), op))
+                using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
+                {
+                    if (await containerRef.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Container,
+                        new BlobRequestOptions(), op, cts.Token))
                         _log.Info("Created Azure Blob Container", _settings.ContainerName);
                     else
                         _log.Info("Successfully connected to existing container", _settings.ContainerName);
-
-                    return containerRef;
                 }
-                catch (Exception ex)
-                {
-                    retry--;
-                    if (retry == 0)
-                        throw new AggregateException(exceptions);
 
-                    exceptions.Add(ex);
-                    _log.Error(ex, $"[{retry}] more tries to initialize blob storage remaining...");
-                    await Task.Delay(RetryInterval[retry]);
-                }
+                return containerRef;
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "[{0}] more tries to initialize table storage remaining...", remainingTries);
+                if (remainingTries == 0)
+                    throw;
+                await Task.Delay(RetryInterval[remainingTries]);
+                return await InitCloudStorage(remainingTries - 1);
             }
         }
 
@@ -183,11 +179,11 @@ namespace Akka.Persistence.Azure.Snapshot
                 blob.Metadata.Add(SeqNoMetaDataKey, metadata.SequenceNr.ToString());
 
                 await blob.UploadFromByteArrayAsync(
-                    snapshotData, 
-                    0, 
+                    snapshotData,
+                    0,
                     snapshotData.Length,
                     AccessCondition.GenerateEmptyCondition(),
-                    GenerateOptions(), 
+                    GenerateOptions(),
                     new OperationContext(),
                     cts.Token);
             }
@@ -293,7 +289,7 @@ namespace Akka.Persistence.Azure.Snapshot
 
         private static BlobRequestOptions GenerateOptions(AzureBlobSnapshotStoreSettings settings)
         {
-            return new BlobRequestOptions {MaximumExecutionTime = settings.RequestTimeout};
+            return new BlobRequestOptions { MaximumExecutionTime = settings.RequestTimeout };
         }
     }
 }
