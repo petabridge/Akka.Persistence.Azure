@@ -83,7 +83,7 @@ namespace Akka.Persistence.Azure.Snapshot
                 catch (Exception ex)
                 {
                     retry--;
-                    if (retry < 0)
+                    if (retry == 0)
                         throw new AggregateException(exceptions);
 
                     exceptions.Add(ex);
