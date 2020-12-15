@@ -26,6 +26,9 @@ namespace Akka.Persistence.Azure.Tests.Query
 
         public static string TableName { get; private set; }
 
+        protected override bool AllocatesAllPersistenceIDsPublisher => false;
+
+
         public static Config Config()
         {
             var azureConfig =
