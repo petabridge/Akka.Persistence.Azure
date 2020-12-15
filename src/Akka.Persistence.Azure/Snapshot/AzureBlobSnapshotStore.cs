@@ -27,12 +27,12 @@ namespace Akka.Persistence.Azure.Snapshot
         private static readonly Dictionary<int, TimeSpan> RetryInterval =
             new Dictionary<int, TimeSpan>()
             {
-                { 6, TimeSpan.FromMilliseconds(100) },
-                { 5, TimeSpan.FromMilliseconds(500) },
-                { 4, TimeSpan.FromMilliseconds(1000) },
-                { 3, TimeSpan.FromMilliseconds(2000) },
-                { 2, TimeSpan.FromMilliseconds(4000) },
-                { 1, TimeSpan.FromMilliseconds(8000) },
+                { 5, TimeSpan.FromMilliseconds(100) },
+                { 4, TimeSpan.FromMilliseconds(500) },
+                { 3, TimeSpan.FromMilliseconds(1000) },
+                { 2, TimeSpan.FromMilliseconds(2000) },
+                { 1, TimeSpan.FromMilliseconds(4000) },
+                { 0, TimeSpan.FromMilliseconds(8000) },
             };
 
         private const string TimeStampMetaDataKey = "Timestamp";
@@ -63,7 +63,6 @@ namespace Akka.Persistence.Azure.Snapshot
         private async Task<CloudBlobContainer> InitCloudStorage()
         {
             var retry = 5;
-            var exceptions = new List<Exception>();
 
             while (true)
             {
@@ -82,13 +81,14 @@ namespace Akka.Persistence.Azure.Snapshot
                 }
                 catch (Exception ex)
                 {
-                    retry--;
-                    if (retry == 0)
-                        throw new AggregateException(exceptions);
+                    
+                    if (retry < 0)
+                        throw;
 
                     exceptions.Add(ex);
                     _log.Error(ex, $"[{retry}] more tries to initialize blob storage remaining...");
                     await Task.Delay(RetryInterval[retry]);
+                    retry--;
                 }
             }
         }
