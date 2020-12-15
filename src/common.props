@@ -2,9 +2,10 @@
   <PropertyGroup>
     <Copyright>Copyright © 2017-2020 Petabridge</Copyright>
     <Authors>Petabridge</Authors>
-    <VersionPrefix>0.6.0</VersionPrefix>
+    <VersionPrefix>0.7.1</VersionPrefix>
     <PackageReleaseNotes>Release of Akka.Persistence.Azure**
-Updates Akka version to 1.4.1</PackageReleaseNotes>
+- Upgraded to [Akka.NET v1.4.12](https://github.com/akkadotnet/akka.net/releases/tag/1.4.12)
+- Added backoff/retry mechanism for `AzureSnapshotStore`</PackageReleaseNotes>
     <PackageIconUrl>
     </PackageIconUrl>
     <PackageProjectUrl>
@@ -15,8 +16,8 @@ Updates Akka version to 1.4.1</PackageReleaseNotes>
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.4.1</XunitVersion>
-    <AkkaVersion>1.4.8</AkkaVersion>
-    <TestSdkVersion>16.6.1</TestSdkVersion>
+    <AkkaVersion>1.4.12</AkkaVersion>
+    <TestSdkVersion>16.8.3</TestSdkVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
