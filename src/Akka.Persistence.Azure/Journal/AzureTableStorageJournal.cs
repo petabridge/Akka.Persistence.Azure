@@ -173,7 +173,8 @@ namespace Akka.Persistence.Azure.Journal
                             deserialized.Manifest,
                             deserialized.IsDeleted,
                             ActorRefs.NoSender,
-                            deserialized.WriterGuid);
+                            deserialized.WriterGuid,
+                            timestamp: savedEvent.UtcTicks);
 
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
                     {
@@ -831,7 +832,8 @@ namespace Akka.Persistence.Azure.Journal
                             deserialized.Manifest,
                             deserialized.IsDeleted,
                             ActorRefs.NoSender,
-                            deserialized.WriterGuid);
+                            deserialized.WriterGuid,
+                            timestamp: entry.UtcTicks);
 
                     foreach (var adapted in AdaptFromJournal(persistent))
                     {
