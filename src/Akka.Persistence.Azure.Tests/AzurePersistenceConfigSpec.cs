@@ -10,7 +10,6 @@ using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Query;
 using Akka.Persistence.Azure.Snapshot;
 using FluentAssertions;
-using FluentAssertions.Equivalency;
 using Xunit;
 
 namespace Akka.Persistence.Azure.Tests
@@ -98,8 +97,7 @@ namespace Akka.Persistence.Azure.Tests
                         table-name = " + tableName + @" 
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.journal.azure-table"));
-
-            createJournalSettings.Should().Throw<ArgumentException>(reason);
+            createJournalSettings.ShouldThrow<ArgumentException>(reason);
         }
         
         [Theory]
@@ -115,7 +113,7 @@ namespace Akka.Persistence.Azure.Tests
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.snapshot-store.azure-blob-store"));
 
-            createSnapshotSettings.Should().Throw<ArgumentException>(reason);
+            createSnapshotSettings.ShouldThrow<ArgumentException>(reason);
         }
     }
 }
