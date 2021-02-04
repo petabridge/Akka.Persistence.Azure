@@ -388,6 +388,8 @@ namespace Akka.Persistence.Azure.Journal
                         }
                         catch (Exception ex)
                         {
+                            _log.Warning(ex, "Failure while writing messages to Azure table storage");
+                        
                             exceptions = exceptions.Add(ex);
                         }
                     }
