@@ -383,15 +383,19 @@ namespace Akka.Persistence.Azure.Journal
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 foreach (var r in persistenceResults)
                                     _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag, r.HttpStatusCode);
+
+                            exceptions = exceptions.Add(null);
                         }
                         catch (Exception ex)
                         {
+                            _log.Warning(ex, "Failure while writing messages to Azure table storage");
+                        
                             exceptions = exceptions.Add(ex);
                         }
                     }
                 }
 
-                if (exceptions.IsEmpty)
+                if (exceptions.All(ex => ex == null))
                 {
                     var allPersistenceIdsBatch = new TableBatchOperation();
 
@@ -439,7 +443,6 @@ namespace Akka.Persistence.Azure.Journal
                                     NotifyTagChange(tag);
                                 }
                             }
-
                         }
                     }
                 }
@@ -451,7 +454,7 @@ namespace Akka.Persistence.Azure.Journal
                  *
                  * Either everything fails or everything succeeds is the idea I guess.
                  */
-                return exceptions.IsEmpty ? null : exceptions;
+                return exceptions.Any(ex => ex != null) ? exceptions : null;
             }
             catch (Exception ex)
             {
