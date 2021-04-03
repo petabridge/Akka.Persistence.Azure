@@ -223,7 +223,7 @@ namespace Akka.Persistence.Azure.Journal
                         tableBatchOperation.Delete(toBeDeleted);
                     }
 
-                    var deleteTask = Table.ExecuteBatchAsync(tableBatchOperation);
+                    var deleteTask = Table.ExecuteBatchAsLimitedBatches(tableBatchOperation);
 
                     await deleteTask;
                 }
@@ -378,7 +378,7 @@ namespace Akka.Persistence.Azure.Journal
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 _log.Debug("Attempting to write batch of {0} messages to Azure storage", persistenceBatch.Count);
 
-                            var persistenceResults = await Table.ExecuteBatchAsync(persistenceBatch);
+                            var persistenceResults = await Table.ExecuteBatchAsLimitedBatches(persistenceBatch);
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 foreach (var r in persistenceResults)
@@ -405,7 +405,7 @@ namespace Akka.Persistence.Azure.Journal
                         allPersistenceIdsBatch.InsertOrReplace(new AllPersistenceIdsEntry(encodedKey));
                     });
 
-                    var allPersistenceResults = await Table.ExecuteBatchAsync(allPersistenceIdsBatch);
+                    var allPersistenceResults = await Table.ExecuteBatchAsLimitedBatches(allPersistenceIdsBatch);
 
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
                         foreach (var r in allPersistenceResults)
@@ -430,7 +430,7 @@ namespace Akka.Persistence.Azure.Journal
                                 eventTagsBatch.InsertOrReplace(item);
                             }
 
-                            var eventTagsResults = await Table.ExecuteBatchAsync(eventTagsBatch);
+                            var eventTagsResults = await Table.ExecuteBatchAsLimitedBatches(eventTagsBatch);
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 foreach (var r in eventTagsResults)
