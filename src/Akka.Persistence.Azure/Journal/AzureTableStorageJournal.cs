@@ -737,8 +737,26 @@ namespace Akka.Persistence.Azure.Journal
                 var tableClient = _storageAccount.CreateCloudTableClient();
                 var tableRef = tableClient.GetTableReference(_settings.TableName);
                 var op = new OperationContext();
+                
                 using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
                 {
+                    if (!_settings.AutoInitialize)
+                    {
+                        var exists = await tableRef.ExistsAsync(null, null, cts.Token);
+
+                        if (!exists)
+                        {
+                            remainingTries = 0;
+                            
+                            throw new Exception(
+                                $"Table {_settings.TableName} doesn't exist. Either create it or turn auto-initialize on");
+                        }
+                        
+                        _log.Info("Successfully connected to existing table", _settings.TableName);
+                        
+                        return tableRef;
+                    }
+                    
                     if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
                         _log.Info("Created Azure Cloud Table", _settings.TableName);
                     else
