@@ -5,6 +5,7 @@
   <PropertyGroup>
     <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
     <Description>Akka.Persistence support for Windows Azure Table storage and Azure blob storage.</Description>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,8 +15,9 @@
 
   <ItemGroup>
     <PackageReference Include="Akka.Persistence.Query" Version="$(AkkaVersion)" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.8.1" />
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
-    <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.2.2" />
+    <PackageReference Include="System.Linq.Async" Version="5.0.0" />
   </ItemGroup>
 
 </Project>

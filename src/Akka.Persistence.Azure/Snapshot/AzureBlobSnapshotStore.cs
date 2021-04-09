@@ -8,14 +8,17 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Snapshot;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
+using Azure;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
@@ -38,11 +41,11 @@ namespace Akka.Persistence.Azure.Snapshot
         private const string TimeStampMetaDataKey = "Timestamp";
         private const string SeqNoMetaDataKey = "SeqNo";
 
-        private readonly Lazy<CloudBlobContainer> _container;
+        private readonly Lazy<BlobContainerClient> _containerClient;
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly SerializationHelper _serialization;
         private readonly AzureBlobSnapshotStoreSettings _settings;
-        private readonly CloudStorageAccount _storageAccount;
+        private readonly BlobServiceClient _serviceClient;
 
         public AzureBlobSnapshotStore(Config config = null)
         {
@@ -51,50 +54,49 @@ namespace Akka.Persistence.Azure.Snapshot
                 ? AzurePersistence.Get(Context.System).BlobSettings
                 : AzureBlobSnapshotStoreSettings.Create(config);
 
-            _storageAccount = _settings.Development ?
-                CloudStorageAccount.DevelopmentStorageAccount :
-                CloudStorageAccount.Parse(_settings.ConnectionString);
+            _serviceClient = _settings.Development ?
+                new BlobServiceClient("UseDevelopmentStorage=true") :
+                new BlobServiceClient(_settings.ConnectionString);
 
-            _container = new Lazy<CloudBlobContainer>(() => InitCloudStorage(5).Result);
+            _containerClient = new Lazy<BlobContainerClient>(() => InitCloudStorage(5).Result);
         }
 
-        public CloudBlobContainer Container => _container.Value;
+        public BlobContainerClient Container => _containerClient.Value;
 
-        private async Task<CloudBlobContainer> InitCloudStorage(int remainingTries)
+        private async Task<BlobContainerClient> InitCloudStorage(int remainingTries)
         {
             try
             {
-                var blobClient = _storageAccount.CreateCloudBlobClient();
-                var containerRef = blobClient.GetContainerReference(_settings.ContainerName);
-                var op = new OperationContext();
+                var blobClient = _serviceClient.GetBlobContainerClient(_settings.ContainerName);
 
-                using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
+                using var cts = new CancellationTokenSource(_settings.ConnectTimeout);
+                if (!_settings.AutoInitialize)
                 {
-                    if (!_settings.AutoInitialize)
+                    var exists = await blobClient.ExistsAsync(cts.Token);
+
+                    if (!exists)
                     {
-                        var exists = await containerRef.ExistsAsync(null, null, cts.Token);
+                        remainingTries = 0;
 
-                        if (!exists)
-                        {
-                            remainingTries = 0;
-
-                            throw new Exception(
-                                $"Container {_settings.ContainerName} doesn't exist. Either create it or turn auto-initialize on");
-                        }
-                        
-                        _log.Info("Successfully connected to existing container", _settings.ContainerName);
-                        
-                        return containerRef;
+                        throw new Exception(
+                            $"Container {_settings.ContainerName} doesn't exist. Either create it or turn auto-initialize on");
                     }
-                    
-                    if (await containerRef.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Container,
-                        new BlobRequestOptions(), op, cts.Token))
-                        _log.Info("Created Azure Blob Container", _settings.ContainerName);
-                    else
-                        _log.Info("Successfully connected to existing container", _settings.ContainerName);
+                        
+                    _log.Info("Successfully connected to existing container", _settings.ContainerName);
+                        
+                    return blobClient;
                 }
 
-                return containerRef;
+                var response = await blobClient.CreateIfNotExistsAsync(
+                    PublicAccessType.BlobContainer,
+                    cancellationToken: cts.Token);
+
+                if (response.GetRawResponse().Status == (int)HttpStatusCode.Created)
+                    _log.Info("Created Azure Blob Container", _settings.ContainerName);
+                else
+                    _log.Info("Successfully connected to existing container", _settings.ContainerName);
+
+                return blobClient;
             }
             catch (Exception ex)
             {
@@ -123,29 +125,25 @@ namespace Akka.Persistence.Azure.Snapshot
         protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId,
             SnapshotSelectionCriteria criteria)
         {
-            var requestOptions = GenerateOptions();
-            BlobResultSegment results = null;
-            using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
+            using var cts = new CancellationTokenSource(_settings.RequestTimeout);
             {
-                results = await Container.ListBlobsSegmentedAsync(SeqNoHelper.ToSnapshotSearchQuery(persistenceId),
-                    true,
-                    BlobListingDetails.Metadata, null, null, requestOptions, new OperationContext(), cts.Token);
-            }
+                var results = Container.GetBlobsAsync(
+                    prefix: SeqNoHelper.ToSnapshotSearchQuery(persistenceId), 
+                    traits: BlobTraits.Metadata,
+                    cancellationToken: cts.Token);
 
-            // if we made it down here, the initial request succeeded.
+                var pageEnumerator = results.AsPages().GetAsyncEnumerator(cts.Token);
 
-            async Task<SelectedSnapshot> FilterAndFetch(BlobResultSegment segment)
-            {
+                if (!await pageEnumerator.MoveNextAsync())
+                    return null;
+
+                // TODO: see if there's ever a scenario where the most recent snapshots aren't in the first page of the pagination list.
                 // apply filter criteria
-                var filtered = segment.Results
-                    .Where(x => x is CloudBlockBlob)
-                    .Cast<CloudBlockBlob>()
+                var filtered = pageEnumerator.Current.Values
                     .Where(x => FilterBlobSeqNo(criteria, x))
                     .Where(x => FilterBlobTimestamp(criteria, x))
-                    .OrderByDescending(x => FetchBlobSeqNo(x)) // ordering matters - get highest seqNo item
-                    .ThenByDescending(x =>
-                        FetchBlobTimestamp(
-                            x)) // if there are multiple snapshots taken at same SeqNo, need latest timestamp
+                    .OrderByDescending(FetchBlobSeqNo) // ordering matters - get highest seqNo item
+                    .ThenByDescending(FetchBlobTimestamp) // if there are multiple snapshots taken at same SeqNo, need latest timestamp
                     .FirstOrDefault();
 
                 // couldn't find what we were looking for. Onto the next part of the query
@@ -153,160 +151,101 @@ namespace Akka.Persistence.Azure.Snapshot
                 if (filtered == null)
                     return null;
 
-                using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
-                using (var memoryStream = new MemoryStream())
-                {
-                    await filtered.DownloadToStreamAsync(memoryStream, AccessCondition.GenerateEmptyCondition(),
-                        GenerateOptions(), new OperationContext(), cts.Token);
+                using var memoryStream = new MemoryStream();
+                var blobClient = Container.GetBlockBlobClient(filtered.Name);
+                var downloadInfo = await blobClient.DownloadAsync(cts.Token);
+                await downloadInfo.Value.Content.CopyToAsync(memoryStream);
 
-                    var snapshot = _serialization.SnapshotFromBytes(memoryStream.ToArray());
+                var snapshot = _serialization.SnapshotFromBytes(memoryStream.ToArray());
 
-                    var returnValue =
-                        new SelectedSnapshot(
-                            new SnapshotMetadata(
-                                persistenceId,
-                                FetchBlobSeqNo(filtered),
-                                new DateTime(FetchBlobTimestamp(filtered))),
-                            snapshot.Data);
+                var result =
+                    new SelectedSnapshot(
+                        new SnapshotMetadata(
+                            persistenceId,
+                            FetchBlobSeqNo(filtered),
+                            new DateTime(FetchBlobTimestamp(filtered))),
+                        snapshot.Data);
 
-                    return returnValue;
-                }
+                return result;
             }
-
-            // TODO: see if there's ever a scenario where the most recent snapshots aren't in the beginning of the pagination list.
-            var result = await FilterAndFetch(results);
-            return result;
         }
 
         protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
-            var blob = Container.GetBlockBlobReference(metadata.ToSnapshotBlobId());
+            var blobClient = Container.GetBlockBlobClient(metadata.ToSnapshotBlobId());
             var snapshotData = _serialization.SnapshotToBytes(new Serialization.Snapshot(snapshot));
 
-            using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
+            using var cts = new CancellationTokenSource(_settings.RequestTimeout);
+            var blobMetadata = new Dictionary<string, string>
             {
-                blob.Metadata.Add(TimeStampMetaDataKey, metadata.Timestamp.Ticks.ToString());
-
+                [TimeStampMetaDataKey] = metadata.Timestamp.Ticks.ToString(),
                 /*
                  * N.B. No need to convert the key into the Journal format we use here.
                  * The blobs themselves don't have their sort order affected by
                  * the presence of this metadata, so we should just save the SeqNo
                  * in a format that can be easily deserialized later.
                  */
-                blob.Metadata.Add(SeqNoMetaDataKey, metadata.SequenceNr.ToString());
+                [SeqNoMetaDataKey] = metadata.SequenceNr.ToString()
+            };
 
-                await blob.UploadFromByteArrayAsync(
-                    snapshotData,
-                    0,
-                    snapshotData.Length,
-                    AccessCondition.GenerateEmptyCondition(),
-                    GenerateOptions(),
-                    new OperationContext(),
-                    cts.Token);
-            }
+            using var stream = new MemoryStream(snapshotData);
+            await blobClient.UploadAsync(
+                stream, 
+                metadata: blobMetadata,
+                cancellationToken: cts.Token);
         }
 
         protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
-            var blob = Container.GetBlockBlobReference(metadata.ToSnapshotBlobId());
-            using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
-            {
-                await blob.DeleteIfExistsAsync(DeleteSnapshotsOption.None, AccessCondition.GenerateEmptyCondition(),
-                    GenerateOptions(), new OperationContext(),
-                    cts.Token);
-            }
+            var blobClient = Container.GetBlobClient(metadata.ToSnapshotBlobId());
+
+            using var cts = new CancellationTokenSource(_settings.RequestTimeout);
+            await blobClient.DeleteIfExistsAsync(cancellationToken: cts.Token);
         }
 
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
-            var requestOptions = GenerateOptions();
-            BlobResultSegment results = null;
-            using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
+            using var cts = new CancellationTokenSource(_settings.RequestTimeout);
+            var items = Container.GetBlobsAsync(
+                prefix: SeqNoHelper.ToSnapshotSearchQuery(persistenceId), 
+                traits: BlobTraits.Metadata,
+                cancellationToken: cts.Token);
+
+            var filtered = items
+                .Where(x => FilterBlobSeqNo(criteria, x))
+                .Where(x => FilterBlobTimestamp(criteria, x));
+
+            var deleteTasks = new List<Task>();
+            await foreach (var blob in filtered.WithCancellation(cts.Token))
             {
-                /*
-                 * Query only the metadata - don't need to stream the entire blob back to us
-                 * in order to delete it from storage in the next request.
-                 */
-                results = await Container.ListBlobsSegmentedAsync(SeqNoHelper.ToSnapshotSearchQuery(persistenceId),
-                    true,
-                    BlobListingDetails.Metadata, null, null, requestOptions, new OperationContext(), cts.Token);
+                var blobClient = Container.GetBlobClient(blob.Name);
+                deleteTasks.Add(blobClient.DeleteIfExistsAsync(cancellationToken: cts.Token));
             }
 
-            // if we made it down here, the initial request succeeded.
-
-            async Task FilterAndDelete(BlobResultSegment segment)
-            {
-                // apply filter criteria
-                var filtered = segment.Results.Where(x => x is CloudBlockBlob)
-                    .Cast<CloudBlockBlob>()
-                    .Where(x => FilterBlobSeqNo(criteria, x))
-                    .Where(x => FilterBlobTimestamp(criteria, x));
-
-                var deleteTasks = new List<Task>();
-                using (var cts = new CancellationTokenSource(_settings.RequestTimeout))
-                {
-                    foreach (var blob in filtered)
-                        deleteTasks.Add(blob.DeleteIfExistsAsync(DeleteSnapshotsOption.None,
-                            AccessCondition.GenerateEmptyCondition(),
-                            GenerateOptions(), new OperationContext(), cts.Token));
-
-                    await Task.WhenAll(deleteTasks);
-                }
-            }
-
-            var continuationToken = results.ContinuationToken;
-            var deleteTask = FilterAndDelete(results);
-
-            while (continuationToken != null)
-            {
-                // get the next round of results in parallel with the deletion of the previous
-                var nextResults = await Container.ListBlobsSegmentedAsync(continuationToken);
-
-                // finish our previous delete tasks
-                await deleteTask;
-
-                // start next round of deletes
-                deleteTask = FilterAndDelete(nextResults);
-
-                // move the loop forward if there are more results to be processed still
-                continuationToken = nextResults.ContinuationToken;
-            }
-
-            // wait for the final delete operation to complete
-            await deleteTask;
+            await Task.WhenAll(deleteTasks);
         }
 
-        private static bool FilterBlobSeqNo(SnapshotSelectionCriteria criteria, CloudBlob x)
+        private static bool FilterBlobSeqNo(SnapshotSelectionCriteria criteria, BlobItem x)
         {
             var seqNo = FetchBlobSeqNo(x);
             return seqNo <= criteria.MaxSequenceNr && seqNo >= criteria.MinSequenceNr;
         }
 
-        private static long FetchBlobSeqNo(CloudBlob x)
+        private static long FetchBlobSeqNo(BlobItem x)
         {
             return long.Parse(x.Metadata[SeqNoMetaDataKey]);
         }
 
-        private static bool FilterBlobTimestamp(SnapshotSelectionCriteria criteria, CloudBlob x)
+        private static bool FilterBlobTimestamp(SnapshotSelectionCriteria criteria, BlobItem x)
         {
             var ticks = FetchBlobTimestamp(x);
             return ticks <= criteria.MaxTimeStamp.Ticks &&
                    (!criteria.MinTimestamp.HasValue || ticks >= criteria.MinTimestamp.Value.Ticks);
         }
 
-        private static long FetchBlobTimestamp(CloudBlob x)
+        private static long FetchBlobTimestamp(BlobItem x)
         {
             return long.Parse(x.Metadata[TimeStampMetaDataKey]);
-        }
-
-        private BlobRequestOptions GenerateOptions()
-        {
-            return GenerateOptions(_settings);
-        }
-
-        private static BlobRequestOptions GenerateOptions(AzureBlobSnapshotStoreSettings settings)
-        {
-            return new BlobRequestOptions { MaximumExecutionTime = settings.RequestTimeout };
         }
     }
 }
