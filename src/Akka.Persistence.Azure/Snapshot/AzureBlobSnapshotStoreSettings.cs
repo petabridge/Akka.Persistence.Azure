@@ -17,7 +17,7 @@ namespace Akka.Persistence.Azure.Snapshot
     public sealed class AzureBlobSnapshotStoreSettings
     {
         public AzureBlobSnapshotStoreSettings(string connectionString, string containerName,
-            TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging, bool development)
+            TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging, bool development, bool autoInitialize)
         {
             if (string.IsNullOrWhiteSpace(containerName))
                 throw new ConfigurationException("[AzureBlobSnapshotStore] Container name is null or empty.");
@@ -29,6 +29,7 @@ namespace Akka.Persistence.Azure.Snapshot
             ConnectTimeout = connectTimeout;
             VerboseLogging = verboseLogging;
             Development = development;
+            AutoInitialize = autoInitialize;
         }
 
         /// <summary>
@@ -58,6 +59,8 @@ namespace Akka.Persistence.Azure.Snapshot
 
         public bool Development { get; }
 
+        public bool AutoInitialize { get; }
+
         /// <summary>
         ///     Creates an <see cref="AzureBlobSnapshotStoreSettings" /> instance using the
         ///     `akka.persistence.snapshot-store.azure-blob-store` HOCON configuration section.
@@ -72,6 +75,7 @@ namespace Akka.Persistence.Azure.Snapshot
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
             var development = config.GetBoolean("development", false);
+            var autoInitialize = config.GetBoolean("auto-initialize", true);
 
             return new AzureBlobSnapshotStoreSettings(
                 connectionString, 
@@ -79,7 +83,8 @@ namespace Akka.Persistence.Azure.Snapshot
                 connectTimeout, 
                 requestTimeout,
                 verbose,
-                development);
+                development,
+                autoInitialize);
         }
     }
 }
