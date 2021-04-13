@@ -9,6 +9,7 @@ using Akka.Configuration;
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Query;
 using Akka.Persistence.Azure.Snapshot;
+using Azure.Storage.Blobs.Models;
 using FluentAssertions;
 using Xunit;
 
@@ -40,6 +41,7 @@ namespace Akka.Persistence.Azure.Tests
             blobSettings.ConnectTimeout.Should().Be(TimeSpan.FromSeconds(3));
             blobSettings.RequestTimeout.Should().Be(TimeSpan.FromSeconds(3));
             blobSettings.VerboseLogging.Should().BeFalse();
+            blobSettings.ContainerPublicAccessType.Should().Be(PublicAccessType.BlobContainer);
         }
         
         [Fact]
