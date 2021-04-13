@@ -97,7 +97,7 @@ namespace Akka.Persistence.Azure.Tests
                         table-name = " + tableName + @" 
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.journal.azure-table"));
-            createJournalSettings.ShouldThrow<ArgumentException>(reason);
+            createJournalSettings.Should().Throw<ArgumentException>(reason);
         }
         
         [Theory]
@@ -113,7 +113,7 @@ namespace Akka.Persistence.Azure.Tests
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.snapshot-store.azure-blob-store"));
 
-            createSnapshotSettings.ShouldThrow<ArgumentException>(reason);
+            createSnapshotSettings.Should().Throw<ArgumentException>(reason);
         }
     }
 }
