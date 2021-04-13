@@ -17,12 +17,34 @@ namespace Akka.Persistence.Azure.Snapshot
     /// </summary>
     public sealed class AzureBlobSnapshotStoreSettings
     {
-        public AzureBlobSnapshotStoreSettings(string connectionString, string containerName,
-            TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging, bool development, bool autoInitialize, 
-            string containerPublicAccessType)
+        [Obsolete]
+        public AzureBlobSnapshotStoreSettings(
+            string connectionString, 
+            string containerName,
+            TimeSpan connectTimeout, 
+            TimeSpan requestTimeout, 
+            bool verboseLogging, 
+            bool development,
+            bool autoInitialize)
+            : this(connectionString, containerName, connectTimeout, requestTimeout, verboseLogging, development, autoInitialize, PublicAccessType.BlobContainer)
+        { }
+
+        public AzureBlobSnapshotStoreSettings(
+            string connectionString, 
+            string containerName,
+            TimeSpan connectTimeout, 
+            TimeSpan requestTimeout, 
+            bool verboseLogging, 
+            bool development, 
+            bool autoInitialize, 
+            PublicAccessType containerPublicAccessType)
         {
             if (string.IsNullOrWhiteSpace(containerName))
                 throw new ConfigurationException("[AzureBlobSnapshotStore] Container name is null or empty.");
+
+            if (string.IsNullOrWhiteSpace(connectionString) && !development)
+                throw new ConfigurationException(
+                    "Invalid [connection-string] value. Connection string must not be null or empty when development mode is not set.");
 
             NameValidator.ValidateContainerName(containerName);
             ConnectionString = connectionString;
@@ -32,10 +54,7 @@ namespace Akka.Persistence.Azure.Snapshot
             VerboseLogging = verboseLogging;
             Development = development;
             AutoInitialize = autoInitialize;
-            ContainerPublicAccessType =
-                Enum.TryParse<PublicAccessType>(containerPublicAccessType, true, out var accessType)
-                    ? accessType
-                    : PublicAccessType.BlobContainer;
+            ContainerPublicAccessType = containerPublicAccessType;
         }
 
         /// <summary>
@@ -84,7 +103,12 @@ namespace Akka.Persistence.Azure.Snapshot
             var verbose = config.GetBoolean("verbose-logging", false);
             var development = config.GetBoolean("development", false);
             var autoInitialize = config.GetBoolean("auto-initialize", true);
-            var containerPublicAccessType = config.GetString("container-public-access-type", PublicAccessType.BlobContainer.ToString());
+
+            var accessType = config.GetString("container-public-access-type", PublicAccessType.BlobContainer.ToString());
+
+            if (!Enum.TryParse<PublicAccessType>(accessType, true, out var containerPublicAccessType))
+                throw new ConfigurationException(
+                    "Invalid [container-public-access-type] value. Valid values are 'None', 'Blob', and 'BlobContainer'");
 
             return new AzureBlobSnapshotStoreSettings(
                 connectionString, 
