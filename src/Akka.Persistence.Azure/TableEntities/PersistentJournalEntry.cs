@@ -6,11 +6,10 @@
 
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Util;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Akka.Persistence.Azure.TableEntities
 {

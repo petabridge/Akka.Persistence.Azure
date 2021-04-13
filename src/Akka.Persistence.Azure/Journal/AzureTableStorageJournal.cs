@@ -11,8 +11,6 @@ using Akka.Persistence.Azure.TableEntities;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Journal;
 using Akka.Util.Internal;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -20,6 +18,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
+using Microsoft.Azure.Cosmos.Table;
 using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Persistence.Azure.Journal
@@ -712,7 +711,7 @@ namespace Akka.Persistence.Azure.Journal
         {
             var query = GenerateAllPersistenceIdsQuery();
 
-            TableQuerySegment result = null;
+            TableQuerySegment<DynamicTableEntity> result = null;
 
             var returnValue = ImmutableList<string>.Empty;
 

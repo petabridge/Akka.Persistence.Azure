@@ -6,7 +6,7 @@
 
 using System;
 using Akka.Configuration;
-using Microsoft.WindowsAzure.Storage;
+using Akka.Persistence.Azure.Util;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
