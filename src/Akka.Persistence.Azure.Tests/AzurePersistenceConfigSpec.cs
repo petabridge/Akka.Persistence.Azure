@@ -41,7 +41,7 @@ namespace Akka.Persistence.Azure.Tests
             blobSettings.ConnectTimeout.Should().Be(TimeSpan.FromSeconds(3));
             blobSettings.RequestTimeout.Should().Be(TimeSpan.FromSeconds(3));
             blobSettings.VerboseLogging.Should().BeFalse();
-            blobSettings.ContainerPublicAccessType.Should().Be(PublicAccessType.BlobContainer);
+            blobSettings.ContainerPublicAccessType.Should().Be(PublicAccessType.None);
         }
         
         [Fact]
