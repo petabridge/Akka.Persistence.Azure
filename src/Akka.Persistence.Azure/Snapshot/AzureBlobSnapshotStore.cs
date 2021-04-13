@@ -88,7 +88,7 @@ namespace Akka.Persistence.Azure.Snapshot
                 }
 
                 var response = await blobClient.CreateIfNotExistsAsync(
-                    PublicAccessType.BlobContainer,
+                    _settings.ContainerPublicAccessType,
                     cancellationToken: cts.Token);
 
                 if (response.GetRawResponse().Status == (int)HttpStatusCode.Created)
