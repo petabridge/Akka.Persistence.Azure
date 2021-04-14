@@ -54,9 +54,25 @@ namespace Akka.Persistence.Azure.Snapshot
                 ? AzurePersistence.Get(Context.System).BlobSettings
                 : AzureBlobSnapshotStoreSettings.Create(config);
 
-            _serviceClient = _settings.Development ?
-                new BlobServiceClient("UseDevelopmentStorage=true") :
-                new BlobServiceClient(_settings.ConnectionString);
+            if (_settings.Development)
+            {
+                _serviceClient = new BlobServiceClient("UseDevelopmentStorage=true");
+            }
+            else
+            {
+                var credentialSetup = Context.System.Settings.Setup.Get<AzureBlobSnapshotSetup>();
+                if (credentialSetup.HasValue)
+                {
+                    _serviceClient = new BlobServiceClient(
+                        credentialSetup.Value.ServiceUri,
+                        credentialSetup.Value.DefaultAzureCredential,
+                        credentialSetup.Value.BlobClientOptions);
+                }
+                else
+                {
+                    _serviceClient = new BlobServiceClient(_settings.ConnectionString);
+                }
+            }
 
             _containerClient = new Lazy<BlobContainerClient>(() => InitCloudStorage(5).Result);
         }
