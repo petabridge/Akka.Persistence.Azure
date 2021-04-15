@@ -21,6 +21,22 @@ akka.persistence.snapshot-store.azure-blob-store.connection-string = "Your Azure
 akka.persistence.snapshot-store.azure-blob-store.container-name = "Your container name"
 ```
 
+### Configuring snapshots Blob Storage using DefaultAzureCredential
+
+You can use `Azure.Identity` `DefaultAzureCredential` to configure the resource by using `AzureBlobSnapshotSetup`. When using `DefaultAzureCredential`, the HOCON 'connection-string' setting is ignored.
+
+Example:
+```
+var blobStorageSetup = AzureBlobSnapshotSetup.Create(
+  new Uri("https://{account_name}.blob.core.windows.net"), // This is the blob service URI
+  new DefaultAzureCredential() // You can pass a DefaultAzureCredentialOption here.
+                               // https://docs.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet
+);
+
+var bootstrap = BootstrapSetup.Create().And(blobStorageSetup);
+var system = ActorSystem.Create("actorSystem", bootstrap);
+```
+
 ## Using the plugin in local development environment
 
 You can use this plugin with Azure Storage Emulator in a local development environment by setting the development flag in the configuration file:
