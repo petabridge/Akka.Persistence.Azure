@@ -50,8 +50,7 @@ akka.persistence.snapshot-store.azure-blob-store.container-public-access-type = 
 
 #### DefaultAzureCredential
 
-`Azure.Identity` `DefaultAzureCredential` can be used to configure the resource by using `AzureBlobSnapshotSetup`. 
-When using `DefaultAzureCredential`, the HOCON 'connection-string' setting is ignored.
+`Azure.Identity` `DefaultAzureCredential` can be used to configure the resource by using `AzureBlobSnapshotSetup`. When using `DefaultAzureCredential`, the HOCON 'connection-string' setting is ignored.
 
 Example:
 ```
