@@ -9,6 +9,7 @@ using Akka.Configuration;
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Query;
 using Akka.Persistence.Azure.Snapshot;
+using Azure.Storage.Blobs.Models;
 using FluentAssertions;
 using Xunit;
 
@@ -40,6 +41,7 @@ namespace Akka.Persistence.Azure.Tests
             blobSettings.ConnectTimeout.Should().Be(TimeSpan.FromSeconds(3));
             blobSettings.RequestTimeout.Should().Be(TimeSpan.FromSeconds(3));
             blobSettings.VerboseLogging.Should().BeFalse();
+            blobSettings.ContainerPublicAccessType.Should().Be(PublicAccessType.None);
         }
         
         [Fact]
@@ -97,7 +99,7 @@ namespace Akka.Persistence.Azure.Tests
                         table-name = " + tableName + @" 
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.journal.azure-table"));
-            createJournalSettings.ShouldThrow<ArgumentException>(reason);
+            createJournalSettings.Should().Throw<ArgumentException>(reason);
         }
         
         [Theory]
@@ -113,7 +115,7 @@ namespace Akka.Persistence.Azure.Tests
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.snapshot-store.azure-blob-store"));
 
-            createSnapshotSettings.ShouldThrow<ArgumentException>(reason);
+            createSnapshotSettings.Should().Throw<ArgumentException>(reason);
         }
     }
 }

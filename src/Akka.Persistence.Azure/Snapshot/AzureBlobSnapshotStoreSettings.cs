@@ -6,7 +6,8 @@
 
 using System;
 using Akka.Configuration;
-using Microsoft.WindowsAzure.Storage;
+using Akka.Persistence.Azure.Util;
+using Azure.Storage.Blobs.Models;
 
 namespace Akka.Persistence.Azure.Snapshot
 {
@@ -16,11 +17,34 @@ namespace Akka.Persistence.Azure.Snapshot
     /// </summary>
     public sealed class AzureBlobSnapshotStoreSettings
     {
-        public AzureBlobSnapshotStoreSettings(string connectionString, string containerName,
-            TimeSpan connectTimeout, TimeSpan requestTimeout, bool verboseLogging, bool development)
+        [Obsolete]
+        public AzureBlobSnapshotStoreSettings(
+            string connectionString, 
+            string containerName,
+            TimeSpan connectTimeout, 
+            TimeSpan requestTimeout, 
+            bool verboseLogging, 
+            bool development,
+            bool autoInitialize)
+            : this(connectionString, containerName, connectTimeout, requestTimeout, verboseLogging, development, autoInitialize, PublicAccessType.BlobContainer)
+        { }
+
+        public AzureBlobSnapshotStoreSettings(
+            string connectionString, 
+            string containerName,
+            TimeSpan connectTimeout, 
+            TimeSpan requestTimeout, 
+            bool verboseLogging, 
+            bool development, 
+            bool autoInitialize, 
+            PublicAccessType containerPublicAccessType)
         {
             if (string.IsNullOrWhiteSpace(containerName))
                 throw new ConfigurationException("[AzureBlobSnapshotStore] Container name is null or empty.");
+
+            if (string.IsNullOrWhiteSpace(connectionString) && !development)
+                throw new ConfigurationException(
+                    "Invalid [connection-string] value. Connection string must not be null or empty when development mode is not set.");
 
             NameValidator.ValidateContainerName(containerName);
             ConnectionString = connectionString;
@@ -29,6 +53,8 @@ namespace Akka.Persistence.Azure.Snapshot
             ConnectTimeout = connectTimeout;
             VerboseLogging = verboseLogging;
             Development = development;
+            AutoInitialize = autoInitialize;
+            ContainerPublicAccessType = containerPublicAccessType;
         }
 
         /// <summary>
@@ -58,6 +84,10 @@ namespace Akka.Persistence.Azure.Snapshot
 
         public bool Development { get; }
 
+        public bool AutoInitialize { get; }
+        
+        public PublicAccessType ContainerPublicAccessType { get; }
+
         /// <summary>
         ///     Creates an <see cref="AzureBlobSnapshotStoreSettings" /> instance using the
         ///     `akka.persistence.snapshot-store.azure-blob-store` HOCON configuration section.
@@ -72,6 +102,13 @@ namespace Akka.Persistence.Azure.Snapshot
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
             var development = config.GetBoolean("development", false);
+            var autoInitialize = config.GetBoolean("auto-initialize", true);
+
+            var accessType = config.GetString("container-public-access-type", PublicAccessType.BlobContainer.ToString());
+
+            if (!Enum.TryParse<PublicAccessType>(accessType, true, out var containerPublicAccessType))
+                throw new ConfigurationException(
+                    "Invalid [container-public-access-type] value. Valid values are 'None', 'Blob', and 'BlobContainer'");
 
             return new AzureBlobSnapshotStoreSettings(
                 connectionString, 
@@ -79,7 +116,9 @@ namespace Akka.Persistence.Azure.Snapshot
                 connectTimeout, 
                 requestTimeout,
                 verbose,
-                development);
+                development,
+                autoInitialize,
+                containerPublicAccessType);
         }
     }
 }

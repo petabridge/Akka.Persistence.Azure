@@ -11,8 +11,6 @@ using Akka.Persistence.Azure.TableEntities;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Journal;
 using Akka.Util.Internal;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -20,6 +18,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
+using Microsoft.Azure.Cosmos.Table;
 using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Persistence.Azure.Journal
@@ -223,7 +222,7 @@ namespace Akka.Persistence.Azure.Journal
                         tableBatchOperation.Delete(toBeDeleted);
                     }
 
-                    var deleteTask = Table.ExecuteBatchAsync(tableBatchOperation);
+                    var deleteTask = Table.ExecuteBatchAsLimitedBatches(tableBatchOperation);
 
                     await deleteTask;
                 }
@@ -378,20 +377,24 @@ namespace Akka.Persistence.Azure.Journal
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 _log.Debug("Attempting to write batch of {0} messages to Azure storage", persistenceBatch.Count);
 
-                            var persistenceResults = await Table.ExecuteBatchAsync(persistenceBatch);
+                            var persistenceResults = await Table.ExecuteBatchAsLimitedBatches(persistenceBatch);
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 foreach (var r in persistenceResults)
                                     _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag, r.HttpStatusCode);
+
+                            exceptions = exceptions.Add(null);
                         }
                         catch (Exception ex)
                         {
+                            _log.Warning(ex, "Failure while writing messages to Azure table storage");
+                        
                             exceptions = exceptions.Add(ex);
                         }
                     }
                 }
 
-                if (exceptions.IsEmpty)
+                if (exceptions.All(ex => ex == null))
                 {
                     var allPersistenceIdsBatch = new TableBatchOperation();
 
@@ -401,7 +404,7 @@ namespace Akka.Persistence.Azure.Journal
                         allPersistenceIdsBatch.InsertOrReplace(new AllPersistenceIdsEntry(encodedKey));
                     });
 
-                    var allPersistenceResults = await Table.ExecuteBatchAsync(allPersistenceIdsBatch);
+                    var allPersistenceResults = await Table.ExecuteBatchAsLimitedBatches(allPersistenceIdsBatch);
 
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
                         foreach (var r in allPersistenceResults)
@@ -426,7 +429,7 @@ namespace Akka.Persistence.Azure.Journal
                                 eventTagsBatch.InsertOrReplace(item);
                             }
 
-                            var eventTagsResults = await Table.ExecuteBatchAsync(eventTagsBatch);
+                            var eventTagsResults = await Table.ExecuteBatchAsLimitedBatches(eventTagsBatch);
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 foreach (var r in eventTagsResults)
@@ -439,7 +442,6 @@ namespace Akka.Persistence.Azure.Journal
                                     NotifyTagChange(tag);
                                 }
                             }
-
                         }
                     }
                 }
@@ -451,7 +453,7 @@ namespace Akka.Persistence.Azure.Journal
                  *
                  * Either everything fails or everything succeeds is the idea I guess.
                  */
-                return exceptions.IsEmpty ? null : exceptions;
+                return exceptions.Any(ex => ex != null) ? exceptions : null;
             }
             catch (Exception ex)
             {
@@ -709,7 +711,7 @@ namespace Akka.Persistence.Azure.Journal
         {
             var query = GenerateAllPersistenceIdsQuery();
 
-            TableQuerySegment result = null;
+            TableQuerySegment<DynamicTableEntity> result = null;
 
             var returnValue = ImmutableList<string>.Empty;
 
@@ -734,8 +736,26 @@ namespace Akka.Persistence.Azure.Journal
                 var tableClient = _storageAccount.CreateCloudTableClient();
                 var tableRef = tableClient.GetTableReference(_settings.TableName);
                 var op = new OperationContext();
+                
                 using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
                 {
+                    if (!_settings.AutoInitialize)
+                    {
+                        var exists = await tableRef.ExistsAsync(null, null, cts.Token);
+
+                        if (!exists)
+                        {
+                            remainingTries = 0;
+                            
+                            throw new Exception(
+                                $"Table {_settings.TableName} doesn't exist. Either create it or turn auto-initialize on");
+                        }
+                        
+                        _log.Info("Successfully connected to existing table", _settings.TableName);
+                        
+                        return tableRef;
+                    }
+                    
                     if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
                         _log.Info("Created Azure Cloud Table", _settings.TableName);
                     else
