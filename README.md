@@ -21,9 +21,36 @@ akka.persistence.snapshot-store.azure-blob-store.connection-string = "Your Azure
 akka.persistence.snapshot-store.azure-blob-store.container-name = "Your container name"
 ```
 
-### Configuring snapshots Blob Storage using DefaultAzureCredential
+### Local development mode
+You can turn local development mode by changing these two settings:
+```
+akka.persistence.journal.azure-table.development = on
+akka.persistence.snapshot-store.azure-blob-store.development = on
+```
+When set, the plugin will ignore the `connection-string` setting and uses the Azure Storage Emulator default connection string of "UseDevelopmentStorage=true" instead.
 
-You can use `Azure.Identity` `DefaultAzureCredential` to configure the resource by using `AzureBlobSnapshotSetup`. When using `DefaultAzureCredential`, the HOCON 'connection-string' setting is ignored.
+### Configuring snapshots Blob Storage
+
+#### Auto-initialize blob container
+
+Blob container auto-initialize behaviour can be changed by changing this flag setting:
+```
+# Creates the required container if set
+akka.persistence.snapshot-store.azure-blob-store.auto-initialize = on
+```
+
+#### Container public access type
+
+Auto-initialized blob container public access type can be controlled by changing this setting:
+```
+# Public access level for the auto-initialized storage container. 
+# Valid values are "None", "BlobContainer" or "Blob"
+akka.persistence.snapshot-store.azure-blob-store.container-public-access-type = "None"
+```
+
+#### DefaultAzureCredential
+
+`Azure.Identity` `DefaultAzureCredential` can be used to configure the resource by using `AzureBlobSnapshotSetup`. When using `DefaultAzureCredential`, the HOCON 'connection-string' setting is ignored.
 
 Example:
 ```
