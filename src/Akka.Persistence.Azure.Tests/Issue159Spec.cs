@@ -1,17 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Akka.Configuration;
+using Akka.Persistence.Azure.TestHelpers;
 using Akka.Persistence.TCK.Snapshot;
 using Azure.Storage.Blobs;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests
 {
     public class Issue159Spec: SnapshotStoreSpec
     {
-        private static readonly Config Config = ConfigurationFactory.ParseString(@"
+        private static Config Config()
+        {
+            var connectionString = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR");
+            if(string.IsNullOrEmpty(connectionString))
+                connectionString = WindowsAzureStorageEmulatorFixture.GenerateConnStr();
+
+            return ConfigurationFactory.ParseString(@"
 akka {
     loglevel = DEBUG
     log-config-on-start = off
@@ -24,7 +28,7 @@ akka {
             plugin = ""akka.persistence.journal.azure-table""
 
             azure-table {
-                connection-string = ""UseDevelopmentStorage=true""
+                connection-string = """ + connectionString + @"""
                 connect-timeout = 3s
                 request-timeout = 3s
                 verbose-logging = on
@@ -49,17 +53,17 @@ akka {
 
 akka.persistence.snapshot-store.azure-blob-store {
     class = ""Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStore, Akka.Persistence.Azure""
-    connection-string = ""UseDevelopmentStorage=true""
+    connection-string = """ + connectionString + @"""
     container-name = ""default""
     connect-timeout = 3s
     request-timeout = 3s
     verbose-logging = on
     plugin-dispatcher = ""akka.actor.default-dispatcher""
-}
-");
+}");
+        }
 
         public Issue159Spec(ITestOutputHelper output)
-            : base(Config, nameof(Issue159Spec), output)
+            : base(Config(), nameof(Issue159Spec), output)
         {
             var extension = AzurePersistence.Get(Sys);
 
