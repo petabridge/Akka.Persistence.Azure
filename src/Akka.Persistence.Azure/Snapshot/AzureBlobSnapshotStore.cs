@@ -102,15 +102,24 @@ namespace Akka.Persistence.Azure.Snapshot
                         
                     return blobClient;
                 }
-
-                var response = await blobClient.CreateIfNotExistsAsync(
-                    _settings.ContainerPublicAccessType,
-                    cancellationToken: cts.Token);
-
-                if (response.GetRawResponse().Status == (int)HttpStatusCode.Created)
-                    _log.Info("Created Azure Blob Container {0}", _settings.ContainerName);
-                else
+                
+                if (await blobClient.ExistsAsync(cts.Token))
+                {
                     _log.Info("Successfully connected to existing container {0}", _settings.ContainerName);
+                }
+                else
+                {
+                    try
+                    {
+                        await blobClient.CreateAsync(_settings.ContainerPublicAccessType,
+                            cancellationToken: cts.Token);
+                        _log.Info("Created Azure Blob Container {0}", _settings.ContainerName);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception($"Failed to create Azure Blob Container {_settings.ContainerName}", e);
+                    }
+                }
 
                 return blobClient;
             }
