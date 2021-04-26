@@ -42,10 +42,6 @@ namespace Akka.Persistence.Azure.Snapshot
             if (string.IsNullOrWhiteSpace(containerName))
                 throw new ConfigurationException("[AzureBlobSnapshotStore] Container name is null or empty.");
 
-            if (string.IsNullOrWhiteSpace(connectionString) && !development)
-                throw new ConfigurationException(
-                    "Invalid [connection-string] value. Connection string must not be null or empty when development mode is not set.");
-
             NameValidator.ValidateContainerName(containerName);
             ConnectionString = connectionString;
             ContainerName = containerName;
