@@ -38,7 +38,16 @@ namespace Akka.Persistence.Azure.TestHelpers
             _client = config.CreateClient();
 
             var images =
-                await _client.Images.ListImagesAsync(new ImagesListParameters {MatchName = AzureStorageImageName});
+                await _client.Images.ListImagesAsync(new ImagesListParameters
+                {
+                    Filters = new Dictionary<string, IDictionary<string, bool>>
+                    {
+                        ["reference"] = new Dictionary<string, bool>
+                        {
+                            [AzureStorageImageName] = true
+                        }
+                    }
+                });
             if (images.Count == 0)
                 await _client.Images.CreateImageAsync(
                     new ImagesCreateParameters {FromImage = AzureStorageImageName, Tag = "latest"}, null,
