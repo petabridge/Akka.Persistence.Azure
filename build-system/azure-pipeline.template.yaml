@@ -35,7 +35,7 @@ jobs:
       - powershell: |
           npm install -g azurite
           mkdir azurite
-          start /B azurite --silent --location azurite --debug azirute/debug.log          
+          Start-Process azurite.cmd -PassThru
         displayName: 'Install and Run Azurite (Windows)'
         condition: eq( variables['Agent.OS'], 'Windows_NT' )
       - task: BatchScript@1
