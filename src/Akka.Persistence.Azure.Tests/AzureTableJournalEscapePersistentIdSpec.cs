@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Persistence.Azure.TestHelpers;
+using Akka.Persistence.Azure.Tests.Helper;
 using Akka.Persistence.TCK;
 using Akka.Persistence.TCK.Journal;
 using Akka.TestKit;
@@ -12,10 +12,14 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests
 {
-    public class AzureTableJournalEscapePersistentIdSpec : AzureTableJournalSpec, IClassFixture<WindowsAzureStorageEmulatorFixture>
+    [Collection("AzureSpecs")]
+    public class AzureTableJournalEscapePersistentIdSpec : JournalSpec
     {
-        public AzureTableJournalEscapePersistentIdSpec(ITestOutputHelper output) : base(output)
+        public AzureTableJournalEscapePersistentIdSpec(ITestOutputHelper output) 
+            : base(AzureConfig(), nameof(AzureTableJournalEscapePersistentIdSpec), output)
         {
+            AzurePersistence.Get(Sys);
+            Initialize();
         }
 
         /// <inheritdoc />

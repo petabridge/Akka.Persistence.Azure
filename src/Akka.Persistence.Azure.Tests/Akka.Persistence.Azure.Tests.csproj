@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\common.props" />
-  <Import Project="..\xunitRunner.props" />
   <PropertyGroup>    
     <TargetFramework>$(NetCoreTestVersion)</TargetFramework>
   </PropertyGroup>
@@ -8,6 +7,7 @@
   <ItemGroup>
     <PackageReference Include="Akka.Persistence.TCK" Version="$(AkkaVersion)" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageReference Include="Docker.DotNet" Version="3.125.5" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <PrivateAssets>all</PrivateAssets>
@@ -16,7 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Persistence.Azure.TestHelpers\Akka.Persistence.Azure.TestHelpers.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Azure\Akka.Persistence.Azure.csproj" />
   </ItemGroup>
 

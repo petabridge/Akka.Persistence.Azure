@@ -11,14 +11,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Persistence.Azure.TestHelpers;
 using Akka.Util.Internal;
+using Azure.Storage.Blobs;
+using Microsoft.Azure.Cosmos.Table;
 using NBench;
 
 namespace Akka.Persistence.Azure.Tests.Performance
 {
     public class AzureJournalPerfSpecs
     {
+        public const string ConnectionString = "UseDevelopmentStorage=true";
+        
         public const string RecoveryCounterName = "MsgRecovered";
         private Counter _recoveryCounter;
 
@@ -35,10 +38,12 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
         public static Config JournalConfig()
         {
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR")))
-                return JournalConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"));
+            var connString = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR");
+            if (string.IsNullOrWhiteSpace(connString))
+                connString = ConnectionString;
 
-            return JournalConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
+            CleanupCloudTable(connString).Wait();
+            return JournalConfig(connString);
         }
 
         public static Config JournalConfig(string connectionString)
@@ -55,6 +60,22 @@ namespace Akka.Persistence.Azure.Tests.Performance
                 .WithFallback("akka.persistence.journal.azure-table.table-name=" + TableName);
         }
 
+        private static async Task CleanupCloudTable(string connectionString)
+        {
+            var account = CloudStorageAccount.Parse(connectionString);
+            var tableClient = account.CreateCloudTableClient();
+            foreach (var cloudTable in tableClient.ListTables())
+            {
+                await cloudTable.DeleteIfExistsAsync();
+            }
+
+            var blobClient = new BlobServiceClient(connectionString);
+            foreach (var blobContainer in blobClient.GetBlobContainers())
+            {
+                await blobClient.DeleteBlobContainerAsync(blobContainer.Name);
+            }
+        }
+        
         private ActorSystem ActorSystem { get; set; }
 
         private List<IActorRef> _persistentActors = new List<IActorRef>(PersistentActorCount);
@@ -64,7 +85,6 @@ namespace Akka.Persistence.Azure.Tests.Performance
         {
             _recoveryCounter = context.GetCounter(RecoveryCounterName);
             _writeCounter = context.GetCounter(WriteCounterName);
-
 
             ActorSystem = Actor.ActorSystem.Create(nameof(AzureJournalPerfSpecs) + TableVersionCounter.Current, JournalConfig());
 
@@ -121,7 +141,7 @@ namespace Akka.Persistence.Azure.Tests.Performance
 
             try
             {
-                DbUtils.CleanupCloudTable(AzurePersistence.Get(ActorSystem).TableSettings.ConnectionString, TableName).Wait(TimeSpan.FromSeconds(3));
+                CleanupCloudTable(AzurePersistence.Get(ActorSystem).TableSettings.ConnectionString).Wait(TimeSpan.FromSeconds(3));
             }
             catch { }
         }
