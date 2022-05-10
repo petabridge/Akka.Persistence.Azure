@@ -21,7 +21,7 @@ namespace Akka.Persistence.Azure.Tests.Query
         private readonly ITestOutputHelper _output;
 
         public AzureTableCurrentPersistenceIdsSpec(ITestOutputHelper output)
-            : base(AzureConfig(), nameof(AzureTablePersistenceIdsSpec), output)
+            : base(AzureConfig(), nameof(AzureTableCurrentPersistenceIdsSpec), output)
         {
             _output = output;
             AzurePersistence.Get(Sys);

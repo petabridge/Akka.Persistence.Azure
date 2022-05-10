@@ -19,18 +19,31 @@ namespace Akka.Persistence.Azure.Tests
             : base(AzureConfig(), nameof(AzureTableJournalEscapePersistentIdSpec), output)
         {
             AzurePersistence.Get(Sys);
-            Initialize();
-        }
-
-        /// <inheritdoc />
-        protected override void PreparePersistenceId(string pid)
-        {
-            base.PreparePersistenceId(pid);
             
             // Before storage is initialized, let's set Pid to the value that needs to be encoded
             var persistenceIdUsedForTests = typeof(PluginSpec).GetField($"<{nameof(Pid)}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
             var currentValue = persistenceIdUsedForTests.GetValue(this).ToString();
             persistenceIdUsedForTests.SetValue(this, $"some/path/to/encode/{currentValue}");
+            
+            Initialize();
+        }
+
+        [WindowsFact(SkipUnixReason = "Batch delete is not supported by Azurite in Linux")]
+        public override void Journal_should_not_reset_HighestSequenceNr_after_message_deletion()
+        {
+            base.Journal_should_not_reset_HighestSequenceNr_after_message_deletion();
+        }
+
+        [WindowsFact(SkipUnixReason = "Batch delete is not supported by Azurite in Linux")]
+        public override void Journal_should_not_replay_permanently_deleted_messages_on_range_deletion()
+        {
+            base.Journal_should_not_replay_permanently_deleted_messages_on_range_deletion();
+        }
+
+        [WindowsFact(SkipUnixReason = "Batch delete is not supported by Azurite in Linux")]
+        public override void Journal_should_not_reset_HighestSequenceNr_after_journal_cleanup()
+        {
+            base.Journal_should_not_reset_HighestSequenceNr_after_journal_cleanup();
         }
     }
 }

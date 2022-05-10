@@ -15,7 +15,7 @@ namespace Akka.Persistence.Azure.Tests.Query
     public sealed class AzureTableCurrentEventsByTagSpec : CurrentEventsByTagSpec
     {
         public AzureTableCurrentEventsByTagSpec(ITestOutputHelper output)
-            : base(AzureConfig(), nameof(AzureTablePersistenceIdsSpec), output)
+            : base(AzureConfig(), nameof(AzureTableCurrentEventsByTagSpec), output)
         {
             AzurePersistence.Get(Sys);
 

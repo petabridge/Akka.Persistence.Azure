@@ -14,7 +14,7 @@ namespace Akka.Persistence.Azure.Tests.Query
     public sealed class AzureTableEventsByPersistenceIdSpec : EventsByPersistenceIdSpec
     {
         public AzureTableEventsByPersistenceIdSpec(ITestOutputHelper output)
-            : base(AzureConfig(), nameof(AzureTablePersistenceIdsSpec), output)
+            : base(AzureConfig(), nameof(AzureTableEventsByPersistenceIdSpec), output)
         {
             AzurePersistence.Get(Sys);
 
