@@ -17,7 +17,7 @@ jobs:
         persistCredentials: true
       # Linux or macOS
       - bash: |
-          sudo npm install -g azurite
+          sudo npm install -g azurite@3.17.1
           sudo mkdir azurite
           sudo azurite --silent --location azurite --debug azirute/debug.log &
         displayName: 'Install and Run Azurite (Linux)'
@@ -33,7 +33,7 @@ jobs:
           AZURE_CONNECTION_STR: UseDevelopmentStorage=true
       # Windows
       - powershell: |
-          npm install -g azurite
+          npm install -g azurite@3.17.1
           mkdir azurite
           Start-Process azurite.cmd -PassThru
         displayName: 'Install and Run Azurite (Windows)'

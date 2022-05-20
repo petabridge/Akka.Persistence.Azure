@@ -7,13 +7,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util.Internal;
+using Azure.Data.Tables;
 using Azure.Storage.Blobs;
-using Microsoft.Azure.Cosmos.Table;
 using NBench;
 
 namespace Akka.Persistence.Azure.Tests.Performance
@@ -60,15 +59,15 @@ namespace Akka.Persistence.Azure.Tests.Performance
                 .WithFallback("akka.persistence.journal.azure-table.table-name=" + TableName);
         }
 
-        private static async Task CleanupCloudTable(string connectionString)
+        public static async Task CleanupCloudTable(string connectionString)
         {
-            var account = CloudStorageAccount.Parse(connectionString);
-            var tableClient = account.CreateCloudTableClient();
-            foreach (var cloudTable in tableClient.ListTables())
+            var tableClient = new TableServiceClient(connectionString);
+            
+            await foreach(var table in tableClient.QueryAsync())
             {
-                await cloudTable.DeleteIfExistsAsync();
+                await tableClient.DeleteTableAsync(table.Name);
             }
-
+            
             var blobClient = new BlobServiceClient(connectionString);
             foreach (var blobContainer in blobClient.GetBlobContainers())
             {
