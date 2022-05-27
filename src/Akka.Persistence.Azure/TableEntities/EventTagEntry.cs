@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Akka.Persistence.Azure.Util;
-using Microsoft.Azure.Cosmos.Table;
+using Azure;
+using Azure.Data.Tables;
 
 namespace Akka.Persistence.Azure.TableEntities
 {
     internal sealed class EventTagEntry
-        : ITableEntity
     {
         public const char Delimiter = ':';
         public const char AsciiIncrementedDelimiter = ';'; //(char)((byte)Delimiter + 1)
@@ -20,8 +19,22 @@ namespace Akka.Persistence.Azure.TableEntities
         public const string IdxTagKeyName = "idxTag";
 
         // In order to use this in a TableQuery a parameterless constructor is required
-        public EventTagEntry()
+        public EventTagEntry(TableEntity entity)
         {
+            PartitionKey = entity.PartitionKey;
+            ETag = entity.ETag;
+            RowKey = entity.RowKey;
+            Timestamp = entity.Timestamp;
+            
+            IdxPartitionKey = entity.GetString(IdxPartitionKeyKeyName);
+            IdxRowKey = entity.GetString(IdxRowKeyKeyName);
+            IdxTag = entity.GetString(IdxTagKeyName);
+            UtcTicks = entity.GetInt64(UtcTicksKeyName).Value;
+            Payload = entity.GetBinary(PayloadKeyName);
+            
+            Manifest = entity.ContainsKey(ManifestKeyName)
+                ? entity.GetString(ManifestKeyName)
+                : string.Empty;
         }
 
         public EventTagEntry(
@@ -33,89 +46,62 @@ namespace Akka.Persistence.Azure.TableEntities
             long? utcTicks = null)
         {
             if (persistenceId.Any(x => x == Delimiter))
-            {
                 throw new ArgumentException($"Must not contain {Delimiter}.", nameof(persistenceId));
-            }
 
             if (tag.Any(x => x == Delimiter))
-            {
                 throw new ArgumentException($"Must not contain {Delimiter}.", nameof(tag));
-            }
 
             PartitionKey = GetPartitionKey(tag);
-
             Manifest = manifest;
-
             IdxPartitionKey = persistenceId;
-
             IdxRowKey = seqNo.ToJournalRowKey();
-
             IdxTag = tag;
-
             UtcTicks = utcTicks ?? DateTime.UtcNow.Ticks;
-
             RowKey = GetRowKey(UtcTicks, IdxPartitionKey, IdxRowKey);
-
             Payload = payload;
         }
 
-        public string ETag { get; set; }
+        public string PartitionKey { get; }
+        public ETag ETag { get; }
+        public string RowKey { get; }
+        public DateTimeOffset? Timestamp { get; }
 
-        public string IdxPartitionKey { get; set; }
+        public string IdxPartitionKey { get; }
 
-        public string IdxRowKey { get; set; }
+        public string IdxRowKey { get; }
 
-        public string IdxTag { get; set; }
+        public string IdxTag { get; }
 
-        public string Manifest { get; set; }
+        public string Manifest { get; }
 
-        public string PartitionKey { get; set; }
+        public byte[] Payload { get; }
 
-        public byte[] Payload { get; set; }
+        public long UtcTicks { get; }
 
-        public string RowKey { get; set; }
-
-        public DateTimeOffset Timestamp { get; set; }
-
-        public long UtcTicks { get; set; }
-
-        public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
+        public TableEntity WriteEntity()
         {
-            Manifest =
-                properties.ContainsKey(ManifestKeyName)
-                    ? properties[ManifestKeyName].StringValue
-                    : string.Empty;
+            var entity = new TableEntity
+            {
+                PartitionKey = PartitionKey,
+                ETag = ETag,
+                RowKey = RowKey,
+                Timestamp = Timestamp,
+                [PayloadKeyName] = Payload,
+                [UtcTicksKeyName] = UtcTicks,
+                [IdxPartitionKeyKeyName] = IdxPartitionKey,
+                [IdxRowKeyKeyName] = IdxRowKey,
+                [IdxTagKeyName] = IdxTag
+            };
 
-            IdxPartitionKey = properties[IdxPartitionKeyKeyName].StringValue;
+            if (!string.IsNullOrWhiteSpace(Manifest))
+                entity[ManifestKeyName] = Manifest;
 
-            IdxRowKey = properties[IdxRowKeyKeyName].StringValue;
-
-            IdxTag = properties[IdxTagKeyName].StringValue;
-
-            UtcTicks = properties[UtcTicksKeyName].Int64Value.Value;
-
-            Payload = properties[PayloadKeyName].BinaryValue;
-        }
-
-        public IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
-        {
-            var dict =
-                new Dictionary<string, EntityProperty>
-                {
-                    [ManifestKeyName] = EntityProperty.GeneratePropertyForString(Manifest),
-                    [PayloadKeyName] = EntityProperty.GeneratePropertyForByteArray(Payload),
-                    [UtcTicksKeyName] = EntityProperty.GeneratePropertyForLong(UtcTicks),
-                    [IdxPartitionKeyKeyName] = EntityProperty.GeneratePropertyForString(IdxPartitionKey),
-                    [IdxRowKeyKeyName] = EntityProperty.GeneratePropertyForString(IdxRowKey),
-                    [IdxTagKeyName] = EntityProperty.GeneratePropertyForString(IdxTag)
-                };
-
-            return dict;
+            return entity;
         }
 
         public static string GetPartitionKey(string tag)
         {
-            return $"{PartitionKeyValue}-{tag}";
+            return PartitionKeyEscapeHelper.Escape($"{PartitionKeyValue}-{tag}");
         }
 
         public static string GetRowKey(

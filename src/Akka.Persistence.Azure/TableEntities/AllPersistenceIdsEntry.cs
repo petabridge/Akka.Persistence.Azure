@@ -1,18 +1,25 @@
 ﻿using System;
-using System.Collections.Generic;
-using Microsoft.Azure.Cosmos.Table;
+using Azure;
+using Azure.Data.Tables;
 
 namespace Akka.Persistence.Azure.TableEntities
 {
-    internal sealed class AllPersistenceIdsEntry
-        : ITableEntity
+    internal sealed class AllPersistenceIdsEntry 
     {
         private const string ManifestKeyName = "manifest";
         public const string PartitionKeyValue = "allPersistenceIdsIdx";
 
         // In order to use this in a TableQuery a parameterless constructor is required
-        public AllPersistenceIdsEntry()
+        public AllPersistenceIdsEntry(TableEntity entity)
         {
+            PartitionKey = entity.PartitionKey;
+            ETag = entity.ETag;
+            RowKey = entity.RowKey;
+            Timestamp = entity.Timestamp;
+            
+            Manifest = entity.ContainsKey(ManifestKeyName)
+                ? entity.GetString(ManifestKeyName)
+                : string.Empty;
         }
 
         public AllPersistenceIdsEntry(
@@ -20,42 +27,32 @@ namespace Akka.Persistence.Azure.TableEntities
             string manifest = "")
         {
             PartitionKey = PartitionKeyValue;
-
             RowKey = persistenceId;
-
             Manifest = manifest;
         }
 
-        public string ETag { get; set; }
+        public string PartitionKey { get; }
+        public ETag ETag { get; }
+        public string RowKey { get; }
+        public DateTimeOffset? Timestamp { get; }
 
-        public string Manifest { get; set; }
+        public string Manifest { get; }
 
-        public string PartitionKey { get; set; }
 
-        public string RowKey { get; set; }
-
-        public DateTimeOffset Timestamp { get; set; }
-
-        public void ReadEntity(
-            IDictionary<string, EntityProperty> properties,
-            OperationContext operationContext)
+        public TableEntity WriteEntity()
         {
-            Manifest =
-                properties.ContainsKey(ManifestKeyName)
-                    ? properties[ManifestKeyName].StringValue
-                    : string.Empty;
-        }
+            var entity = new TableEntity
+            {
+                PartitionKey = PartitionKey,
+                ETag = ETag,
+                RowKey = RowKey,
+                Timestamp = Timestamp,
+            };
+            
+            if (!string.IsNullOrWhiteSpace(Manifest))
+                entity[ManifestKeyName] = Manifest;
 
-        public IDictionary<string, EntityProperty> WriteEntity(
-            OperationContext operationContext)
-        {
-            var dict =
-                new Dictionary<string, EntityProperty>
-                {
-                    [ManifestKeyName] = EntityProperty.GeneratePropertyForString(Manifest),
-                };
-
-            return dict;
+            return entity;
         }
     }
 }
