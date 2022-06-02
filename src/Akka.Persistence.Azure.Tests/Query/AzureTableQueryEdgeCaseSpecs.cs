@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Query;
-using Akka.Persistence.Azure.TestHelpers;
 using Akka.Persistence.Azure.Tests.Helper;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Query;
@@ -16,10 +15,11 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests.Query
 {
-    [Collection("AzureQuery")]
+    [Collection("AzureSpecs")]
     public class AzureTableQueryEdgeCaseSpecs : Akka.TestKit.Xunit2.TestKit
     {
         public static readonly AtomicCounter Counter = new AtomicCounter(0);
@@ -41,7 +41,7 @@ namespace Akka.Persistence.Azure.Tests.Query
         public const int MessageCount = 20;
 
         public AzureTableQueryEdgeCaseSpecs(ITestOutputHelper output)
-            : base(Config(), nameof(AzureTableQueryEdgeCaseSpecs), output)
+            : base(AzureConfig(), nameof(AzureTableQueryEdgeCaseSpecs), output)
         {
             _output = output;
             Materializer = Sys.Materializer();
@@ -171,20 +171,6 @@ namespace Akka.Persistence.Azure.Tests.Query
             {
                 return new Tagged(evt, ImmutableHashSet<string>.Empty.Add(DefaultTag).Add(evt.GetType().Name));
             }
-        }
-
-        public static string TableName { get; private set; }
-
-        public static Config Config()
-        {
-            var azureConfig =
-                !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    ? AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    : AzureStorageConfigHelper.AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
-
-            TableName = azureConfig.GetString("akka.persistence.journal.azure-table.table-name");
-
-            return azureConfig;
         }
     }
 }

@@ -18,7 +18,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
-using Microsoft.Azure.Cosmos.Table;
+using Azure;
+using Azure.Data.Tables;
 using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Persistence.Azure.Journal
@@ -50,8 +51,8 @@ namespace Akka.Persistence.Azure.Journal
         private readonly Dictionary<string, ISet<IActorRef>> _persistenceIdSubscribers = new Dictionary<string, ISet<IActorRef>>();
         private readonly SerializationHelper _serialization;
         private readonly AzureTableStorageJournalSettings _settings;
-        private readonly CloudStorageAccount _storageAccount;
-        private readonly Lazy<CloudTable> _tableStorage;
+        private readonly TableServiceClient _tableServiceClient;
+        private TableClient _tableStorage_DoNotUseDirectly;
         private readonly Dictionary<string, ISet<IActorRef>> _tagSubscribers = new Dictionary<string, ISet<IActorRef>>();
 
         public AzureTableStorageJournal(Config config = null)
@@ -61,23 +62,24 @@ namespace Akka.Persistence.Azure.Journal
                 AzureTableStorageJournalSettings.Create(config);
 
             _serialization = new SerializationHelper(Context.System);
-            _storageAccount = _settings.Development ?
-                CloudStorageAccount.DevelopmentStorageAccount : 
-                CloudStorageAccount.Parse(_settings.ConnectionString);
-
-            _tableStorage = new Lazy<CloudTable>(() => InitCloudStorage(5).Result);
+            _tableServiceClient = new TableServiceClient(_settings.ConnectionString);
         }
 
-        public CloudTable Table => _tableStorage.Value;
+        public TableClient Table
+        {
+            get
+            {
+                if (_tableStorage_DoNotUseDirectly == null)
+                    throw new Exception("Table storage has not been initialized yet. PreStart() has not been invoked");
+                return _tableStorage_DoNotUseDirectly;
+            }
+        }
 
-        protected bool HasAllPersistenceIdSubscribers =>
-            _allPersistenceIdSubscribers.Count != 0;
+        protected bool HasAllPersistenceIdSubscribers => _allPersistenceIdSubscribers.Count != 0;
 
-        protected bool HasPersistenceIdSubscribers =>
-            _persistenceIdSubscribers.Count != 0;
+        protected bool HasPersistenceIdSubscribers => _persistenceIdSubscribers.Count != 0;
 
-        protected bool HasTagSubscribers =>
-            _tagSubscribers.Count != 0;
+        protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
 
         public override async Task<long> ReadHighestSequenceNrAsync(
             string persistenceId,
@@ -87,20 +89,10 @@ namespace Akka.Persistence.Azure.Journal
 
             _log.Debug("Entering method ReadHighestSequenceNrAsync");
 
-            var sequenceNumberQuery = GenerateHighestSequenceNumberQuery(persistenceId);
-            TableQuerySegment<HighestSequenceNrEntry> result = null;
-            long seqNo = 0L;
-
-            do
-            {
-                result = await Table.ExecuteQuerySegmentedAsync(sequenceNumberQuery, result?.ContinuationToken);
-
-                if (result.Results.Count > 0)
-                {
-                    seqNo = Math.Max(seqNo, result.Results.Max(x => x.HighestSequenceNr));
-                }
-            } while (result.ContinuationToken != null);
-
+            var seqNo = await HighestSequenceNumberQuery(persistenceId)
+                .Select(entity => entity.GetInt64(HighestSequenceNrEntry.HighestSequenceNrKey).Value)
+                .AggregateAsync(0L, Math.Max);
+            
             _log.Debug("Leaving method ReadHighestSequenceNrAsync with SeqNo [{0}] for PersistentId [{1}]", seqNo, persistenceId);
 
             return seqNo;
@@ -116,32 +108,34 @@ namespace Akka.Persistence.Azure.Journal
         {
             NotifyNewPersistenceIdAdded(persistenceId);
 
-            _log.Debug("Entering method ReplayMessagesAsync for persistentId [{0}] from seqNo range [{1}, {2}] and taking up to max [{3}]", persistenceId, fromSequenceNr, toSequenceNr, max);
+            _log.Debug("Entering method ReplayMessagesAsync for persistentId [{0}] from seqNo range [{1}, {2}] and taking up to max [{3}]", 
+                persistenceId, fromSequenceNr, toSequenceNr, max);
 
             if (max == 0)
                 return;
 
-            var replayQuery = GeneratePersistentJournalEntryReplayQuery(persistenceId, fromSequenceNr, toSequenceNr);
+            var pages = PersistentJournalEntryReplayQuery(persistenceId, fromSequenceNr, toSequenceNr).AsPages().GetAsyncEnumerator();
 
-            var nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, null);
+            ValueTask<bool>? nextTask = pages.MoveNextAsync();
             var count = 0L;
-            while (nextTask != null)
+            while(nextTask.HasValue)
             {
-                var tableQueryResult = await nextTask;
-
+                await nextTask.Value;
+                var currentPage = pages.Current;
+                    
                 if (_log.IsDebugEnabled && _settings.VerboseLogging)
                 {
-                    _log.Debug("Recovered [{0}] messages for entity [{1}]", tableQueryResult.Results.Count, persistenceId);
+                    _log.Debug("Recovered [{0}] messages for entity [{1}]", currentPage.Values.Count, persistenceId);
                 }
 
-                if (tableQueryResult.ContinuationToken != null)
+                if (currentPage.ContinuationToken != null)
                 {
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
                     {
                         _log.Debug("Have additional messages to download for entity [{0}]", persistenceId);
                     }
                     // start the next query while we process the results of this one
-                    nextTask = Table.ExecuteQuerySegmentedAsync(replayQuery, tableQueryResult.ContinuationToken);
+                    nextTask = pages.MoveNextAsync();
                 }
                 else
                 {
@@ -154,13 +148,14 @@ namespace Akka.Persistence.Azure.Journal
                     nextTask = null;
                 }
 
-                foreach (var savedEvent in tableQueryResult.Results)
+                foreach (var entity in currentPage.Values)
                 {
                     // check if we've hit max recovery
                     if (count >= max)
                         return;
                     ++count;
 
+                    var savedEvent = new PersistentJournalEntry(entity);
                     var deserialized = _serialization.PersistentFromBytes(savedEvent.Payload);
 
                     // Write the new persistent because it sets the sender as deadLetters which is not correct
@@ -187,44 +182,34 @@ namespace Akka.Persistence.Azure.Journal
             _log.Debug("Leaving method ReplayMessagesAsync");
         }
 
-        protected override async Task DeleteMessagesToAsync(
-            string persistenceId,
-            long toSequenceNr)
+        protected override async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
             NotifyNewPersistenceIdAdded(persistenceId);
 
             _log.Debug("Entering method DeleteMessagesToAsync for persistentId [{0}] and up to seqNo [{1}]", persistenceId, toSequenceNr);
 
-            var query = GeneratePersistentJournalEntryDeleteQuery(persistenceId, toSequenceNr);
+            var pages = PersistentJournalEntryDeleteQuery(persistenceId, toSequenceNr).AsPages().GetAsyncEnumerator();
 
-            var nextSegment = Table.ExecuteQuerySegmentedAsync(query, null);
-
-            while (nextSegment != null)
+            ValueTask<bool>? nextTask = pages.MoveNextAsync();
+            while (nextTask.HasValue)
             {
-                var queryResults = await nextSegment;
+                await nextTask.Value;
+                var currentPage = pages.Current;
 
                 if (_log.IsDebugEnabled && _settings.VerboseLogging)
                 {
-                    _log.Debug("Have [{0}] messages to delete for entity [{1}]", queryResults.Results.Count, persistenceId);
+                    _log.Debug("Have [{0}] messages to delete for entity [{1}]", currentPage.Values.Count, persistenceId);
                 }
 
-                nextSegment =
-                    queryResults.ContinuationToken != null
-                        ? Table.ExecuteQuerySegmentedAsync(query, queryResults.ContinuationToken)
-                        : null;
+                if (currentPage.ContinuationToken != null)
+                    nextTask = pages.MoveNextAsync();
+                else
+                    nextTask = null;
 
-                if (queryResults.Results.Count > 0)
+                if (currentPage.Values.Count > 0)
                 {
-                    var tableBatchOperation = new TableBatchOperation();
-
-                    foreach (var toBeDeleted in queryResults.Results)
-                    {
-                        tableBatchOperation.Delete(toBeDeleted);
-                    }
-
-                    var deleteTask = Table.ExecuteBatchAsLimitedBatches(tableBatchOperation);
-
-                    await deleteTask;
+                    await Table.SubmitTransactionAsync(currentPage.Values
+                        .Select(entity => new TableTransactionAction(TableTransactionActionType.Delete, entity)));
                 }
             }
 
@@ -235,8 +220,8 @@ namespace Akka.Persistence.Azure.Journal
         {
             _log.Debug("Initializing Azure Table Storage...");
 
-            // forces loading of the value
-            var name = Table.Name;
+            InitCloudStorage(5)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
 
             _log.Debug("Successfully started Azure Table Storage!");
 
@@ -244,8 +229,7 @@ namespace Akka.Persistence.Azure.Journal
             base.PreStart();
         }
 
-        protected override bool ReceivePluginInternal(
-            object message)
+        protected override bool ReceivePluginInternal(object message)
         {
             switch (message)
             {
@@ -275,16 +259,13 @@ namespace Akka.Persistence.Azure.Journal
             return true;
         }
 
-        protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(
-            IEnumerable<AtomicWrite> atomicWrites)
+        protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> atomicWrites)
         {
             try
             {
-                var taggedEntries = ImmutableDictionary<string, List<EventTagEntry>>.Empty;
-
-                var exceptions = ImmutableList<Exception>.Empty;
-
-                var highSequenceNumbers = ImmutableDictionary<string, long>.Empty;
+                var taggedEntries = new Dictionary<string, List<EventTagEntry>>();
+                var exceptions = new List<Exception>();
+                var highSequenceNumbers = new Dictionary<string, long>();
 
                 using (var currentWrites = atomicWrites.GetEnumerator())
                 {
@@ -292,123 +273,103 @@ namespace Akka.Persistence.Azure.Journal
                     {
                         Debug.Assert(currentWrites.Current != null, "atomicWrites.Current != null");
 
-                        var list = currentWrites.Current.Payload.AsInstanceOf<IImmutableList<IPersistentRepresentation>>();
-
-                        var batchItems = ImmutableList<ITableEntity>.Empty;
-
+                        var list = (IImmutableList<IPersistentRepresentation>) currentWrites.Current.Payload;
+                        var batchItems = new List<TableTransactionAction>();
                         foreach (var t in list)
                         {
                             var item = t;
-
                             Debug.Assert(item != null, nameof(item) + " != null");
 
-                            byte[] payloadBytes = null;
-
                             string[] tags = {};
-
                             // If the payload is a tagged payload, reset to a non-tagged payload
                             if (item.Payload is Tagged tagged)
                             {
                                 item = item.WithPayload(tagged.Payload);
-
-                                payloadBytes = _serialization.PersistentToBytes(item);
-
                                 if (tagged.Tags.Count > 0)
-                                {
                                     tags = tagged.Tags.ToArray();
-
-                                }
                             }
 
-                            if (payloadBytes == null)
-                            {
-                                payloadBytes = _serialization.PersistentToBytes(item);
-                            }
+                            var payloadBytes = _serialization.PersistentToBytes(item);
+                            
+                            var newItem = new PersistentJournalEntry(
+                                persistentId: item.PersistenceId, 
+                                seqNo: item.SequenceNr,
+                                payload: payloadBytes,
+                                manifest: item.Manifest,
+                                tags: tags);
 
-                            var newItem =
-                                new PersistentJournalEntry(
-                                    item.PersistenceId,
-                                    item.SequenceNr,
-                                    payloadBytes,
-                                    item.Manifest,
-                                    tags);
-
-                            batchItems = batchItems.Add(newItem);
+                            batchItems.Add(new TableTransactionAction(TableTransactionActionType.Add, newItem.WriteEntity()));
 
                             foreach (var tag in tags)
                             {
                                 if (!taggedEntries.ContainsKey(tag))
-                                {
-                                    taggedEntries = taggedEntries.SetItem(tag, new List<EventTagEntry>());
-                                }
+                                    taggedEntries[tag] = new List<EventTagEntry>();
 
-                                taggedEntries[tag].Add(
-                                    new EventTagEntry(
-                                        newItem.PartitionKey,
-                                        tag,
-                                        newItem.SeqNo,
-                                        newItem.Payload,
-                                        newItem.Manifest,
-                                        newItem.UtcTicks));
+                                taggedEntries[tag].Add(new EventTagEntry(
+                                    persistenceId: newItem.PartitionKey,
+                                    tag: tag,
+                                    seqNo: newItem.SeqNo,
+                                    payload: newItem.Payload,
+                                    manifest: newItem.Manifest,
+                                    utcTicks: newItem.UtcTicks));
                             }
 
-                            highSequenceNumbers =
-                                highSequenceNumbers.SetItem(
-                                    item.PersistenceId,
-                                    item.SequenceNr);
+                            highSequenceNumbers[item.PersistenceId] = item.SequenceNr;
                         }
 
                         try
                         {
-                            var persistenceBatch = new TableBatchOperation();
-
-                            highSequenceNumbers.ForEach(
-                                x => batchItems = batchItems.Add(
-                                    new HighestSequenceNrEntry(x.Key, x.Value)));
+                            foreach (var entry in highSequenceNumbers)
+                            {
+                                batchItems.Add(new TableTransactionAction(
+                                    TableTransactionActionType.UpsertReplace,
+                                    new HighestSequenceNrEntry(entry.Key, entry.Value).WriteEntity()));
+                            }
 
                             // Encode partition keys for writing
-                            foreach (var tableEntity in batchItems)
+                            foreach (var action in batchItems)
                             {
-                                tableEntity.PartitionKey = PartitionKeyEscapeHelper.Escape(tableEntity.PartitionKey);
+                                action.Entity.PartitionKey = PartitionKeyEscapeHelper.Escape(action.Entity.PartitionKey);
                             }
-                            
-                            batchItems.ForEach(x => persistenceBatch.InsertOrReplace(x));
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                                _log.Debug("Attempting to write batch of {0} messages to Azure storage", persistenceBatch.Count);
+                                _log.Debug("Attempting to write batch of {0} messages to Azure storage", batchItems.Count);
 
-                            var persistenceResults = await Table.ExecuteBatchAsLimitedBatches(persistenceBatch);
-
+                            var response = await Table.SubmitTransactionAsync(batchItems);
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                                foreach (var r in persistenceResults)
-                                    _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag, r.HttpStatusCode);
+                            {
+                                foreach (var r in response.Value)
+                                {
+                                    _log.Debug("Azure table storage wrote entities with status code [{0}]", r.Status);
+                                }
+                            }
 
-                            exceptions = exceptions.Add(null);
+                            exceptions.Add(null);
                         }
                         catch (Exception ex)
                         {
                             _log.Warning(ex, "Failure while writing messages to Azure table storage");
-                        
-                            exceptions = exceptions.Add(ex);
+                            exceptions.Add(ex);
                         }
                     }
                 }
 
                 if (exceptions.All(ex => ex == null))
                 {
-                    var allPersistenceIdsBatch = new TableBatchOperation();
+                    var allPersistenceIdsBatch = new List<TableTransactionAction>();
 
-                    highSequenceNumbers.ForEach(x =>
+                    foreach (var item in highSequenceNumbers)
                     {
-                        var encodedKey = PartitionKeyEscapeHelper.Escape(x.Key);
-                        allPersistenceIdsBatch.InsertOrReplace(new AllPersistenceIdsEntry(encodedKey));
-                    });
+                        allPersistenceIdsBatch.Add(new TableTransactionAction(
+                            TableTransactionActionType.UpdateReplace,
+                            new AllPersistenceIdsEntry(PartitionKeyEscapeHelper.Escape(item.Key)).WriteEntity()));
+                    }
 
-                    var allPersistenceResults = await Table.ExecuteBatchAsLimitedBatches(allPersistenceIdsBatch);
+                    var allPersistenceResponse = await Table.SubmitTransactionAsync(allPersistenceIdsBatch);
 
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                        foreach (var r in allPersistenceResults)
-                            _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag, r.HttpStatusCode);
+                        foreach (var r in allPersistenceResponse.Value)
+                            _log.Debug("Azure table storage wrote entity with status code [{1}]", r.Status);
 
                     if (HasPersistenceIdSubscribers || HasAllPersistenceIdSubscribers)
                     {
@@ -417,23 +378,20 @@ namespace Akka.Persistence.Azure.Journal
 
                     if (taggedEntries.Count > 0)
                     {
-                        var eventTagsBatch = new TableBatchOperation();
-
                         foreach (var kvp in taggedEntries)
                         {
-                            eventTagsBatch.Clear();
+                            var eventTagsBatch = new List<TableTransactionAction>();
 
                             foreach (var item in kvp.Value)
                             {
-                                item.PartitionKey = PartitionKeyEscapeHelper.Escape(item.PartitionKey);
-                                eventTagsBatch.InsertOrReplace(item);
+                                eventTagsBatch.Add(new TableTransactionAction(TableTransactionActionType.UpsertReplace, item.WriteEntity()));
                             }
 
-                            var eventTagsResults = await Table.ExecuteBatchAsLimitedBatches(eventTagsBatch);
+                            var eventTagsResponse = await Table.SubmitTransactionAsync(eventTagsBatch);
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                                foreach (var r in eventTagsResults)
-                                    _log.Debug("Azure table storage wrote entity [{0}] with status code [{1}]", r.Etag, r.HttpStatusCode);
+                                foreach (var r in eventTagsResponse.Value)
+                                    _log.Debug("Azure table storage wrote entity with status code [{1}]", r.Status);
 
                             if (HasTagSubscribers && taggedEntries.Count != 0)
                             {
@@ -453,7 +411,7 @@ namespace Akka.Persistence.Azure.Journal
                  *
                  * Either everything fails or everything succeeds is the idea I guess.
                  */
-                return exceptions.Any(ex => ex != null) ? exceptions : null;
+                return exceptions.Any(ex => ex != null) ? exceptions.ToImmutableList() : null;
             }
             catch (Exception ex)
             {
@@ -462,217 +420,98 @@ namespace Akka.Persistence.Azure.Journal
             }
         }
 
-        private static TableQuery GenerateAllPersistenceIdsQuery()
+        private AsyncPageable<TableEntity> GenerateAllPersistenceIdsQuery(
+            int? maxPerPage = null,
+            CancellationToken cancellationToken = default)
         {
-            var filter =
-                TableQuery.GenerateFilterCondition(
-                    "PartitionKey",
-                    QueryComparisons.Equal,
-                    AllPersistenceIdsEntry.PartitionKeyValue);
-
-            var returnValue = new TableQuery().Where(filter).Select(new[] { "RowKey" });
-
-            return returnValue;
+            return Table.QueryAsync<TableEntity>(
+                filter: $"PartitionKey eq '{AllPersistenceIdsEntry.PartitionKeyValue}'",
+                maxPerPage: maxPerPage,
+                @select: new[] { "RowKey" }, 
+                cancellationToken: cancellationToken
+            );
         }
 
-        private static TableQuery<HighestSequenceNrEntry> GenerateHighestSequenceNumberQuery(
-            string persistenceId)
-        {
-            var filter =
-                TableQuery.CombineFilters(
-                    TableQuery.GenerateFilterCondition(
-                        "PartitionKey",
-                        QueryComparisons.Equal,
-                        PartitionKeyEscapeHelper.Escape(persistenceId)),
-                    TableOperators.And,
-                    TableQuery.GenerateFilterCondition(
-                        "RowKey",
-                        QueryComparisons.Equal,
-                        HighestSequenceNrEntry.RowKeyValue));
-
-            var returnValue = new TableQuery<HighestSequenceNrEntry>().Where(filter);
-
-            return returnValue;
-        }
-
-        //private static TableQuery GeneratePersistentJournalEntryDeleteQuery(
-        private static TableQuery<PersistentJournalEntry> GeneratePersistentJournalEntryDeleteQuery(
+        private AsyncPageable<TableEntity> HighestSequenceNumberQuery(
             string persistenceId,
-            long toSequenceNr)
+            int? maxPerPage = null,
+            CancellationToken cancellationToken = default)
         {
-            var persistenceIdFilter =
-                TableQuery.GenerateFilterCondition(
-                    "PartitionKey",
-                    QueryComparisons.Equal,
-                    PartitionKeyEscapeHelper.Escape(persistenceId));
-
-            var highestSequenceNrFilter =
-                TableQuery.GenerateFilterCondition(
-                    "RowKey",
-                    QueryComparisons.NotEqual,
-                    HighestSequenceNrEntry.RowKeyValue);
-
-            var rowKeyLessThanFilter =
-                TableQuery.GenerateFilterCondition(
-                    "RowKey",
-                    QueryComparisons.LessThanOrEqual,
-                    toSequenceNr.ToJournalRowKey());
-
-            var rowKeyFilter =
-                TableQuery.CombineFilters(
-                    highestSequenceNrFilter,
-                    TableOperators.And,
-                    rowKeyLessThanFilter);
-
-            var filter =
-                TableQuery.CombineFilters(
-                    persistenceIdFilter,
-                    TableOperators.And,
-                    rowKeyFilter);
-
-            var returnValue = new TableQuery<PersistentJournalEntry>().Where(filter);
-
-            return returnValue;
+            return Table.QueryAsync<TableEntity>(
+                filter: $"PartitionKey eq '{PartitionKeyEscapeHelper.Escape(persistenceId)}' and " +
+                        $"RowKey eq '{HighestSequenceNrEntry.RowKeyValue}'",
+                maxPerPage: maxPerPage,
+                @select: null,
+                cancellationToken: cancellationToken
+            );
         }
 
-        private static TableQuery<EventTagEntry> GenerateEventTagEntryDeleteQuery(
+        private AsyncPageable<TableEntity> PersistentJournalEntryDeleteQuery(
+            string persistenceId,
+            long toSequenceNr,
+            int? maxPerPage = null,
+            CancellationToken cancellationToken = default)
+        {
+            return Table.QueryAsync<TableEntity>(
+                filter: $"PartitionKey eq '{PartitionKeyEscapeHelper.Escape(persistenceId)}' and " +
+                        $"RowKey ne '{HighestSequenceNrEntry.RowKeyValue}' and " +
+                        $"RowKey le '{toSequenceNr.ToJournalRowKey()}'",
+                maxPerPage: maxPerPage,
+                @select: null,
+                cancellationToken: cancellationToken);
+        }
+
+        private AsyncPageable<TableEntity> EventTagEntryDeleteQuery(
             string persistenceId,
             long fromSequenceNr,
-            long toSequenceNr)
+            long toSequenceNr,
+            int? maxPerPage = null,
+            CancellationToken cancellationToken = default)
         {
-            var persistenceIdFilter =
-                TableQuery.GenerateFilterCondition(
-                    "PartitionKey",
-                    QueryComparisons.Equal,
-                    EventTagEntry.PartitionKeyValue);
-
-            var idxPartitionKeyFilter =
-                TableQuery.GenerateFilterCondition(
-                    EventTagEntry.IdxPartitionKeyKeyName,
-                    QueryComparisons.Equal,
-                    persistenceId);
-
-            var idxRowKeyGreaterThanFilter =
-                TableQuery.GenerateFilterCondition(
-                    EventTagEntry.IdxRowKeyKeyName,
-                    QueryComparisons.GreaterThanOrEqual,
-                    fromSequenceNr.ToJournalRowKey());
-
-            var idxRowKeyLessThanFilter =
-                TableQuery.GenerateFilterCondition(
-                    EventTagEntry.IdxRowKeyKeyName,
-                    QueryComparisons.LessThanOrEqual,
-                    toSequenceNr.ToJournalRowKey());
-
-            var partitionKeyFilter =
-                TableQuery.CombineFilters(
-                    persistenceIdFilter,
-                    TableOperators.And,
-                    idxPartitionKeyFilter);
-
-            var idxRowKeyFilter = 
-                TableQuery.CombineFilters(
-                    idxRowKeyGreaterThanFilter,
-                    TableOperators.And,
-                    idxRowKeyLessThanFilter);
-
-            var filter =
-                TableQuery.CombineFilters(
-                    partitionKeyFilter,
-                    TableOperators.And,
-                    idxRowKeyFilter);
-
-            var returnValue = new TableQuery<EventTagEntry>().Where(filter);
-
-            return returnValue;
+            return Table.QueryAsync<TableEntity>(
+                filter: $"PartitionKey eq '{EventTagEntry.PartitionKeyValue}' and " +
+                        $"{EventTagEntry.IdxPartitionKeyKeyName} eq '{persistenceId}' and " +
+                        $"{EventTagEntry.IdxRowKeyKeyName} ge '{fromSequenceNr.ToJournalRowKey()}' and " +
+                        $"{EventTagEntry.IdxRowKeyKeyName} le '{toSequenceNr.ToJournalRowKey()}'",
+                maxPerPage: maxPerPage,
+                @select: null,
+                cancellationToken: cancellationToken);
         }
 
-        private static TableQuery<PersistentJournalEntry> GeneratePersistentJournalEntryReplayQuery(
+        private AsyncPageable<TableEntity> PersistentJournalEntryReplayQuery(
             string persistentId,
             long fromSequenceNumber,
-            long toSequenceNumber)
+            long toSequenceNumber,
+            int? maxPerPage = null,
+            CancellationToken cancellationToken = default)
         {
-            var persistenceIdFilter =
-                TableQuery.GenerateFilterCondition(
-                    "PartitionKey",
-                    QueryComparisons.Equal,
-                    PartitionKeyEscapeHelper.Escape(persistentId));
-
-            var highestSequenceNrFilter =
-                TableQuery.GenerateFilterCondition(
-                    "RowKey",
-                    QueryComparisons.NotEqual,
-                    HighestSequenceNrEntry.RowKeyValue);
-
-            var filter =
-                TableQuery.CombineFilters(
-                    persistenceIdFilter,
-                    TableOperators.And,
-                    highestSequenceNrFilter);
-
+            var filter = $"PartitionKey eq '{PartitionKeyEscapeHelper.Escape(persistentId)}' and " +
+                         $"RowKey ne '{HighestSequenceNrEntry.RowKeyValue}'";
+            
             if (fromSequenceNumber > 0)
-            {
-                filter =
-                    TableQuery.CombineFilters(
-                        filter,
-                        TableOperators.And,
-                        TableQuery.GenerateFilterCondition(
-                            "RowKey",
-                            QueryComparisons.GreaterThanOrEqual,
-                            fromSequenceNumber.ToJournalRowKey()));
-            }
+                filter += $" and RowKey ge '{fromSequenceNumber.ToJournalRowKey()}'"; 
 
-            if (toSequenceNumber != long.MaxValue)
-            {
-                filter =
-                    TableQuery.CombineFilters(
-                        filter,
-                        TableOperators.And,
-                        TableQuery.GenerateFilterCondition(
-                            "RowKey",
-                            QueryComparisons.LessThanOrEqual,
-                            toSequenceNumber.ToJournalRowKey()));
-            }
+            if (toSequenceNumber < long.MaxValue)
+                filter += $" and RowKey le '{toSequenceNumber.ToJournalRowKey()}'";
 
-            var returnValue = new TableQuery<PersistentJournalEntry>().Where(filter);
-
-            return returnValue;
+            return Table.QueryAsync<TableEntity>(filter, maxPerPage, null, cancellationToken);
         }
 
-        private static TableQuery<EventTagEntry> GenerateTaggedMessageQuery(
-            ReplayTaggedMessages replay)
+        private AsyncPageable<TableEntity> TaggedMessageQuery(
+            ReplayTaggedMessages replay,
+            int? maxPerPage = null,
+            CancellationToken cancellationToken = default)
         {
-            var partitionKeyFilter =
-                TableQuery.GenerateFilterCondition(
-                    "PartitionKey",
-                    QueryComparisons.Equal,
-                    PartitionKeyEscapeHelper.Escape(EventTagEntry.GetPartitionKey(replay.Tag)));
-
-            var utcTicksTRowKeyFilter =
-                TableQuery.CombineFilters(
-                    TableQuery.GenerateFilterCondition(
-                        "RowKey",
-                        QueryComparisons.GreaterThan,
-                        $"{replay.FromOffset.ToJournalRowKey()}{EventTagEntry.AsciiIncrementedDelimiter}"),
-                    TableOperators.And,
-                    TableQuery.GenerateFilterCondition(
-                        "RowKey",
-                        QueryComparisons.LessThanOrEqual,
-                        $"{replay.ToOffset.ToJournalRowKey()}{EventTagEntry.Delimiter}"));
-
-            var filter =
-                TableQuery.CombineFilters(
-                    partitionKeyFilter,
-                    TableOperators.And,
-                    utcTicksTRowKeyFilter);
-
-            var returnValue = new TableQuery<EventTagEntry>().Where(filter);
-
-            return returnValue;
+            return Table.QueryAsync<TableEntity>(
+                filter: $"PartitionKey eq '{PartitionKeyEscapeHelper.Escape(EventTagEntry.GetPartitionKey(replay.Tag))}' and " +
+                        $"RowKey gt '{replay.FromOffset.ToJournalRowKey()}{EventTagEntry.AsciiIncrementedDelimiter}' and " +
+                        $"RowKey le '{replay.ToOffset.ToJournalRowKey()}{EventTagEntry.Delimiter}'",
+                maxPerPage: maxPerPage,
+                @select: null,
+                cancellationToken: cancellationToken);
         }
 
-        private async Task AddAllPersistenceIdSubscriber(
-            IActorRef subscriber)
+        private async Task AddAllPersistenceIdSubscriber(IActorRef subscriber)
         {
             lock (_allPersistenceIdSubscribers)
             {
@@ -681,9 +520,7 @@ namespace Akka.Persistence.Azure.Journal
             subscriber.Tell(new CurrentPersistenceIds(await GetAllPersistenceIds()));
         }
 
-        private void AddPersistenceIdSubscriber(
-            IActorRef subscriber,
-            string persistenceId)
+        private void AddPersistenceIdSubscriber(IActorRef subscriber, string persistenceId)
         {
             if (!_persistenceIdSubscribers.TryGetValue(persistenceId, out var subscriptions))
             {
@@ -694,9 +531,7 @@ namespace Akka.Persistence.Azure.Journal
             subscriptions.Add(subscriber);
         }
 
-        private void AddTagSubscriber(
-            IActorRef subscriber,
-            string tag)
+        private void AddTagSubscriber(IActorRef subscriber, string tag)
         {
             if (!_tagSubscribers.TryGetValue(tag, out var subscriptions))
             {
@@ -709,39 +544,20 @@ namespace Akka.Persistence.Azure.Journal
 
         private async Task<IEnumerable<string>> GetAllPersistenceIds()
         {
-            var query = GenerateAllPersistenceIdsQuery();
-
-            TableQuerySegment<DynamicTableEntity> result = null;
-
-            var returnValue = ImmutableList<string>.Empty;
-
-            do
-            {
-                result = await Table.ExecuteQuerySegmentedAsync(query, result?.ContinuationToken);
-
-                if (result.Results.Count > 0)
-                {
-                    returnValue = returnValue.AddRange(result.Results.Select(x => x.RowKey));
-                }
-            } while (result.ContinuationToken != null);
-
-            return returnValue;
+            return await GenerateAllPersistenceIdsQuery().Select(item => item.RowKey).ToListAsync();
         }
 
-        private async Task<CloudTable> InitCloudStorage(
-            int remainingTries)
+        private async Task InitCloudStorage(int remainingTries)
         {
             try
             {
-                var tableClient = _storageAccount.CreateCloudTableClient();
-                var tableRef = tableClient.GetTableReference(_settings.TableName);
-                var op = new OperationContext();
+                var tableClient = _tableServiceClient.GetTableClient(_settings.TableName);
                 
                 using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
                 {
                     if (!_settings.AutoInitialize)
                     {
-                        var exists = await tableRef.ExistsAsync(null, null, cts.Token);
+                        var exists = await IsTableExist(_settings.TableName, cts.Token);
 
                         if (!exists)
                         {
@@ -752,17 +568,17 @@ namespace Akka.Persistence.Azure.Journal
                         }
                         
                         _log.Info("Successfully connected to existing table", _settings.TableName);
-                        
-                        return tableRef;
+
+                        _tableStorage_DoNotUseDirectly = tableClient;
+                        return;
                     }
                     
-                    if (await tableRef.CreateIfNotExistsAsync(new TableRequestOptions(), op, cts.Token))
+                    if (await tableClient.CreateIfNotExistsAsync(cts.Token) != null)
                         _log.Info("Created Azure Cloud Table", _settings.TableName);
                     else
                         _log.Info("Successfully connected to existing table", _settings.TableName);
+                    _tableStorage_DoNotUseDirectly = tableClient;
                 }
-
-                return tableRef;
             }
             catch (Exception ex)
             {
@@ -770,8 +586,16 @@ namespace Akka.Persistence.Azure.Journal
                 if (remainingTries == 0)
                     throw;
                 await Task.Delay(RetryInterval[remainingTries]);
-                return await InitCloudStorage(remainingTries - 1);
+                await InitCloudStorage(remainingTries - 1);
             }
+        }
+
+        private async Task<bool> IsTableExist(string name, CancellationToken token)
+        {
+            var tables = await _tableServiceClient.QueryAsync(t => t.Name == name, cancellationToken: token)
+                .ToListAsync(token)
+                .ConfigureAwait(false);
+            return tables.Count > 0;
         }
 
         private void NotifyNewPersistenceIdAdded(
@@ -816,31 +640,27 @@ namespace Akka.Persistence.Azure.Journal
         /// </summary>
         /// <param name="replay">TBD</param>
         /// <returns>TBD</returns>
-        private async Task<long> ReplayTaggedMessagesAsync(
-            ReplayTaggedMessages replay)
+        private async Task<long> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
-            var query = GenerateTaggedMessageQuery(replay);
-
-            // While we can specify the TakeCount, the CloudTable client does
-            //    not really respect this fact and will keep pulling results.
-            query.TakeCount =
-                replay.Max > int.MaxValue
-                    ? int.MaxValue
-                    : (int)replay.Max;
-
             // In order to actually break at the limit we ask for we have to
             //    keep a separate counter and track it ourselves.
             var counter = 0;
-
-            TableQuerySegment<EventTagEntry> result = null;
-
             var maxOrderingId = 0L;
 
-            do
+            var pages = TaggedMessageQuery(replay).AsPages().GetAsyncEnumerator();
+            ValueTask<bool>? nextTask = pages.MoveNextAsync();
+            
+            while (nextTask != null)
             {
-                result = await Table.ExecuteQuerySegmentedAsync(query, result?.ContinuationToken);
+                await nextTask.Value;
+                var currentPage = pages.Current;
 
-                foreach (var entry in result.Results.OrderBy(x => x.UtcTicks))
+                if (currentPage.ContinuationToken != null)
+                    nextTask = pages.MoveNextAsync();
+                else
+                    nextTask = null;
+                
+                foreach (var entry in currentPage.Values.Select(entity => new EventTagEntry(entity)).OrderBy(x => x.UtcTicks))
                 {
                     var deserialized = _serialization.PersistentFromBytes(entry.Payload);
 
@@ -872,13 +692,12 @@ namespace Akka.Persistence.Azure.Journal
                 {
                     break;
                 }
-            } while (result.ContinuationToken != null);
+            }
 
             return maxOrderingId;
         }
 
-        private bool TryAddPersistenceId(
-            string persistenceId)
+        private bool TryAddPersistenceId(string persistenceId)
         {
             lock (_allPersistenceIds)
             {

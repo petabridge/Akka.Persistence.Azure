@@ -5,6 +5,25 @@ namespace Akka.Persistence.Azure.Tests.Helper
 {
     public static class AzureStorageConfigHelper
     {
+        private const string ConnectionString = "UseDevelopmentStorage=true";
+        
+        public static Config AzureConfig()
+        {
+            return AzureConfig(AzureConfig);
+        }
+
+        public static Config AzureConfig(Func<string, Config> configTemplate)
+        {
+            var connString = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR");
+            if (!string.IsNullOrEmpty(connString))
+            {
+                return AzureConfig(connString);
+            }
+
+            DbUtils.CleanupCloudTable(ConnectionString).Wait();
+            return configTemplate(ConnectionString);
+        }
+    
         public static Config AzureConfig(string connectionString)
         {
             var tableName = "t" + Guid.NewGuid().ToString().Replace("-", "");
@@ -59,7 +78,8 @@ akka {
     }
 }")
                 .WithFallback("akka.persistence.journal.azure-table.table-name=" + tableName)
-                .WithFallback("akka.persistence.snapshot-store.azure-blob-store.container-name=" + containerName);
+                .WithFallback("akka.persistence.snapshot-store.azure-blob-store.container-name=" + containerName)
+                .WithFallback(AzurePersistence.DefaultConfig);
         }
 
     }
