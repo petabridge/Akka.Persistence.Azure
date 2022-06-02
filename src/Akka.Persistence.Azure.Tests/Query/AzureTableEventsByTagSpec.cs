@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Query;
-using Akka.Persistence.Azure.TestHelpers;
 using Akka.Persistence.Azure.Tests.Helper;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Query;
@@ -11,15 +10,15 @@ using Akka.Persistence.TCK.Query;
 using Akka.Streams.TestKit;
 using Xunit;
 using Xunit.Abstractions;
+using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests.Query
 {
-    [Collection("AzureQuery")]
-    public sealed class AzureTableEventsByTagSpec
-        : EventsByTagSpec
+    [Collection("AzureSpecs")]
+    public sealed class AzureTableEventsByTagSpec : EventsByTagSpec
     {
         public AzureTableEventsByTagSpec(ITestOutputHelper output)
-            : base(Config(), nameof(AzureTableEventsByTagSpec), output)
+            : base(AzureConfig(), nameof(AzureTableEventsByTagSpec), output)
         {
             AzurePersistence.Get(Sys);
 
@@ -30,20 +29,6 @@ namespace Akka.Persistence.Azure.Tests.Query
             var x = Sys.ActorOf(JournalTestActor.Props("x"));
             x.Tell("warm-up");
             ExpectMsg("warm-up-done", TimeSpan.FromSeconds(60));
-        }
-
-        public static string TableName { get; private set; }
-
-        public static Config Config()
-        {
-            var azureConfig =
-                !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    ? AzureStorageConfigHelper.AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"))
-                    : AzureStorageConfigHelper.AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
-
-            TableName = azureConfig.GetString("akka.persistence.journal.azure-table.table-name");
-
-            return azureConfig;
         }
 
         [Fact]

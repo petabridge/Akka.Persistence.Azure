@@ -6,7 +6,7 @@
 
 using System;
 using Akka.Configuration;
-using Akka.Persistence.Azure.TestHelpers;
+using Akka.Persistence.Azure.Tests.Helper;
 using Akka.Persistence.TCK.Snapshot;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,22 +14,14 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests
 {
-    [Collection("AzureSnapshot")]
+    [Collection("AzureSpecs")]
     public class AzureBlobSnapshotStoreSpec : SnapshotStoreSpec
     {
-        public AzureBlobSnapshotStoreSpec(ITestOutputHelper output) : base(Config(),
-            nameof(AzureTableJournalSpec), output)
+        public AzureBlobSnapshotStoreSpec(ITestOutputHelper output) 
+            : base(AzureConfig(), nameof(AzureBlobSnapshotStoreSpec), output)
         {
             AzurePersistence.Get(Sys);
             Initialize();
-        }
-
-        public static Config Config()
-        {
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR")))
-                return AzureConfig(Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR"));
-
-            return AzureConfig(WindowsAzureStorageEmulatorFixture.GenerateConnStr());
         }
     }
 }

@@ -13,7 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Persistence.Azure.TestHelpers\Akka.Persistence.Azure.TestHelpers.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Azure\Akka.Persistence.Azure.csproj" />
   </ItemGroup>
 
