@@ -1,3 +1,41 @@
+#### 0.9.0 July 21 2022 ####
+Added [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) support to Akka.Persistence.Azure, which you can activate via the following:
+
+First, install the `Akka.Persistence.Azure.Hosting` NuGet package:
+
+```shell
+PS> install-package Akka.Persistence.Azure.Hosting
+
+```
+
+Next, add the `WithAzurePersistence` method calls to your `AkkaConfigurationBuilder` (from Akka.Hosting):
+
+```csharp
+var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR");
+var host = new HostBuilder()
+    .ConfigureServices(collection =>
+    {
+        collection.AddAkka("MyActorSys", builder =>
+        {
+        	// enables both journal and snapshot store
+            builder.WithAzurePersistence(conn);
+            builder.StartActors((system, registry) =>
+            {
+                var myActor = system.ActorOf(Props.Create(() => new MyPersistenceActor("ac1")), "actor1");
+                registry.Register<MyPersistenceActor>(myActor);
+            });
+        });
+    }).Build();
+
+await host.StartAsync();
+return host;
+```
+
+You can also call the following methods to activate the journal / snapshot stores independently:
+
+* ` WithAzureTableJournal`
+* `WithAzureBlobsSnapshotStore`
+
 #### 0.8.4 June 2 2022 ####
 * Upgraded to [Akka.NET 1.4.39](https://github.com/akkadotnet/akka.net/releases/tag/1.4.39)
 * [Update Azure.Identity to 1.6.0](https://github.com/petabridge/Akka.Persistence.Azure/pull/205)
