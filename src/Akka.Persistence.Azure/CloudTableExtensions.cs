@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
-using Microsoft.Azure.Cosmos.Table;
+using Azure;
+using Azure.Data.Tables;
 
 namespace Akka.Persistence.Azure
 {
@@ -8,39 +10,26 @@ namespace Akka.Persistence.Azure
     {
         private const int MaxBatchSize = 100;
         
-        public static async Task<IList<TableResult>> ExecuteBatchAsLimitedBatches(
-            this CloudTable table,
-            TableBatchOperation batch)
+        public static async Task<IReadOnlyList<Response>> ExecuteBatchAsLimitedBatches(
+            this TableClient table,
+            List<TableTransactionAction> batch)
         {
             if (batch.Count < 1)
-                return new List<TableResult>();
+                return ImmutableList<Response>.Empty;
             
             if (batch.Count <= MaxBatchSize)
-                return await table.ExecuteBatchAsync(batch);
+                return (await table.SubmitTransactionAsync(batch)).Value;
 
-            var result = new List<TableResult>();
+            var result = new List<Response>();
             var limitedBatchOperationLists = batch.ChunkBy(MaxBatchSize);
             
             foreach (var limitedBatchOperationList in limitedBatchOperationLists)
             {
-                var limitedBatch = CreateLimitedTableBatchOperation(limitedBatchOperationList);
-                var limitedBatchResult = await table.ExecuteBatchAsync(limitedBatch);
-                result.AddRange(limitedBatchResult);
+                var limitedBatchResponse = await table.SubmitTransactionAsync(limitedBatchOperationList);
+                result.AddRange(limitedBatchResponse.Value);
             }
 
             return result;
-        }
-
-        private static TableBatchOperation CreateLimitedTableBatchOperation(
-            IEnumerable<TableOperation> limitedBatchOperationList)
-        {
-            var limitedBatch = new TableBatchOperation();
-            foreach (var limitedBatchOperation in limitedBatchOperationList)
-            {
-                limitedBatch.Add(limitedBatchOperation);
-            }
-
-            return limitedBatch;
         }
     }
 }

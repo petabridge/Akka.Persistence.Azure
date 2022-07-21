@@ -1,20 +1,18 @@
-﻿using System;
-using Akka.Configuration;
-using Akka.Persistence.Azure.TestHelpers;
+﻿using Akka.Configuration;
+using Akka.Persistence.Azure.Tests.Helper;
 using Akka.Persistence.TCK.Snapshot;
 using Azure.Storage.Blobs;
+using Xunit;
 using Xunit.Abstractions;
+using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests
 {
+    [Collection("AzureSpecs")]
     public class Issue159Spec: SnapshotStoreSpec
     {
-        private static Config Config()
+        private static Config Config(string connectionString)
         {
-            var connectionString = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR");
-            if(string.IsNullOrEmpty(connectionString))
-                connectionString = WindowsAzureStorageEmulatorFixture.GenerateConnStr();
-
             return ConfigurationFactory.ParseString(@"
 akka {
     loglevel = DEBUG
@@ -47,23 +45,22 @@ akka {
 
         snapshot-store {
             plugin = ""akka.persistence.snapshot-store.azure-blob-store""
+            azure-blob-store {
+                class = ""Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStore, Akka.Persistence.Azure""
+                connection-string = """ + connectionString + @"""
+                container-name = ""default""
+                connect-timeout = 3s
+                request-timeout = 3s
+                verbose-logging = on
+                plugin-dispatcher = ""akka.actor.default-dispatcher""
+            }
         }
     }
-}
-
-akka.persistence.snapshot-store.azure-blob-store {
-    class = ""Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStore, Akka.Persistence.Azure""
-    connection-string = """ + connectionString + @"""
-    container-name = ""default""
-    connect-timeout = 3s
-    request-timeout = 3s
-    verbose-logging = on
-    plugin-dispatcher = ""akka.actor.default-dispatcher""
 }");
         }
 
         public Issue159Spec(ITestOutputHelper output)
-            : base(Config(), nameof(Issue159Spec), output)
+            : base(AzureConfig(Config), nameof(Issue159Spec), output)
         {
             var extension = AzurePersistence.Get(Sys);
 

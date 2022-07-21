@@ -7,9 +7,8 @@
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Util;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Azure.Cosmos.Table;
+using Azure;
+using Azure.Data.Tables;
 
 namespace Akka.Persistence.Azure.TableEntities
 {
@@ -26,7 +25,7 @@ namespace Akka.Persistence.Azure.TableEntities
     ///     those expensive parts at run-time.
     ///     Also, due to the way this API is designed... We have to be ok with mutability.
     /// </remarks>
-    internal sealed class PersistentJournalEntry : ITableEntity
+    internal sealed class PersistentJournalEntry
     {
         public const string TagsKeyName = "tags";
         public const string UtcTicksKeyName = "utcTicks";
@@ -34,8 +33,22 @@ namespace Akka.Persistence.Azure.TableEntities
         private const string PayloadKeyName = "payload";
         private const string SeqNoKeyName = "seqno";
 
-        public PersistentJournalEntry()
+        public PersistentJournalEntry(TableEntity entity)
         {
+            PartitionKey = entity.PartitionKey;
+            ETag = entity.ETag;
+            RowKey = entity.RowKey;
+            Timestamp = entity.Timestamp;
+            
+            Manifest = entity.ContainsKey(ManifestKeyName)
+                ? entity.GetString(ManifestKeyName)
+                : string.Empty;
+
+            // an exception is fine here - means the data is corrupted anyway
+            SeqNo = entity.GetInt64(SeqNoKeyName).Value;
+            Payload = entity.GetBinary(PayloadKeyName);
+            Tags = entity.GetString(TagsKeyName).Split(new []{';'}, StringSplitOptions.RemoveEmptyEntries);
+            UtcTicks = entity.GetInt64(UtcTicksKeyName).Value;
         }
 
         public PersistentJournalEntry(
@@ -54,21 +67,23 @@ namespace Akka.Persistence.Azure.TableEntities
             UtcTicks = DateTime.UtcNow.Ticks;
         }
 
-        public string ETag { get; set; }
+        public string PartitionKey { get; }
+
+        public ETag ETag { get; }
+
+        public string RowKey { get; }
+
+        public DateTimeOffset? Timestamp { get; }
 
         /// <summary>
         ///     The serialization manifest.
         /// </summary>
-        public string Manifest { get; set; }
-
-        public string PartitionKey { get; set; }
+        public string Manifest { get; }
 
         /// <summary>
         ///     The persistent payload
         /// </summary>
-        public byte[] Payload { get; set; }
-
-        public string RowKey { get; set; }
+        public byte[] Payload { get; }
 
         /// <summary>
         ///     The sequence number.
@@ -77,14 +92,12 @@ namespace Akka.Persistence.Azure.TableEntities
         ///     We store this as a separate field since we may pad the <see cref="RowKey" />
         ///     in order to get the rows for each partition to sort in descending order.
         /// </remarks>
-        public long SeqNo { get; set; }
+        public long SeqNo { get; }
 
         /// <summary>
         ///     Tags associated with this entry, if any
         /// </summary>
-        public string[] Tags { get; set; }
-
-        public DateTimeOffset Timestamp { get; set; }
+        public string[] Tags { get; }
 
         /// <summary>
         ///     Ticks of current UTC at the time the entry was created
@@ -93,35 +106,26 @@ namespace Akka.Persistence.Azure.TableEntities
         ///     Azure Table Storage does not index the Timestamp value so performing
         ///     any query against it will be extremely slow
         /// </remarks>
-        public long UtcTicks { get; set; }
+        public long UtcTicks { get; }
 
-        public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
+        public TableEntity WriteEntity()
         {
-            Manifest =
-                properties.ContainsKey(ManifestKeyName)
-                    ? properties[ManifestKeyName].StringValue
-                    : string.Empty;
+            var entity = new TableEntity
+            {
+                PartitionKey = PartitionKey,
+                ETag = ETag,
+                RowKey = RowKey,
+                Timestamp = Timestamp,
+                [PayloadKeyName] = Payload,
+                [SeqNoKeyName] = SeqNo,
+                [TagsKeyName] = string.Join(";", Tags),
+                [UtcTicksKeyName] = UtcTicks
+            };
 
-            // an exception is fine here - means the data is corrupted anyway
-            SeqNo = properties[SeqNoKeyName].Int64Value.Value;
-            Payload = properties[PayloadKeyName].BinaryValue;
-            Tags = properties[TagsKeyName].StringValue.Split(new []{';'}, StringSplitOptions.RemoveEmptyEntries);
-            UtcTicks = properties[UtcTicksKeyName].Int64Value.Value;
-        }
+            if (!string.IsNullOrWhiteSpace(Manifest))
+                entity[ManifestKeyName] = Manifest;
 
-        public IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
-        {
-            var dict =
-                new Dictionary<string, EntityProperty>
-                {
-                    [PayloadKeyName] = EntityProperty.GeneratePropertyForByteArray(Payload),
-                    [ManifestKeyName] = EntityProperty.GeneratePropertyForString(Manifest),
-                    [SeqNoKeyName] = EntityProperty.GeneratePropertyForLong(SeqNo),
-                    [TagsKeyName] = EntityProperty.GeneratePropertyForString(string.Join(";", Tags)),
-                    [UtcTicksKeyName] = EntityProperty.GeneratePropertyForLong(UtcTicks)
-                };
-
-            return dict;
+            return entity;
         }
     }
 }
