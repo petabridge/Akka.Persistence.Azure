@@ -4,6 +4,47 @@ Akka.Persistence implementation that uses Windows Azure table and blob storage.
 
 ## Configuration
 
+### Easy Mode: Using Akka.Hosting
+
+[Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) can make configuring Akka.Persistence.Azure trivially easy and HOCON-less.
+
+First, install the `Akka.Persistence.Azure.Hosting` NuGet package:
+
+```shell
+PS> install-package Akka.Persistence.Azure.Hosting
+
+```
+
+Next, add the `WithAzurePersistence` method calls to your `AkkaConfigurationBuilder` (from Akka.Hosting):
+
+```csharp
+var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR");
+var host = new HostBuilder()
+    .ConfigureServices(collection =>
+    {
+        collection.AddAkka("MyActorSys", builder =>
+        {
+          // enables both journal and snapshot store
+            builder.WithAzurePersistence(conn);
+            builder.StartActors((system, registry) =>
+            {
+                var myActor = system.ActorOf(Props.Create(() => new MyPersistenceActor("ac1")), "actor1");
+                registry.Register<MyPersistenceActor>(myActor);
+            });
+        });
+    }).Build();
+
+await host.StartAsync();
+return host;
+```
+
+You can also call the following methods to activate the journal / snapshot stores independently:
+
+* ` WithAzureTableJournal`
+* `WithAzureBlobsSnapshotStore`
+
+### Custom Mode: HOCON
+
 Here is a default configuration used by this plugin: https://github.com/petabridge/Akka.Persistence.Azure/blob/dev/src/Akka.Persistence.Azure/reference.conf
 
 You will need to provide connection string and Azure Table name for journal, and connection string with container name for Azure Blob Store:

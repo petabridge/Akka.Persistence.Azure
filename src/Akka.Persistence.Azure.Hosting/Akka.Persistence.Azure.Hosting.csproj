@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\common.props" />
+    <PropertyGroup>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+        <Description>Akka.Hosting support for Akka.Persistence.Azure.</Description>
+        <LangVersion>8.0</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Akka.Persistence.Azure\Akka.Persistence.Azure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Akka.Persistence.Hosting" Version="0.4.1" />
+    </ItemGroup>
+
+</Project>
