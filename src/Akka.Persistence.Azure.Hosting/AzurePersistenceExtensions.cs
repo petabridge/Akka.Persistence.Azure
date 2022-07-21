@@ -38,8 +38,11 @@ namespace Akka.Persistence.Azure.Hosting
                 }}
             }}";
 
-            var finalConfig = journalConfiguration.WithFallback(AzureTableStorageReadJournal.DefaultConfiguration());
+            var finalConfig = journalConfiguration;
             builder.AddHocon(finalConfig, HoconAddMode.Prepend);
+            
+            // PUSH DEFAULT CONFIG TO END
+            builder.AddHocon(AzurePersistence.DefaultConfig, HoconAddMode.Append);
             
             if (configurator != null) // configure event adapters
             {
@@ -66,8 +69,11 @@ namespace Akka.Persistence.Azure.Hosting
                 }}
             }}";
 
-            var finalConfig = journalConfiguration.WithFallback(AzureTableStorageReadJournal.DefaultConfiguration());
+            var finalConfig = journalConfiguration;
             builder.AddHocon(finalConfig, HoconAddMode.Prepend);
+            
+            // PUSH DEFAULT CONFIG TO END
+            builder.AddHocon(AzurePersistence.DefaultConfig, HoconAddMode.Append);
 
             return builder;
         }

@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Akka.Persistence.Azure.Hosting\Akka.Persistence.Azure.Hosting.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Azure\Akka.Persistence.Azure.csproj" />
   </ItemGroup>
 
