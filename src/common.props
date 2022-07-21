@@ -2,10 +2,11 @@
   <PropertyGroup>
     <Copyright>Copyright © 2017-2020 Petabridge</Copyright>
     <Authors>Petabridge</Authors>
-    <VersionPrefix>0.7.1</VersionPrefix>
-    <PackageReleaseNotes>Release of Akka.Persistence.Azure**
-- Upgraded to [Akka.NET v1.4.12](https://github.com/akkadotnet/akka.net/releases/tag/1.4.12)
-- Added backoff/retry mechanism for `AzureSnapshotStore`</PackageReleaseNotes>
+    <VersionPrefix>0.8.4</VersionPrefix>
+    <PackageReleaseNotes>Upgraded to [Akka.NET 1.4.39](https://github.com/akkadotnet/akka.net/releases/tag/1.4.39)
+[Update Azure.Identity to 1.6.0](https://github.com/petabridge/Akka.Persistence.Azure/pull/205)
+[Update System.Linq.Async to 6.0.1](https://github.com/petabridge/Akka.Persistence.Azure/pull/198)
+[Upgrade `Microsoft.Azure.Consmos.Table` to `Azure.Data.Tables` 12.5.0](https://github.com/petabridge/Akka.Persistence.Azure/pull/207)</PackageReleaseNotes>
     <PackageIconUrl>
     </PackageIconUrl>
     <PackageProjectUrl>
