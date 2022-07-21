@@ -22,7 +22,11 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var host = new HostBuilder()
                 .ConfigureServices(collection =>
                 {
-                    collection.AddAkka("MyActorSys", builder => { builder.WithAzurePersistence(conn); });
+                    collection.AddAkka("MyActorSys", builder =>
+                    {
+                        builder.WithAzurePersistence(conn);
+                        testSetup(builder);
+                    });
                 }).Build();
 
             await host.StartAsync();
