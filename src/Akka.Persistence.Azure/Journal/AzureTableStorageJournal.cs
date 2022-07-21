@@ -369,7 +369,7 @@ namespace Akka.Persistence.Azure.Journal
 
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
                         foreach (var r in allPersistenceResponse.Value)
-                            _log.Debug("Azure table storage wrote entity with status code [{1}]", r.Status);
+                            _log.Debug("Azure table storage wrote entity with status code [{0}]", r.Status);
 
                     if (HasPersistenceIdSubscribers || HasAllPersistenceIdSubscribers)
                     {
@@ -391,7 +391,7 @@ namespace Akka.Persistence.Azure.Journal
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 foreach (var r in eventTagsResponse.Value)
-                                    _log.Debug("Azure table storage wrote entity with status code [{1}]", r.Status);
+                                    _log.Debug("Azure table storage wrote entity with status code [{0}]", r.Status);
 
                             if (HasTagSubscribers && taggedEntries.Count != 0)
                             {
