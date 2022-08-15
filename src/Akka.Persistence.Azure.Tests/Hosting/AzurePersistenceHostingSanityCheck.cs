@@ -14,11 +14,12 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests.Hosting
 {
+    [Collection("AzureSpecs")]
     public class AzurePersistenceHostingSanityCheck
     {
         public static async Task<IHost> StartHost(Action<AkkaConfigurationBuilder> testSetup)
         {
-            var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR");
+            var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
             var host = new HostBuilder()
                 .ConfigureServices(collection =>
                 {
