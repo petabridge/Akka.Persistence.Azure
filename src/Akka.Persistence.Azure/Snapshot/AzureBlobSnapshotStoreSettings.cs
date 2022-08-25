@@ -129,19 +129,19 @@ namespace Akka.Persistence.Azure.Snapshot
         public PublicAccessType ContainerPublicAccessType { get; }
 
         /// <summary>
-        /// A <see cref="Uri"/> referencing the blob service.
-        /// This is likely to be similar to "https://{account_name}.blob.core.windows.net".
+        ///     A <see cref="Uri"/> referencing the blob service.
+        ///     This is likely to be similar to "https://{account_name}.blob.core.windows.net".
         /// </summary>
         public Uri ServiceUri { get; }
 
         /// <summary>
-        /// The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        ///     The <see cref="DefaultAzureCredential"/> used to sign API requests.
         /// </summary>
         public DefaultAzureCredential DefaultAzureCredential { get; }
 
         /// <summary>
-        /// Optional client options that define the transport pipeline policies for authentication,
-        /// retries, etc., that are applied to every request.
+        ///     Optional client options that define the transport pipeline policies for authentication,
+        ///     retries, etc., that are applied to every request.
         /// </summary>
         public BlobClientOptions BlobClientOptions { get; }
 

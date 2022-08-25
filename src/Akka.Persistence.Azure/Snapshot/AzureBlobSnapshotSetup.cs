@@ -13,24 +13,24 @@ using Azure.Storage.Blobs.Models;
 namespace Akka.Persistence.Azure.Snapshot
 {
     /// <summary>
-    /// Setup class for <see cref="AzureBlobSnapshotStore"/>.
-    /// Any populated properties will override its respective HOCON setting.
+    ///     Setup class for <see cref="AzureBlobSnapshotStore"/>.
+    ///     Any populated properties will override its respective HOCON setting.
     /// </summary>
     public class AzureBlobSnapshotSetup : Setup
     {
         /// <summary>
-        /// Create a new <see cref="AzureBlobSnapshotSetup"/>
+        ///     Create a new <see cref="AzureBlobSnapshotSetup"/>
         /// </summary>
         /// <param name="serviceUri">
-        /// A <see cref="Uri"/> referencing the blob service.
-        /// This is likely to be similar to "https://{account_name}.blob.core.windows.net".
+        ///     A <see cref="Uri"/> referencing the blob service.
+        ///     This is likely to be similar to "https://{account_name}.blob.core.windows.net".
         /// </param>
         /// <param name="defaultAzureCredential">
-        /// The <see cref="DefaultAzureCredential"/> used to sign requests.
+        ///     The <see cref="DefaultAzureCredential"/> used to sign requests.
         /// </param>
         /// <param name="blobClientOptions">
-        /// Optional client options that define the transport pipeline policies for authentication,
-        /// retries, etc., that are applied to every request.
+        ///     Optional client options that define the transport pipeline policies for authentication,
+        ///     retries, etc., that are applied to every request.
         /// </param>
         /// <returns>A new <see cref="AzureBlobSnapshotSetup"/> instance</returns>
         public static AzureBlobSnapshotSetup Create(
@@ -87,19 +87,19 @@ namespace Akka.Persistence.Azure.Snapshot
         public PublicAccessType? ContainerPublicAccessType { get; set; }
 
         /// <summary>
-        /// A <see cref="Uri"/> referencing the blob service.
-        /// This is likely to be similar to "https://{account_name}.blob.core.windows.net".
+        ///     A <see cref="Uri"/> referencing the blob service.
+        ///     This is likely to be similar to "https://{account_name}.blob.core.windows.net".
         /// </summary>
         public Uri ServiceUri { get; set; }
 
         /// <summary>
-        /// The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        ///     The <see cref="DefaultAzureCredential"/> used to sign API requests.
         /// </summary>
         public DefaultAzureCredential DefaultAzureCredential { get; set; }
 
         /// <summary>
-        /// Optional client options that define the transport pipeline policies for authentication,
-        /// retries, etc., that are applied to every request.
+        ///     Optional client options that define the transport pipeline policies for authentication,
+        ///     retries, etc., that are applied to every request.
         /// </summary>
         public BlobClientOptions BlobClientOptions { get; set; }
 
