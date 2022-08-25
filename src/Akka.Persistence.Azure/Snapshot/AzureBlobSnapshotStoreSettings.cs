@@ -5,8 +5,11 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Util;
+using Azure.Identity;
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 
 namespace Akka.Persistence.Azure.Snapshot
@@ -29,6 +32,7 @@ namespace Akka.Persistence.Azure.Snapshot
             : this(connectionString, containerName, connectTimeout, requestTimeout, verboseLogging, development, autoInitialize, PublicAccessType.BlobContainer)
         { }
 
+        [Obsolete]
         public AzureBlobSnapshotStoreSettings(
             string connectionString, 
             string containerName,
@@ -38,6 +42,32 @@ namespace Akka.Persistence.Azure.Snapshot
             bool development, 
             bool autoInitialize, 
             PublicAccessType containerPublicAccessType)
+            : this(
+                connectionString: connectionString,
+                containerName: containerName,
+                connectTimeout: connectTimeout,
+                requestTimeout: requestTimeout,
+                verboseLogging: verboseLogging,
+                development: development,
+                autoInitialize: autoInitialize,
+                containerPublicAccessType: containerPublicAccessType,
+                serviceUri: null,
+                defaultAzureCredential: null,
+                blobClientOption: null)
+        { }
+
+        public AzureBlobSnapshotStoreSettings(
+            string connectionString, 
+            string containerName,
+            TimeSpan connectTimeout, 
+            TimeSpan requestTimeout, 
+            bool verboseLogging, 
+            bool development, 
+            bool autoInitialize, 
+            PublicAccessType containerPublicAccessType,
+            Uri serviceUri,
+            DefaultAzureCredential defaultAzureCredential,
+            BlobClientOptions blobClientOption)
         {
             if (string.IsNullOrWhiteSpace(containerName))
                 throw new ConfigurationException("[AzureBlobSnapshotStore] Container name is null or empty.");
@@ -51,6 +81,9 @@ namespace Akka.Persistence.Azure.Snapshot
             Development = development;
             AutoInitialize = autoInitialize;
             ContainerPublicAccessType = containerPublicAccessType;
+            ServiceUri = serviceUri;
+            DefaultAzureCredential = defaultAzureCredential;
+            BlobClientOptions = blobClientOption;
         }
 
         /// <summary>
@@ -78,12 +111,106 @@ namespace Akka.Persistence.Azure.Snapshot
         /// </summary>
         public bool VerboseLogging { get; }
 
+        /// <summary>
+        ///     Flag that we're running in development mode. When this is set, <see cref="DefaultAzureCredential"/> and
+        ///     <see cref="ConnectionString"/> will be ignored, replaced with "UseDevelopmentStorage=true" for local
+        ///     connection to Azurite.
+        /// </summary>
         public bool Development { get; }
 
+        /// <summary>
+        ///     Automatically create the Blog Storage container if no existing Blob container is found
+        /// </summary>
         public bool AutoInitialize { get; }
         
+        /// <summary>
+        ///     The public access type of the auto-initialized Blob Storage container
+        /// </summary>
         public PublicAccessType ContainerPublicAccessType { get; }
 
+        /// <summary>
+        /// A <see cref="Uri"/> referencing the blob service.
+        /// This is likely to be similar to "https://{account_name}.blob.core.windows.net".
+        /// </summary>
+        public Uri ServiceUri { get; }
+
+        /// <summary>
+        /// The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        /// </summary>
+        public DefaultAzureCredential DefaultAzureCredential { get; }
+
+        /// <summary>
+        /// Optional client options that define the transport pipeline policies for authentication,
+        /// retries, etc., that are applied to every request.
+        /// </summary>
+        public BlobClientOptions BlobClientOptions { get; }
+
+        public AzureBlobSnapshotStoreSettings WithConnectionString(string connectionString)
+            => Copy(connectionString: connectionString);
+        public AzureBlobSnapshotStoreSettings WithContainerName(string containerName)
+            => Copy(containerName: containerName);
+        public AzureBlobSnapshotStoreSettings WithConnectTimeout(TimeSpan connectTimeout)
+            => Copy(connectTimeout: connectTimeout);
+        public AzureBlobSnapshotStoreSettings WithRequestTimeout(TimeSpan requestTimeout)
+            => Copy(requestTimeout: requestTimeout);
+        public AzureBlobSnapshotStoreSettings WithVerboseLogging(bool verboseLogging)
+            => Copy(verboseLogging: verboseLogging);
+        public AzureBlobSnapshotStoreSettings WithDevelopment(bool development)
+            => Copy(development: development);
+        public AzureBlobSnapshotStoreSettings WithAutoInitialize(bool autoInitialize)
+            => Copy(autoInitialize: autoInitialize);
+        public AzureBlobSnapshotStoreSettings WithContainerPublicAccessType(PublicAccessType containerPublicAccessType)
+            => Copy(containerPublicAccessType: containerPublicAccessType);
+        public AzureBlobSnapshotStoreSettings WithAzureCredential(
+            Uri serviceUri,
+            DefaultAzureCredential defaultAzureCredential,
+            BlobClientOptions blobClientOption = null)
+            => Copy(
+                serviceUri: serviceUri,
+                defaultAzureCredential: defaultAzureCredential,
+                blobClientOption: blobClientOption);
+        
+        private AzureBlobSnapshotStoreSettings Copy(
+            string connectionString = null,
+            string containerName = null,
+            TimeSpan? connectTimeout = null,
+            TimeSpan? requestTimeout = null,
+            bool? verboseLogging = null,
+            bool? development = null,
+            bool? autoInitialize = null,
+            PublicAccessType? containerPublicAccessType = null,
+            Uri serviceUri = null,
+            DefaultAzureCredential defaultAzureCredential = null,
+            BlobClientOptions blobClientOption = null)
+            => new AzureBlobSnapshotStoreSettings(
+                connectionString ?? ConnectionString,
+                containerName ?? ContainerName,
+                connectTimeout ?? ConnectTimeout,
+                requestTimeout ?? RequestTimeout,
+                verboseLogging ?? VerboseLogging,
+                development ?? Development,
+                autoInitialize ?? AutoInitialize,
+                containerPublicAccessType ?? ContainerPublicAccessType,
+                serviceUri ?? ServiceUri,
+                defaultAzureCredential ?? DefaultAzureCredential,
+                blobClientOption ?? BlobClientOptions);
+        
+        /// <summary>
+        ///     Creates an <see cref="AzureBlobSnapshotStoreSettings" /> instance using the
+        ///     `akka.persistence.snapshot-store.azure-blob-store` HOCON configuration section inside
+        ///     the <see cref="ActorSystem"/> settings.
+        /// </summary>
+        /// <param name="system">The <see cref="ActorSystem"/> to extract the configuration from</param>
+        /// <returns>A new settings instance.</returns>
+        public static AzureBlobSnapshotStoreSettings Create(ActorSystem system)
+        {
+            var config = system.Settings.Config.GetConfig("akka.persistence.snapshot-store.azure-blob-store");
+            if (config is null)
+                throw new ConfigurationException(
+                    "Could not find HOCON config at path 'akka.persistence.snapshot-store.azure-blob-store'");
+            return Create(config);
+        }
+        
         /// <summary>
         ///     Creates an <see cref="AzureBlobSnapshotStoreSettings" /> instance using the
         ///     `akka.persistence.snapshot-store.azure-blob-store` HOCON configuration section.
@@ -92,6 +219,9 @@ namespace Akka.Persistence.Azure.Snapshot
         /// <returns>A new settings instance.</returns>
         public static AzureBlobSnapshotStoreSettings Create(Config config)
         {
+            if (config is null)
+                throw new ArgumentNullException(nameof(config));
+            
             var connectionString = config.GetString("connection-string");
             var containerName = config.GetString("container-name");
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
