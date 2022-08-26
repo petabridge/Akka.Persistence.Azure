@@ -15,8 +15,8 @@ namespace Akka.Persistence.Azure.Hosting
     /// </summary>
     public static class AzurePersistenceExtensions
     {
-        private const string DefaultTableName = "AkkaPersistenceDefaultTable";
-        private const string DefaultBlobContainerName = "akka-persistence-default-container";
+        public const string DefaultTableName = "AkkaPersistenceDefaultTable";
+        public const string DefaultBlobContainerName = "akka-persistence-default-container";
         
         /// <summary>
         ///     Add an AzureTableStorage journal as the default Akka.Persistence
