@@ -172,6 +172,7 @@ namespace Akka.Persistence.Azure.Hosting
             if (setup is null)
                 throw new ArgumentNullException(nameof(setup));
             
+            builder.AddHocon("akka.persistence.journal.plugin = \"akka.persistence.journal.azure-table\"", HoconAddMode.Prepend);
             builder.AddSetup(setup);
             
             // PUSH DEFAULT CONFIG TO END
@@ -324,6 +325,7 @@ namespace Akka.Persistence.Azure.Hosting
             if (setup is null)
                 throw new ArgumentNullException(nameof(setup));
 
+            builder.AddHocon("akka.persistence.snapshot-store.plugin = \"akka.persistence.snapshot-store.azure-blob-store\"", HoconAddMode.Prepend);
             builder.AddSetup(setup);
             
             // PUSH DEFAULT CONFIG TO END

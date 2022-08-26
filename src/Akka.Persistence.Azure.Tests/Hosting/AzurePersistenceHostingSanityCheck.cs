@@ -5,6 +5,7 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Hosting;
 using Akka.Persistence.Azure.Hosting;
+using Akka.Persistence.Azure.Tests.Helper;
 using Akka.TestKit.Xunit2.Internals;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +21,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         public static async Task<IHost> StartHost(Action<AkkaConfigurationBuilder> testSetup)
         {
             var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
+            await DbUtils.CleanupCloudTable(conn);
             var host = new HostBuilder()
                 .ConfigureServices(collection =>
                 {
