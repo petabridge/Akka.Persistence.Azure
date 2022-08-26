@@ -11,7 +11,7 @@ using Azure.Identity;
 
 namespace Akka.Persistence.Azure.Journal
 {
-    public class AzureTableStorageJournalSetup : Setup
+    public sealed class AzureTableStorageJournalSetup : Setup
     {
         /// <summary>
         ///     The connection string for connecting to Windows Azure table storage.

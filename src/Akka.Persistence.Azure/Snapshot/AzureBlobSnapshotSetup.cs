@@ -16,7 +16,7 @@ namespace Akka.Persistence.Azure.Snapshot
     ///     Setup class for <see cref="AzureBlobSnapshotStore"/>.
     ///     Any populated properties will override its respective HOCON setting.
     /// </summary>
-    public class AzureBlobSnapshotSetup : Setup
+    public sealed class AzureBlobSnapshotSetup : Setup
     {
         /// <summary>
         ///     Create a new <see cref="AzureBlobSnapshotSetup"/>
