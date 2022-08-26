@@ -34,7 +34,7 @@ namespace Akka.Persistence.Azure
         /// <summary>
         ///     The default HOCON configuration for <see cref="AzurePersistence" />.
         /// </summary>
-        public static Config DefaultConfig =>
+        public static readonly Config DefaultConfig =
             ConfigurationFactory.FromResource<AzurePersistence>("Akka.Persistence.Azure.reference.conf");
 
         /// <summary>

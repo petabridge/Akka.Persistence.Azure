@@ -61,8 +61,26 @@ namespace Akka.Persistence.Azure.Journal
                 AzurePersistence.Get(Context.System).TableSettings :
                 AzureTableStorageJournalSettings.Create(config);
 
+            var setup = Context.System.Settings.Setup.Get<AzureTableStorageJournalSetup>();
+            if (setup.HasValue)
+                _settings = setup.Value.Apply(_settings);
+            
             _serialization = new SerializationHelper(Context.System);
-            _tableServiceClient = new TableServiceClient(_settings.ConnectionString);
+
+            if (_settings.Development)
+            {
+                _tableServiceClient = new TableServiceClient(connectionString: "UseDevelopmentStorage=true");
+            }
+            else
+            {
+                // Use DefaultAzureCredential if both ServiceUri and DefaultAzureCredential are populated in the settings 
+                _tableServiceClient = _settings.ServiceUri != null && _settings.DefaultAzureCredential != null
+                    ? new TableServiceClient(
+                        endpoint: _settings.ServiceUri,
+                        tokenCredential: _settings.DefaultAzureCredential,
+                        options: _settings.TableClientOptions)
+                    : new TableServiceClient(connectionString: _settings.ConnectionString);
+            }
         }
 
         public TableClient Table
