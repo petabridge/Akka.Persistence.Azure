@@ -1,4 +1,10 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+// <copyright file="AzureTableStorageReadJournal.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2022 Petabridge, LLC <https://petabridge.com>
+// </copyright>
+// -----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Query.Publishers;
