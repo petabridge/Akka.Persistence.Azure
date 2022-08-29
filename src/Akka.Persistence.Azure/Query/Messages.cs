@@ -1,4 +1,10 @@
-﻿using Akka.Actor;
+﻿// -----------------------------------------------------------------------
+// <copyright file="Messages.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2022 Petabridge, LLC <https://petabridge.com>
+// </copyright>
+// -----------------------------------------------------------------------
+
+using Akka.Actor;
 using Akka.Event;
 using System;
 using System.Collections.Generic;

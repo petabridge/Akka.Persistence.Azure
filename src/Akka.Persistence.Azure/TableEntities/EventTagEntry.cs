@@ -1,4 +1,10 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+// <copyright file="EventTagEntry.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2022 Petabridge, LLC <https://petabridge.com>
+// </copyright>
+// -----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using Akka.Persistence.Azure.Util;
 using Azure;

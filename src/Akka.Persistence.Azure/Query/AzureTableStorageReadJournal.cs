@@ -1,4 +1,10 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+// <copyright file="AzureTableStorageReadJournal.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2022 Petabridge, LLC <https://petabridge.com>
+// </copyright>
+// -----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Query.Publishers;
@@ -17,26 +23,37 @@ namespace Akka.Persistence.Azure.Query
         IEventsByTagQuery,
         ICurrentEventsByTagQuery
     {
-        public static string Identifier = "akka.persistence.query.journal.azure-table";
+        public const string Identifier = "akka.persistence.query.journal.azure-table";
 
         private readonly int _maxBufferSize;
         private readonly TimeSpan _refreshInterval;
         private readonly string _writeJournalPluginId;
 
         /// <summary>
-        /// Returns a default query configuration for akka persistence SQLite-based journals and snapshot stores.
+        /// Returns a default query configuration for akka persistence Azure-based journals and snapshot stores.
         /// </summary>
         /// <returns></returns>
-        public static Config DefaultConfiguration()
-        {
-            return ConfigurationFactory.FromResource<AzureTableStorageReadJournal>("Akka.Persistence.Azure.reference.conf");
-        }
+        // NOTE: Do NOT remove this method, this is being called through reflection magic code
+        // in Akka.Persistence.Query.PersistenceQuery.GetDefaultConfig<T>()
+        public static Config DefaultConfiguration() => AzurePersistence.DefaultConfig;
 
         public AzureTableStorageReadJournal(ExtendedActorSystem system, Config config)
         {
             _maxBufferSize = config.GetInt("max-buffer-size");
             _refreshInterval = config.GetTimeSpan("refresh-interval");
             _writeJournalPluginId = config.GetString("write-plugin");
+
+            var setupOption = system.Settings.Setup.Get<AzureTableStorageReadJournalSetup>();
+            if (setupOption.HasValue)
+            {
+                var setup = setupOption.Value;
+                if (setup.MaxBufferSize != null)
+                    _maxBufferSize = setup.MaxBufferSize.Value;
+                if (setup.RefreshInterval != null)
+                    _refreshInterval = setup.RefreshInterval.Value;
+                if (!string.IsNullOrWhiteSpace(setup.WritePluginId))
+                    _writeJournalPluginId = setup.WritePluginId;
+            }
         }
 
         /// <summary>

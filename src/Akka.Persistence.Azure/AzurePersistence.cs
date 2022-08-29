@@ -1,6 +1,6 @@
 ﻿// -----------------------------------------------------------------------
 // <copyright file="AzurePersistence.cs" company="Petabridge, LLC">
-//      Copyright (C) 2015 - 2018 Petabridge, LLC <https://petabridge.com>
+//      Copyright (C) 2015 - 2022 Petabridge, LLC <https://petabridge.com>
 // </copyright>
 // -----------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ namespace Akka.Persistence.Azure
         /// <summary>
         ///     The default HOCON configuration for <see cref="AzurePersistence" />.
         /// </summary>
-        public static Config DefaultConfig =>
+        public static readonly Config DefaultConfig =
             ConfigurationFactory.FromResource<AzurePersistence>("Akka.Persistence.Azure.reference.conf");
 
         /// <summary>

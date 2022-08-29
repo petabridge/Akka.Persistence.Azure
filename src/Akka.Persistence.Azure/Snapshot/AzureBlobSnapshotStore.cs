@@ -1,6 +1,6 @@
 ﻿// -----------------------------------------------------------------------
 // <copyright file="AzureBlobSnapshotStore.cs" company="Petabridge, LLC">
-//      Copyright (C) 2015 - 2018 Petabridge, LLC <https://petabridge.com>
+//      Copyright (C) 2015 - 2022 Petabridge, LLC <https://petabridge.com>
 // </copyright>
 // -----------------------------------------------------------------------
 
@@ -54,24 +54,22 @@ namespace Akka.Persistence.Azure.Snapshot
                 ? AzurePersistence.Get(Context.System).BlobSettings
                 : AzureBlobSnapshotStoreSettings.Create(config);
 
+            var setup = Context.System.Settings.Setup.Get<AzureBlobSnapshotSetup>();
+            if (setup.HasValue)
+                _settings = setup.Value.Apply(_settings);
+            
             if (_settings.Development)
             {
-                _serviceClient = new BlobServiceClient("UseDevelopmentStorage=true");
+                _serviceClient = new BlobServiceClient(connectionString: "UseDevelopmentStorage=true");
             }
             else
             {
-                var credentialSetup = Context.System.Settings.Setup.Get<AzureBlobSnapshotSetup>();
-                if (credentialSetup.HasValue)
-                {
-                    _serviceClient = new BlobServiceClient(
-                        credentialSetup.Value.ServiceUri,
-                        credentialSetup.Value.DefaultAzureCredential,
-                        credentialSetup.Value.BlobClientOptions);
-                }
-                else
-                {
-                    _serviceClient = new BlobServiceClient(_settings.ConnectionString);
-                }
+                _serviceClient = _settings.ServiceUri != null && _settings.DefaultAzureCredential != null
+                    ? _serviceClient = new BlobServiceClient(
+                        serviceUri: _settings.ServiceUri, 
+                        credential: _settings.DefaultAzureCredential,
+                        options: _settings.BlobClientOptions)
+                    : _serviceClient = new BlobServiceClient(connectionString: _settings.ConnectionString);
             }
 
             _containerClient = new Lazy<BlobContainerClient>(() => InitCloudStorage(5).Result);

@@ -1,4 +1,10 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+// <copyright file="HighestSequenceNrEntry.cs" company="Petabridge, LLC">
+//      Copyright (C) 2015 - 2022 Petabridge, LLC <https://petabridge.com>
+// </copyright>
+// -----------------------------------------------------------------------
+
+using System;
 using Azure;
 using Azure.Data.Tables;
 
