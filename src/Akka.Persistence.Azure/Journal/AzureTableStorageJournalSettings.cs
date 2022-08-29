@@ -116,19 +116,19 @@ namespace Akka.Persistence.Azure.Journal
         public bool AutoInitialize { get; }
 
         /// <summary>
-        /// A <see cref="Uri"/> referencing the blob service.
-        /// This is likely to be similar to "https://{account_name}.table.core.windows.net".
+        ///     A <see cref="Uri"/> referencing the Azure Table Storage service.
+        ///     This is likely to be similar to "https://{account_name}.table.core.windows.net".
         /// </summary>
         public Uri ServiceUri { get; }
 
         /// <summary>
-        /// The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        ///     The <see cref="DefaultAzureCredential"/> used to sign API requests.
         /// </summary>
         public DefaultAzureCredential DefaultAzureCredential { get; }
 
         /// <summary>
-        /// Optional client options that define the transport pipeline policies for authentication,
-        /// retries, etc., that are applied to every request.
+        ///     Optional client options that define the transport pipeline policies for authentication,
+        ///     retries, etc., that are applied to every request.
         /// </summary>
         public TableClientOptions TableClientOptions { get; }
 

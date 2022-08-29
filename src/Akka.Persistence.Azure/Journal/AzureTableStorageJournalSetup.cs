@@ -11,7 +11,7 @@ using Azure.Identity;
 
 namespace Akka.Persistence.Azure.Journal
 {
-    public class AzureTableStorageJournalSetup : Setup
+    public sealed class AzureTableStorageJournalSetup : Setup
     {
         /// <summary>
         ///     The connection string for connecting to Windows Azure table storage.
@@ -51,19 +51,19 @@ namespace Akka.Persistence.Azure.Journal
         public bool? AutoInitialize { get; set; }
         
         /// <summary>
-        /// A <see cref="Uri"/> referencing the blob service.
-        /// This is likely to be similar to "https://{account_name}.table.core.windows.net".
+        ///     A <see cref="Uri"/> referencing the Azure Storage Table service.
+        ///     This is likely to be similar to "https://{account_name}.table.core.windows.net".
         /// </summary>
         public Uri ServiceUri { get; set; }
 
         /// <summary>
-        /// The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        ///     The <see cref="DefaultAzureCredential"/> used to sign API requests.
         /// </summary>
         public DefaultAzureCredential DefaultAzureCredential { get; set; }
 
         /// <summary>
-        /// Optional client options that define the transport pipeline policies for authentication,
-        /// retries, etc., that are applied to every request.
+        ///     Optional client options that define the transport pipeline policies for authentication,
+        ///     retries, etc., that are applied to every request.
         /// </summary>
         public TableClientOptions TableClientOptions { get; set; }
 

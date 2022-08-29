@@ -9,7 +9,7 @@ using Akka.Actor.Setup;
 
 namespace Akka.Persistence.Azure.Query
 {
-    public class AzureTableStorageReadJournalSetup: Setup
+    public sealed class AzureTableStorageReadJournalSetup: Setup
     {
         /// <summary>
         /// How many events to fetch in one query (replay) and keep buffered until they
