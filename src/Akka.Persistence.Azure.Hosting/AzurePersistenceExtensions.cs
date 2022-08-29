@@ -223,7 +223,7 @@ namespace Akka.Persistence.Azure.Hosting
             this AkkaConfigurationBuilder builder,
             Uri serviceUri,
             DefaultAzureCredential defaultAzureCredential,
-            BlobClientOptions blobClientOptions,
+            BlobClientOptions blobClientOptions = null,
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName)
         {

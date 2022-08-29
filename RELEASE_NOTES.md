@@ -1,3 +1,77 @@
+#### 0.9.1 August 29 2022 ####
+
+* [Bump Akka.NET version from 1.4.39 to 1.4.40](https://github.com/akkadotnet/akka.net/releases/tag/1.4.40)
+* [Bump Akka.Persistence.Hosting version from 0.4.1 to 0.4.2](https://github.com/petabridge/Akka.Persistence.Azure/pull/233)
+* [Bump Azure.Storage.Blobs version from 12.12.0 to 12.13.1](https://github.com/petabridge/Akka.Persistence.Azure/pull/234)
+* [Bump Azure.Identity version from 1.6.0 to 1.6.1](https://github.com/petabridge/Akka.Persistence.Azure/pull/231)
+* [Added programmatic Setup classes](https://github.com/petabridge/Akka.Persistence.Azure/pull/235)
+* [Update Akka.Hosting support to support `DefaultAzureCredential`](https://github.com/petabridge/Akka.Persistence.Azure/pull/237)
+
+New Setup classes are added to allow programmatic setup of the journal table and snapshot-store blog storage; these setup classes supports `DefaultAzureCredential`. Note that to use `DefaultAzureCredential` from the `Azure.Identity` package, you need to provide both service URI and credential.
+
+```csharp
+var host = new HostBuilder()
+    .ConfigureServices(collection =>
+    {
+        collection.AddAkka("MyActorSys", builder =>
+        {
+            var credentials = new DefaultAzureCredential();
+            
+            // Programatically setup the journal table
+            builder.WithAzureTableJournal(setup => {
+                setup.TableName = "myazuretable";
+                setup.ServiceUri = new Uri("https://{account_name}.table.core.windows.net");
+                setup.DefaultAzureCredential = credentials;
+                // Optional TableClientOptions
+                setup.TableClientOptions = new TableClientOptions(); 
+            });
+            
+            // Programatically setup the snapshot-store blob container
+            builder.WithAzureBlobsSnapshotStore(setup => {
+                setup.ContainerName = "myAzureBlobContainer";
+                setup.ServiceUri = new Uri("https://{account_name}.blob.core.windows.net");
+                setup.DefaultAzureCredential = credentials;
+                // Optional BlobClientOptions
+                setup.BlobClientOptions = new BlobClientOptions(); 
+            });
+            
+            builder.StartActors((system, registry) =>
+            {
+                var myActor = system.ActorOf(Props.Create(() => new MyPersistenceActor("ac1")), "actor1");
+                registry.Register<MyPersistenceActor>(myActor);
+            });
+        });
+    }).Build();
+```
+
+A few convenience `Akka.Hosting` extension methods are also added as a shortcut:
+```csharp
+var host = new HostBuilder()
+    .ConfigureServices(collection =>
+    {
+        collection.AddAkka("MyActorSys", builder =>
+        {
+            var credentials = new DefaultAzureCredential();
+            
+            // Add the journal table
+            builder.WithAzureTableJournal(
+                serviceUri: new Uri("https://{account_name}.table.core.windows.net"),
+                defaultAzureCredential: credentials);
+            
+            // Add the snapshot-store blob container
+            builder.WithAzureBlobsSnapshotStore(
+                serviceUri: new Uri("https://{account_name}.blob.core.windows.net"),
+                defaultAzureCredential: credentials);
+            
+            builder.StartActors((system, registry) =>
+            {
+                var myActor = system.ActorOf(Props.Create(() => new MyPersistenceActor("ac1")), "actor1");
+                registry.Register<MyPersistenceActor>(myActor);
+            });
+        });
+    }).Build();
+```
+
 #### 0.9.0 July 21 2022 ####
 Added [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) support to Akka.Persistence.Azure, which you can activate via the following:
 
