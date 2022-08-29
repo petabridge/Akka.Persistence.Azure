@@ -12,7 +12,6 @@ First, install the `Akka.Persistence.Azure.Hosting` NuGet package:
 
 ```shell
 PS> install-package Akka.Persistence.Azure.Hosting
-
 ```
 
 Next, add the `WithAzurePersistence` method calls to your `AkkaConfigurationBuilder` (from Akka.Hosting):
@@ -40,8 +39,108 @@ return host;
 
 You can also call the following methods to activate the journal / snapshot stores independently:
 
-* ` WithAzureTableJournal`
+* `WithAzureTableJournal`
 * `WithAzureBlobsSnapshotStore`
+
+### Using Azure.Identity.DefaultAzureCredential With Akka.Hosting
+
+```csharp
+var host = new HostBuilder()
+    .ConfigureServices(collection =>
+    {
+        collection.AddAkka("MyActorSys", builder =>
+        {
+            var credentials = new DefaultAzureCredential();
+            
+            // Add the journal table
+            builder.WithAzureTableJournal(
+                serviceUri: new Uri("https://{account_name}.table.core.windows.net"),
+                defaultAzureCredential: credentials);
+            
+            // Add the snapshot-store blob container
+            builder.WithAzureBlobsSnapshotStore(
+                serviceUri: new Uri("https://{account_name}.blob.core.windows.net"),
+                defaultAzureCredential: credentials);
+            
+            builder.StartActors((system, registry) =>
+            {
+                var myActor = system.ActorOf(Props.Create(() => new MyPersistenceActor("ac1")), "actor1");
+                registry.Register<MyPersistenceActor>(myActor);
+            });
+        });
+    }).Build();
+
+await host.StartAsync();
+return host;
+```
+
+#### Using Configurable Setup Class With Akka.Hosting
+
+`WithAzureTableJournal` and `WithAzureBlobsSnapshotStore` have an overload that allows you to use `AzureTableStorageJournalSetup` and `AzureBlobSnapshotStoreSetup` class respectively that allows you to configure all settings that are available in the HOCON settings. These setup classes also allows you to set `Azure.Identity.DefaultAzureCredential` programmatically.
+
+There are two overload types that you can use, one by passing the `Setup` class instance directly, and the other using a delegate. Both have the same result at the end, use one that fits your programming style the best. 
+
+```csharp
+var host = new HostBuilder()
+    .ConfigureServices(collection =>
+    {
+        collection.AddAkka("MyActorSys", builder =>
+        {
+            var credentials = new DefaultAzureCredential();
+            
+            // Programatically setup the journal table using delegate
+            builder.WithAzureTableJournal(setup => 
+            {
+                setup.TableName = "myazuretable";
+                setup.ServiceUri = new Uri("https://{account_name}.table.core.windows.net");
+                setup.DefaultAzureCredential = credentials;
+                // Optional TableClientOptions
+                setup.TableClientOptions = new TableClientOptions(); 
+            });
+            
+            // You can also programatically pass in a Setup instance
+            /*
+            builder.WithAzureTableJournal(new AzureTableStorageJournalSetup
+            {
+                TableName = "myazuretable",
+                ServiceUri = new Uri("https://{account_name}.table.core.windows.net"),
+                DefaultAzureCredential = credentials,
+                // Optional TableClientOptions
+                TableClientOptions = new TableClientOptions() 
+            });
+            */
+            
+            // Programatically setup the snapshot-store blob container using delegate
+            builder.WithAzureBlobsSnapshotStore(setup => {
+                setup.ContainerName = "myAzureBlobContainer";
+                setup.ServiceUri = new Uri("https://{account_name}.blob.core.windows.net");
+                setup.DefaultAzureCredential = credentials;
+                // Optional BlobClientOptions
+                setup.BlobClientOptions = new BlobClientOptions(); 
+            });
+            
+            // You can also programatically pass in a Setup instance
+            /*
+            builder.WithAzureBlobsSnapshotStore(new AzureBlobSnapshotStoreSetup {
+                ContainerName = "myAzureBlobContainer",
+                ServiceUri = new Uri("https://{account_name}.blob.core.windows.net"),
+                DefaultAzureCredential = credentials,
+                // Optional BlobClientOptions
+                BlobClientOptions = new BlobClientOptions() 
+            });
+            */
+            
+            builder.StartActors((system, registry) =>
+            {
+                var myActor = system.ActorOf(Props.Create(() => new MyPersistenceActor("ac1")), "actor1");
+                registry.Register<MyPersistenceActor>(myActor);
+            });
+        });
+    }).Build();
+
+await host.StartAsync();
+return host;
+```
 
 ### Custom Mode: HOCON
 
@@ -60,6 +159,37 @@ akka.persistence.journal.azure-table.table-name = "Your table name"
 # Configure snapshots
 akka.persistence.snapshot-store.azure-blob-store.connection-string = "Your Azure Storage connection string"
 akka.persistence.snapshot-store.azure-blob-store.container-name = "Your container name"
+```
+
+### Using Azure.Identity.DefaultAzureCredential Through Programmatic Setup
+
+Since there is no way to pass in `DefaultAzureCredential` through HOCON settings, this has to be done programatically using `Setup` classes.
+
+```csharp
+// Need to enable plugin
+var config = ConfigurationFactory.ParseString(@"
+akka.persistence.journal.plugin = akka.persistence.journal.azure-table
+akka.persistence.snapshot-store.plugin = akka.persistence.snapshot-store.azure-blob-store");
+
+var credentials = new DefaultAzureCredential();
+var setup = BootstrapSetup.Create()
+    .WithConfig(config)
+    // Add DefaultAzureCredential to snapshot-store using Setup class
+    .And(new AzureBlobSnapshotSetup 
+    {
+        ServiceUri = new Uri("https://{account_name}.blob.core.windows.net"),
+        DefaultAzureCredential = credentials,
+        BlobClientOptions = new BlobClientOptions() // Optional
+    })
+    // Add DefaultAzureCredential to journal table using Setup class
+    .And(new AzureTableStorageJournalSetup 
+    {
+        ServiceUri = new Uri("https://{account_name}.table.core.windows.net"),
+        DefaultAzureCredential = credentials,
+        TableClientOptions = new TableClientOptions() // Optional
+    });
+
+var myActorSystem = ActorSystem.Create("myActorSystem", setup);
 ```
 
 ### Local development mode
