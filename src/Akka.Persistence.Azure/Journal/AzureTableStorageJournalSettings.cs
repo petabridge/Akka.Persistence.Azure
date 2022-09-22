@@ -9,6 +9,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Util;
+using Azure.Core;
 using Azure.Data.Tables;
 using Azure.Identity;
 
@@ -52,7 +53,7 @@ namespace Akka.Persistence.Azure.Journal
             bool development, 
             bool autoInitialize,
             Uri serviceUri,
-            DefaultAzureCredential defaultAzureCredential,
+            TokenCredential defaultAzureCredential,
             TableClientOptions tableClientOptions)
         {
             if(string.IsNullOrWhiteSpace(tableName))
@@ -74,7 +75,7 @@ namespace Akka.Persistence.Azure.Journal
             Development = development;
             AutoInitialize = autoInitialize;
             ServiceUri = serviceUri;
-            DefaultAzureCredential = defaultAzureCredential;
+            AzureCredential = defaultAzureCredential;
             TableClientOptions = tableClientOptions;
         }
 
@@ -104,7 +105,7 @@ namespace Akka.Persistence.Azure.Journal
         public bool VerboseLogging { get; }
 
         /// <summary>
-        ///     Flag that we're running in development mode. When this is set, <see cref="DefaultAzureCredential"/> and
+        ///     Flag that we're running in development mode. When this is set, <see cref="TokenCredential"/> and
         ///     <see cref="ConnectionString"/> will be ignored, replaced with "UseDevelopmentStorage=true" for local
         ///     connection to Azurite.
         /// </summary>
@@ -122,9 +123,15 @@ namespace Akka.Persistence.Azure.Journal
         public Uri ServiceUri { get; }
 
         /// <summary>
-        ///     The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
-        public DefaultAzureCredential DefaultAzureCredential { get; }
+        [Obsolete(message: "Use AzureCredential instead")]
+        public TokenCredential DefaultAzureCredential => AzureCredential;
+
+        /// <summary>
+        ///     The <see cref="TokenCredential"/> used to sign API requests.
+        /// </summary>
+        public TokenCredential AzureCredential { get; }
 
         /// <summary>
         ///     Optional client options that define the transport pipeline policies for authentication,
@@ -148,11 +155,11 @@ namespace Akka.Persistence.Azure.Journal
             => Copy(autoInitialize: autoInitialize);
         public AzureTableStorageJournalSettings WithAzureCredential(
             Uri serviceUri,
-            DefaultAzureCredential defaultAzureCredential,
+            TokenCredential defaultAzureCredential,
             TableClientOptions tableClientOptions = null)
             => Copy(
                 serviceUri: serviceUri,
-                defaultAzureCredential: defaultAzureCredential,
+                azureCredential: defaultAzureCredential,
                 tableClientOptions: tableClientOptions);
         
         private AzureTableStorageJournalSettings Copy(
@@ -164,7 +171,7 @@ namespace Akka.Persistence.Azure.Journal
             bool? development = null,
             bool? autoInitialize = null,
             Uri serviceUri = null,
-            DefaultAzureCredential defaultAzureCredential = null,
+            TokenCredential azureCredential = null,
             TableClientOptions tableClientOptions = null)
             => new AzureTableStorageJournalSettings(
                 connectionString: connectionString ?? ConnectionString,
@@ -175,7 +182,7 @@ namespace Akka.Persistence.Azure.Journal
                 development: development ?? Development,
                 autoInitialize: autoInitialize ?? AutoInitialize,
                 serviceUri: serviceUri ?? ServiceUri,
-                defaultAzureCredential: defaultAzureCredential ?? DefaultAzureCredential,
+                defaultAzureCredential: azureCredential ?? AzureCredential,
                 tableClientOptions: tableClientOptions ?? TableClientOptions);
 
         /// <summary>

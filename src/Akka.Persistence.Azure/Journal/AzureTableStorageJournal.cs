@@ -73,11 +73,11 @@ namespace Akka.Persistence.Azure.Journal
             }
             else
             {
-                // Use DefaultAzureCredential if both ServiceUri and DefaultAzureCredential are populated in the settings 
-                _tableServiceClient = _settings.ServiceUri != null && _settings.DefaultAzureCredential != null
+                // Use TokenCredential if both ServiceUri and TokenCredential are populated in the settings 
+                _tableServiceClient = _settings.ServiceUri != null && _settings.AzureCredential != null
                     ? new TableServiceClient(
                         endpoint: _settings.ServiceUri,
-                        tokenCredential: _settings.DefaultAzureCredential,
+                        tokenCredential: _settings.AzureCredential,
                         options: _settings.TableClientOptions)
                     : new TableServiceClient(connectionString: _settings.ConnectionString);
             }

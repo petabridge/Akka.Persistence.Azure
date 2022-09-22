@@ -8,6 +8,7 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Util;
+using Azure.Core;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -66,7 +67,7 @@ namespace Akka.Persistence.Azure.Snapshot
             bool autoInitialize, 
             PublicAccessType containerPublicAccessType,
             Uri serviceUri,
-            DefaultAzureCredential defaultAzureCredential,
+            TokenCredential defaultAzureCredential,
             BlobClientOptions blobClientOption)
         {
             if (string.IsNullOrWhiteSpace(containerName))
@@ -82,7 +83,7 @@ namespace Akka.Persistence.Azure.Snapshot
             AutoInitialize = autoInitialize;
             ContainerPublicAccessType = containerPublicAccessType;
             ServiceUri = serviceUri;
-            DefaultAzureCredential = defaultAzureCredential;
+            AzureCredential = defaultAzureCredential;
             BlobClientOptions = blobClientOption;
         }
 
@@ -112,7 +113,7 @@ namespace Akka.Persistence.Azure.Snapshot
         public bool VerboseLogging { get; }
 
         /// <summary>
-        ///     Flag that we're running in development mode. When this is set, <see cref="DefaultAzureCredential"/> and
+        ///     Flag that we're running in development mode. When this is set, <see cref="TokenCredential"/> and
         ///     <see cref="ConnectionString"/> will be ignored, replaced with "UseDevelopmentStorage=true" for local
         ///     connection to Azurite.
         /// </summary>
@@ -135,10 +136,17 @@ namespace Akka.Persistence.Azure.Snapshot
         public Uri ServiceUri { get; }
 
         /// <summary>
-        ///     The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
-        public DefaultAzureCredential DefaultAzureCredential { get; }
+        [Obsolete(message:"Use AzureCredential instead")]
+        public TokenCredential DefaultAzureCredential => AzureCredential;
 
+        /// <summary>
+        ///     The <see cref="TokenCredential"/> used to sign API requests.
+        /// </summary>
+        public TokenCredential AzureCredential { get; }
+        
+        
         /// <summary>
         ///     Optional client options that define the transport pipeline policies for authentication,
         ///     retries, etc., that are applied to every request.
@@ -163,11 +171,11 @@ namespace Akka.Persistence.Azure.Snapshot
             => Copy(containerPublicAccessType: containerPublicAccessType);
         public AzureBlobSnapshotStoreSettings WithAzureCredential(
             Uri serviceUri,
-            DefaultAzureCredential defaultAzureCredential,
+            TokenCredential defaultAzureCredential,
             BlobClientOptions blobClientOption = null)
             => Copy(
                 serviceUri: serviceUri,
-                defaultAzureCredential: defaultAzureCredential,
+                azureCredential: defaultAzureCredential,
                 blobClientOption: blobClientOption);
         
         private AzureBlobSnapshotStoreSettings Copy(
@@ -180,7 +188,7 @@ namespace Akka.Persistence.Azure.Snapshot
             bool? autoInitialize = null,
             PublicAccessType? containerPublicAccessType = null,
             Uri serviceUri = null,
-            DefaultAzureCredential defaultAzureCredential = null,
+            TokenCredential azureCredential = null,
             BlobClientOptions blobClientOption = null)
             => new AzureBlobSnapshotStoreSettings(
                 connectionString ?? ConnectionString,
@@ -192,7 +200,7 @@ namespace Akka.Persistence.Azure.Snapshot
                 autoInitialize ?? AutoInitialize,
                 containerPublicAccessType ?? ContainerPublicAccessType,
                 serviceUri ?? ServiceUri,
-                defaultAzureCredential ?? DefaultAzureCredential,
+                azureCredential ?? AzureCredential,
                 blobClientOption ?? BlobClientOptions);
         
         /// <summary>
@@ -237,14 +245,17 @@ namespace Akka.Persistence.Azure.Snapshot
                     "Invalid [container-public-access-type] value. Valid values are 'None', 'Blob', and 'BlobContainer'");
 
             return new AzureBlobSnapshotStoreSettings(
-                connectionString, 
-                containerName, 
-                connectTimeout, 
-                requestTimeout,
-                verbose,
-                development,
-                autoInitialize,
-                containerPublicAccessType);
+                connectionString: connectionString, 
+                containerName: containerName, 
+                connectTimeout: connectTimeout, 
+                requestTimeout: requestTimeout,
+                verboseLogging: verbose,
+                development: development,
+                autoInitialize: autoInitialize,
+                containerPublicAccessType: containerPublicAccessType,
+                serviceUri: null,
+                defaultAzureCredential: null,
+                blobClientOption: null);
         }
     }
 }
