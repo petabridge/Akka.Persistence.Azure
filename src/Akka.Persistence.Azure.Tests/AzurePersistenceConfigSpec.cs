@@ -53,7 +53,7 @@ namespace Akka.Persistence.Azure.Tests
             settings.AutoInitialize.Should().BeTrue();
             settings.ContainerPublicAccessType.Should().Be(PublicAccessType.None);
             settings.ServiceUri.Should().BeNull();
-            settings.DefaultAzureCredential.Should().BeNull();
+            settings.AzureCredential.Should().BeNull();
             settings.BlobClientOptions.Should().BeNull();
         }
         
@@ -83,7 +83,7 @@ namespace Akka.Persistence.Azure.Tests
             settings.AutoInitialize.Should().BeFalse();
             settings.ContainerPublicAccessType.Should().Be(PublicAccessType.Blob);
             settings.ServiceUri.Should().Be(uri);
-            settings.DefaultAzureCredential.Should().Be(credentials);
+            settings.AzureCredential.Should().Be(credentials);
             settings.BlobClientOptions.Should().Be(options);
         }
 
@@ -104,7 +104,7 @@ namespace Akka.Persistence.Azure.Tests
                 AutoInitialize = false,
                 ContainerPublicAccessType = PublicAccessType.Blob,
                 ServiceUri = uri,
-                DefaultAzureCredential = credentials,
+                AzureCredential = credentials,
                 BlobClientOptions = options
             };
 
@@ -119,7 +119,7 @@ namespace Akka.Persistence.Azure.Tests
             settings.AutoInitialize.Should().BeFalse();
             settings.ContainerPublicAccessType.Should().Be(PublicAccessType.Blob);
             settings.ServiceUri.Should().Be(uri);
-            settings.DefaultAzureCredential.Should().Be(credentials);
+            settings.AzureCredential.Should().Be(credentials);
             settings.BlobClientOptions.Should().Be(options);
         }
 
@@ -136,7 +136,7 @@ namespace Akka.Persistence.Azure.Tests
             settings.Development.Should().BeFalse();
             settings.AutoInitialize.Should().BeTrue();
             settings.ServiceUri.Should().BeNull();
-            settings.DefaultAzureCredential.Should().BeNull();
+            settings.AzureCredential.Should().BeNull();
             settings.TableClientOptions.Should().BeNull();
         }
 
@@ -164,7 +164,7 @@ namespace Akka.Persistence.Azure.Tests
             settings.Development.Should().BeTrue();
             settings.AutoInitialize.Should().BeFalse();
             settings.ServiceUri.Should().Be(uri);
-            settings.DefaultAzureCredential.Should().Be(credentials);
+            settings.AzureCredential.Should().Be(credentials);
             settings.TableClientOptions.Should().Be(options);
         }
 
@@ -184,7 +184,7 @@ namespace Akka.Persistence.Azure.Tests
                 Development = true,
                 AutoInitialize = false,
                 ServiceUri = uri,
-                DefaultAzureCredential = credentials,
+                AzureCredential = credentials,
                 TableClientOptions = options
             };
 
@@ -198,7 +198,7 @@ namespace Akka.Persistence.Azure.Tests
             settings.Development.Should().BeTrue();
             settings.AutoInitialize.Should().BeFalse();
             settings.ServiceUri.Should().Be(uri);
-            settings.DefaultAzureCredential.Should().Be(credentials);
+            settings.AzureCredential.Should().Be(credentials);
             settings.TableClientOptions.Should().Be(options);
         }
         

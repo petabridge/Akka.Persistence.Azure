@@ -66,10 +66,10 @@ namespace Akka.Persistence.Azure.Snapshot
             }
             else
             {
-                _serviceClient = _settings.ServiceUri != null && _settings.DefaultAzureCredential != null
+                _serviceClient = _settings.ServiceUri != null && _settings.AzureCredential != null
                     ? _serviceClient = new BlobServiceClient(
                         serviceUri: _settings.ServiceUri, 
-                        credential: _settings.DefaultAzureCredential,
+                        credential: _settings.AzureCredential,
                         options: _settings.BlobClientOptions)
                     : _serviceClient = new BlobServiceClient(connectionString: _settings.ConnectionString);
             }
