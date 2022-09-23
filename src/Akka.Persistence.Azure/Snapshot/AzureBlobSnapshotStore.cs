@@ -47,6 +47,8 @@ namespace Akka.Persistence.Azure.Snapshot
         private readonly AzureBlobSnapshotStoreSettings _settings;
         private readonly BlobServiceClient _serviceClient;
 
+        private readonly CancellationTokenSource _shutdownCts;
+
         public AzureBlobSnapshotStore(Config config = null)
         {
             _serialization = new SerializationHelper(Context.System);
@@ -72,62 +74,71 @@ namespace Akka.Persistence.Azure.Snapshot
                     : _serviceClient = new BlobServiceClient(connectionString: _settings.ConnectionString);
             }
 
-            _containerClient = new Lazy<BlobContainerClient>(() => InitCloudStorage(5).Result);
+            _shutdownCts = new CancellationTokenSource();
+            _containerClient = new Lazy<BlobContainerClient>(() => 
+                InitCloudStorage(5, _shutdownCts.Token).GetAwaiter().GetResult());
         }
 
         public BlobContainerClient Container => _containerClient.Value;
 
-        private async Task<BlobContainerClient> InitCloudStorage(int remainingTries)
+        private async Task<BlobContainerClient> InitCloudStorage(int remainingTries, CancellationToken cancellationToken)
         {
             try
             {
                 var blobClient = _serviceClient.GetBlobContainerClient(_settings.ContainerName);
 
-                using var cts = new CancellationTokenSource(_settings.ConnectTimeout);
-                if (!_settings.AutoInitialize)
+                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(_settings.ConnectTimeout);
+                using (cts)
                 {
-                    var exists = await blobClient.ExistsAsync(cts.Token);
-
-                    if (!exists)
+                    if (!_settings.AutoInitialize)
                     {
-                        remainingTries = 0;
+                        var exists = await blobClient.ExistsAsync(cts.Token);
 
-                        throw new Exception(
-                            $"Container {_settings.ContainerName} doesn't exist. Either create it or turn auto-initialize on");
+                        if (!exists)
+                        {
+                            remainingTries = 0;
+
+                            throw new Exception(
+                                $"Container {_settings.ContainerName} doesn't exist. Either create it or turn auto-initialize on");
+                        }
+                        
+                        _log.Info("Successfully connected to existing container {0}", _settings.ContainerName);
+                        
+                        return blobClient;
                     }
-                        
-                    _log.Info("Successfully connected to existing container {0}", _settings.ContainerName);
-                        
+                
+                    if (await blobClient.ExistsAsync(cts.Token))
+                    {
+                        _log.Info("Successfully connected to existing container {0}", _settings.ContainerName);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            await blobClient.CreateAsync(_settings.ContainerPublicAccessType,
+                                cancellationToken: cts.Token);
+                            _log.Info("Created Azure Blob Container {0}", _settings.ContainerName);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new Exception($"Failed to create Azure Blob Container {_settings.ContainerName}", e);
+                        }
+                    }
+
                     return blobClient;
                 }
-                
-                if (await blobClient.ExistsAsync(cts.Token))
-                {
-                    _log.Info("Successfully connected to existing container {0}", _settings.ContainerName);
-                }
-                else
-                {
-                    try
-                    {
-                        await blobClient.CreateAsync(_settings.ContainerPublicAccessType,
-                            cancellationToken: cts.Token);
-                        _log.Info("Created Azure Blob Container {0}", _settings.ContainerName);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new Exception($"Failed to create Azure Blob Container {_settings.ContainerName}", e);
-                    }
-                }
-
-                return blobClient;
             }
             catch (Exception ex)
             {
                 _log.Error(ex, "[{0}] more tries to initialize table storage remaining...", remainingTries);
                 if (remainingTries == 0)
                     throw;
-                await Task.Delay(RetryInterval[remainingTries]);
-                return await InitCloudStorage(remainingTries - 1);
+                await Task.Delay(RetryInterval[remainingTries], cancellationToken);
+                if (cancellationToken.IsCancellationRequested)
+                    throw;
+                
+                return await InitCloudStorage(remainingTries - 1, cancellationToken);
             }
         }
 
@@ -144,11 +155,20 @@ namespace Akka.Persistence.Azure.Snapshot
             base.PreStart();
         }
 
+        protected override void PostStop()
+        {
+            _shutdownCts.Cancel();
+            _shutdownCts.Dispose();
+            base.PostStop();
+        }
 
-        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId,
+        protected override async Task<SelectedSnapshot> LoadAsync(
+            string persistenceId,
             SnapshotSelectionCriteria criteria)
         {
-            using var cts = new CancellationTokenSource(_settings.RequestTimeout);
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token);
+            cts.CancelAfter(_settings.RequestTimeout);
+            using(cts)
             {
                 var results = Container.GetBlobsAsync(
                     prefix: SeqNoHelper.ToSnapshotSearchQuery(persistenceId), 
@@ -198,54 +218,66 @@ namespace Akka.Persistence.Azure.Snapshot
             var blobClient = Container.GetBlockBlobClient(metadata.ToSnapshotBlobId());
             var snapshotData = _serialization.SnapshotToBytes(new Serialization.Snapshot(snapshot));
 
-            using var cts = new CancellationTokenSource(_settings.RequestTimeout);
-            var blobMetadata = new Dictionary<string, string>
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token);
+            cts.CancelAfter(_settings.RequestTimeout);
+            using (cts)
             {
-                [TimeStampMetaDataKey] = metadata.Timestamp.Ticks.ToString(),
-                /*
-                 * N.B. No need to convert the key into the Journal format we use here.
-                 * The blobs themselves don't have their sort order affected by
-                 * the presence of this metadata, so we should just save the SeqNo
-                 * in a format that can be easily deserialized later.
-                 */
-                [SeqNoMetaDataKey] = metadata.SequenceNr.ToString()
-            };
+                var blobMetadata = new Dictionary<string, string>
+                {
+                    [TimeStampMetaDataKey] = metadata.Timestamp.Ticks.ToString(),
+                    /*
+                     * N.B. No need to convert the key into the Journal format we use here.
+                     * The blobs themselves don't have their sort order affected by
+                     * the presence of this metadata, so we should just save the SeqNo
+                     * in a format that can be easily deserialized later.
+                     */
+                    [SeqNoMetaDataKey] = metadata.SequenceNr.ToString()
+                };
 
-            using var stream = new MemoryStream(snapshotData);
-            await blobClient.UploadAsync(
-                stream, 
-                metadata: blobMetadata,
-                cancellationToken: cts.Token);
+                using var stream = new MemoryStream(snapshotData);
+                await blobClient.UploadAsync(
+                    stream, 
+                    metadata: blobMetadata,
+                    cancellationToken: cts.Token);
+            }
         }
 
         protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
             var blobClient = Container.GetBlobClient(metadata.ToSnapshotBlobId());
 
-            using var cts = new CancellationTokenSource(_settings.RequestTimeout);
-            await blobClient.DeleteIfExistsAsync(cancellationToken: cts.Token);
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token);
+            cts.CancelAfter(_settings.RequestTimeout);
+            using (cts)
+            {
+                await blobClient.DeleteIfExistsAsync(cancellationToken: cts.Token);
+            }
         }
 
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
-            using var cts = new CancellationTokenSource(_settings.RequestTimeout);
-            var items = Container.GetBlobsAsync(
-                prefix: SeqNoHelper.ToSnapshotSearchQuery(persistenceId), 
-                traits: BlobTraits.Metadata,
-                cancellationToken: cts.Token);
-
-            var filtered = items
-                .Where(x => FilterBlobSeqNo(criteria, x))
-                .Where(x => FilterBlobTimestamp(criteria, x));
-
-            var deleteTasks = new List<Task>();
-            await foreach (var blob in filtered.WithCancellation(cts.Token))
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token);
+            cts.CancelAfter(_settings.RequestTimeout);
+            using (cts)
             {
-                var blobClient = Container.GetBlobClient(blob.Name);
-                deleteTasks.Add(blobClient.DeleteIfExistsAsync(cancellationToken: cts.Token));
-            }
+                var items = Container.GetBlobsAsync(
+                    prefix: SeqNoHelper.ToSnapshotSearchQuery(persistenceId), 
+                    traits: BlobTraits.Metadata,
+                    cancellationToken: cts.Token);
 
-            await Task.WhenAll(deleteTasks);
+                var filtered = items
+                    .Where(x => FilterBlobSeqNo(criteria, x))
+                    .Where(x => FilterBlobTimestamp(criteria, x));
+
+                var deleteTasks = new List<Task>();
+                await foreach (var blob in filtered.WithCancellation(cts.Token))
+                {
+                    var blobClient = Container.GetBlobClient(blob.Name);
+                    deleteTasks.Add(blobClient.DeleteIfExistsAsync(cancellationToken: cts.Token));
+                }
+
+                await Task.WhenAll(deleteTasks);
+            }
         }
 
         private static bool FilterBlobSeqNo(SnapshotSelectionCriteria criteria, BlobItem x)
