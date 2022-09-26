@@ -53,7 +53,7 @@ namespace Akka.Persistence.Azure.Tests
         [Fact(DisplayName = "Limited batch with less than 100 entries should work")]
         public async Task FewEntriesTest()
         {
-            var entries = Enumerable.Range(0, 50)
+            var entries = Enumerable.Range(1, 50)
                 .Select(i => new TableTransactionAction(TableTransactionActionType.Add, new TableEntity
                 {
                     PartitionKey = "test",
@@ -67,13 +67,13 @@ namespace Akka.Persistence.Azure.Tests
             var entities = await _tableClient.QueryAsync<TableEntity>("PartitionKey eq 'test'", null, null, cts.Token)
                 .ToListAsync(cts.Token);
             entities.Count.Should().Be(50);
-            entities.Select(e => int.Parse(e.RowKey)).Should().BeEquivalentTo(Enumerable.Range(0, 50));
+            entities.Select(e => int.Parse(e.RowKey.TrimStart('0'))).Should().BeEquivalentTo(Enumerable.Range(1, 50));
         }
         
         [Fact(DisplayName = "Limited batch with more than 100 entries should work")]
         public async Task LotsEntriesTest()
         {
-            var entries = Enumerable.Range(0, 505)
+            var entries = Enumerable.Range(1, 505)
                 .Select(i => new TableTransactionAction(TableTransactionActionType.Add, new TableEntity
                 {
                     PartitionKey = "test",
@@ -87,7 +87,7 @@ namespace Akka.Persistence.Azure.Tests
             var entities = await _tableClient.QueryAsync<TableEntity>("PartitionKey eq 'test'", null, null, cts.Token)
                 .ToListAsync(cts.Token);
             entities.Count.Should().Be(505);
-            entities.Select(e => int.Parse(e.RowKey)).Should().BeEquivalentTo(Enumerable.Range(0, 505));
+            entities.Select(e => int.Parse(e.RowKey.TrimStart('0'))).Should().BeEquivalentTo(Enumerable.Range(1, 505));
         }
     }
 }
