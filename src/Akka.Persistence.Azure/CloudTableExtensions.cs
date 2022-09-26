@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Data.Tables;
@@ -18,20 +19,21 @@ namespace Akka.Persistence.Azure
         
         public static async Task<IReadOnlyList<Response>> ExecuteBatchAsLimitedBatches(
             this TableClient table,
-            List<TableTransactionAction> batch)
+            List<TableTransactionAction> batch, 
+            CancellationToken token)
         {
             if (batch.Count < 1)
                 return ImmutableList<Response>.Empty;
             
             if (batch.Count <= MaxBatchSize)
-                return (await table.SubmitTransactionAsync(batch)).Value;
+                return (await table.SubmitTransactionAsync(batch, token)).Value;
 
             var result = new List<Response>();
             var limitedBatchOperationLists = batch.ChunkBy(MaxBatchSize);
             
             foreach (var limitedBatchOperationList in limitedBatchOperationLists)
             {
-                var limitedBatchResponse = await table.SubmitTransactionAsync(limitedBatchOperationList);
+                var limitedBatchResponse = await table.SubmitTransactionAsync(limitedBatchOperationList, token);
                 result.AddRange(limitedBatchResponse.Value);
             }
 

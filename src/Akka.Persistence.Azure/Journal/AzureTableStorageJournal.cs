@@ -229,10 +229,15 @@ namespace Akka.Persistence.Azure.Journal
                 else
                     nextTask = null;
 
-                if (currentPage.Values.Count > 0)
+                var response = await Table.ExecuteBatchAsLimitedBatches(currentPage.Values
+                    .Select(entity => new TableTransactionAction(TableTransactionActionType.Delete, entity)).ToList(), _shutdownCts.Token);
+                
+                if (_log.IsDebugEnabled && _settings.VerboseLogging)
                 {
-                    await Table.SubmitTransactionAsync(currentPage.Values
-                        .Select(entity => new TableTransactionAction(TableTransactionActionType.Delete, entity)), _shutdownCts.Token);
+                    foreach (var r in response)
+                    {
+                        _log.Debug("Azure table storage wrote entities with status code [{0}]", r.Status);
+                    }
                 }
             }
 
@@ -365,10 +370,10 @@ namespace Akka.Persistence.Azure.Journal
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 _log.Debug("Attempting to write batch of {0} messages to Azure storage", batchItems.Count);
 
-                            var response = await Table.SubmitTransactionAsync(batchItems, _shutdownCts.Token);
+                            var response = await Table.ExecuteBatchAsLimitedBatches(batchItems, _shutdownCts.Token);
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                             {
-                                foreach (var r in response.Value)
+                                foreach (var r in response)
                                 {
                                     _log.Debug("Azure table storage wrote entities with status code [{0}]", r.Status);
                                 }
@@ -395,10 +400,10 @@ namespace Akka.Persistence.Azure.Journal
                             new AllPersistenceIdsEntry(PartitionKeyEscapeHelper.Escape(item.Key)).WriteEntity()));
                     }
 
-                    var allPersistenceResponse = await Table.SubmitTransactionAsync(allPersistenceIdsBatch, _shutdownCts.Token);
+                    var allPersistenceResponse = await Table.ExecuteBatchAsLimitedBatches(allPersistenceIdsBatch, _shutdownCts.Token);
 
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                        foreach (var r in allPersistenceResponse.Value)
+                        foreach (var r in allPersistenceResponse)
                             _log.Debug("Azure table storage wrote entity with status code [{0}]", r.Status);
 
                     if (HasPersistenceIdSubscribers || HasAllPersistenceIdSubscribers)
@@ -417,10 +422,10 @@ namespace Akka.Persistence.Azure.Journal
                                 eventTagsBatch.Add(new TableTransactionAction(TableTransactionActionType.UpsertReplace, item.WriteEntity()));
                             }
 
-                            var eventTagsResponse = await Table.SubmitTransactionAsync(eventTagsBatch, _shutdownCts.Token);
+                            var eventTagsResponse = await Table.ExecuteBatchAsLimitedBatches(eventTagsBatch, _shutdownCts.Token);
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                                foreach (var r in eventTagsResponse.Value)
+                                foreach (var r in eventTagsResponse)
                                     _log.Debug("Azure table storage wrote entity with status code [{0}]", r.Status);
 
                             if (HasTagSubscribers && taggedEntries.Count != 0)
