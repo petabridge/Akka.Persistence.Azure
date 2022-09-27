@@ -17,6 +17,19 @@ namespace Akka.Persistence.Azure
     {
         private const int MaxBatchSize = 100;
         
+        /// <summary>
+        /// <para>
+        /// Execute a batch transaction to the service. This method automatically chunks the batch request into chunks
+        /// of 100 items if the batch size is greater than 100.
+        /// </para>
+        /// <b>NOTE</b>: This does mean that sending more than 100 items will break atomicity, there is no guarantee
+        /// that all items in the batch will be executed successfully.
+        /// </summary>
+        /// <param name="table">The Azure table client</param>
+        /// <param name="batch">The list of <see cref="TableTransactionAction"/> items to be sent to the service</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>List of <see cref="Response"/> for each items</returns>
+        // TODO Replace this with real transactional execution if Azure Table Storage supports it in the future.
         public static async Task<IReadOnlyList<Response>> ExecuteBatchAsLimitedBatches(
             this TableClient table,
             List<TableTransactionAction> batch, 
