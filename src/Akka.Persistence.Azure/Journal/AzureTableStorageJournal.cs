@@ -229,6 +229,12 @@ namespace Akka.Persistence.Azure.Journal
                 else
                     nextTask = null;
 
+                // ** Intentional behaviour **
+                // Send the batch as a chunk of 100 items. This is intentional because Azure Table Storage
+                // does not support transaction with more than 100 entries.
+                //
+                // ExecuteBatchAsLimitedBatches breaks atomicity on any transaction/batch write operations with more than
+                // 100 entries.
                 var response = await Table.ExecuteBatchAsLimitedBatches(currentPage.Values
                     .Select(entity => new TableTransactionAction(TableTransactionActionType.Delete, entity)).ToList(), _shutdownCts.Token);
                 
@@ -370,6 +376,12 @@ namespace Akka.Persistence.Azure.Journal
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 _log.Debug("Attempting to write batch of {0} messages to Azure storage", batchItems.Count);
 
+                            // ** Intentional behaviour **
+                            // Send the batch as a chunk of 100 items. This is intentional because Azure Table Storage
+                            // does not support transaction with more than 100 entries.
+                            //
+                            // ExecuteBatchAsLimitedBatches breaks atomicity on any transaction/batch write operations with more than
+                            // 100 entries.
                             var response = await Table.ExecuteBatchAsLimitedBatches(batchItems, _shutdownCts.Token);
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                             {
@@ -400,6 +412,12 @@ namespace Akka.Persistence.Azure.Journal
                             new AllPersistenceIdsEntry(PartitionKeyEscapeHelper.Escape(item.Key)).WriteEntity()));
                     }
 
+                    // ** Intentional behaviour **
+                    // Send the batch as a chunk of 100 items. This is intentional because Azure Table Storage
+                    // does not support transaction with more than 100 entries.
+                    //
+                    // ExecuteBatchAsLimitedBatches breaks atomicity on any transaction/batch write operations with more than
+                    // 100 entries.
                     var allPersistenceResponse = await Table.ExecuteBatchAsLimitedBatches(allPersistenceIdsBatch, _shutdownCts.Token);
 
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
@@ -422,6 +440,12 @@ namespace Akka.Persistence.Azure.Journal
                                 eventTagsBatch.Add(new TableTransactionAction(TableTransactionActionType.UpsertReplace, item.WriteEntity()));
                             }
 
+                            // ** Intentional behaviour **
+                            // Send the batch as a chunk of 100 items. This is intentional because Azure Table Storage
+                            // does not support transaction with more than 100 entries.
+                            //
+                            // ExecuteBatchAsLimitedBatches breaks atomicity on any transaction/batch write operations with more than
+                            // 100 entries.
                             var eventTagsResponse = await Table.ExecuteBatchAsLimitedBatches(eventTagsBatch, _shutdownCts.Token);
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
