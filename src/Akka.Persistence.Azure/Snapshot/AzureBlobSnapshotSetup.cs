@@ -6,6 +6,7 @@
 
 using System;
 using Akka.Actor.Setup;
+using Azure.Core;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -26,7 +27,7 @@ namespace Akka.Persistence.Azure.Snapshot
         ///     This is likely to be similar to "https://{account_name}.blob.core.windows.net".
         /// </param>
         /// <param name="defaultAzureCredential">
-        ///     The <see cref="DefaultAzureCredential"/> used to sign requests.
+        ///     The <see cref="TokenCredential"/> used to sign requests.
         /// </param>
         /// <param name="blobClientOptions">
         ///     Optional client options that define the transport pipeline policies for authentication,
@@ -35,12 +36,12 @@ namespace Akka.Persistence.Azure.Snapshot
         /// <returns>A new <see cref="AzureBlobSnapshotSetup"/> instance</returns>
         public static AzureBlobSnapshotSetup Create(
             Uri serviceUri, 
-            DefaultAzureCredential defaultAzureCredential,
+            TokenCredential defaultAzureCredential,
             BlobClientOptions blobClientOptions = default)
             => new AzureBlobSnapshotSetup
             {
                 ServiceUri = serviceUri,
-                DefaultAzureCredential = defaultAzureCredential,
+                AzureCredential = defaultAzureCredential,
                 BlobClientOptions = blobClientOptions
             };
 
@@ -70,7 +71,7 @@ namespace Akka.Persistence.Azure.Snapshot
         public bool? VerboseLogging { get; set; }
 
         /// <summary>
-        ///     Flag that we're running in development mode. When this is set, <see cref="DefaultAzureCredential"/> and
+        ///     Flag that we're running in development mode. When this is set, <see cref="TokenCredential"/> and
         ///     <see cref="ConnectionString"/> will be ignored, replaced with "UseDevelopmentStorage=true" for local
         ///     connection to Azurite.
         /// </summary>
@@ -93,9 +94,19 @@ namespace Akka.Persistence.Azure.Snapshot
         public Uri ServiceUri { get; set; }
 
         /// <summary>
-        ///     The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
-        public DefaultAzureCredential DefaultAzureCredential { get; set; }
+        [Obsolete(message:"Use AzureCredential instead")]
+        public TokenCredential DefaultAzureCredential
+        {
+            get => AzureCredential;
+            set => AzureCredential = value;
+        }
+
+        /// <summary>
+        ///     The <see cref="TokenCredential"/> used to sign API requests.
+        /// </summary>
+        public TokenCredential AzureCredential { get; set; }
 
         /// <summary>
         ///     Optional client options that define the transport pipeline policies for authentication,
@@ -121,8 +132,8 @@ namespace Akka.Persistence.Azure.Snapshot
                 settings = settings.WithAutoInitialize(AutoInitialize.Value);
             if (ContainerPublicAccessType != null)
                 settings = settings.WithContainerPublicAccessType(ContainerPublicAccessType.Value);
-            if (ServiceUri != null && DefaultAzureCredential != null)
-                settings = settings.WithAzureCredential(ServiceUri, DefaultAzureCredential, BlobClientOptions);
+            if (ServiceUri != null && AzureCredential != null)
+                settings = settings.WithAzureCredential(ServiceUri, AzureCredential, BlobClientOptions);
 
             return settings;
         }

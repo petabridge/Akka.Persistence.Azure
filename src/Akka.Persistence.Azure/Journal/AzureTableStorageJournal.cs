@@ -54,6 +54,7 @@ namespace Akka.Persistence.Azure.Journal
         private readonly TableServiceClient _tableServiceClient;
         private TableClient _tableStorage_DoNotUseDirectly;
         private readonly Dictionary<string, ISet<IActorRef>> _tagSubscribers = new Dictionary<string, ISet<IActorRef>>();
+        private readonly CancellationTokenSource _shutdownCts;
 
         public AzureTableStorageJournal(Config config = null)
         {
@@ -73,14 +74,16 @@ namespace Akka.Persistence.Azure.Journal
             }
             else
             {
-                // Use DefaultAzureCredential if both ServiceUri and DefaultAzureCredential are populated in the settings 
-                _tableServiceClient = _settings.ServiceUri != null && _settings.DefaultAzureCredential != null
+                // Use TokenCredential if both ServiceUri and TokenCredential are populated in the settings 
+                _tableServiceClient = _settings.ServiceUri != null && _settings.AzureCredential != null
                     ? new TableServiceClient(
                         endpoint: _settings.ServiceUri,
-                        tokenCredential: _settings.DefaultAzureCredential,
+                        tokenCredential: _settings.AzureCredential,
                         options: _settings.TableClientOptions)
                     : new TableServiceClient(connectionString: _settings.ConnectionString);
             }
+
+            _shutdownCts = new CancellationTokenSource();
         }
 
         public TableClient Table
@@ -107,9 +110,9 @@ namespace Akka.Persistence.Azure.Journal
 
             _log.Debug("Entering method ReadHighestSequenceNrAsync");
 
-            var seqNo = await HighestSequenceNumberQuery(persistenceId)
+            var seqNo = await HighestSequenceNumberQuery(persistenceId, null, _shutdownCts.Token)
                 .Select(entity => entity.GetInt64(HighestSequenceNrEntry.HighestSequenceNrKey).Value)
-                .AggregateAsync(0L, Math.Max);
+                .AggregateAsync(0L, Math.Max, cancellationToken: _shutdownCts.Token);
             
             _log.Debug("Leaving method ReadHighestSequenceNrAsync with SeqNo [{0}] for PersistentId [{1}]", seqNo, persistenceId);
 
@@ -132,7 +135,8 @@ namespace Akka.Persistence.Azure.Journal
             if (max == 0)
                 return;
 
-            var pages = PersistentJournalEntryReplayQuery(persistenceId, fromSequenceNr, toSequenceNr).AsPages().GetAsyncEnumerator();
+            var pages = PersistentJournalEntryReplayQuery(persistenceId, fromSequenceNr, toSequenceNr, null, _shutdownCts.Token)
+                .AsPages().GetAsyncEnumerator(_shutdownCts.Token);
 
             ValueTask<bool>? nextTask = pages.MoveNextAsync();
             var count = 0L;
@@ -206,7 +210,8 @@ namespace Akka.Persistence.Azure.Journal
 
             _log.Debug("Entering method DeleteMessagesToAsync for persistentId [{0}] and up to seqNo [{1}]", persistenceId, toSequenceNr);
 
-            var pages = PersistentJournalEntryDeleteQuery(persistenceId, toSequenceNr).AsPages().GetAsyncEnumerator();
+            var pages = PersistentJournalEntryDeleteQuery(persistenceId, toSequenceNr, null, _shutdownCts.Token)
+                .AsPages().GetAsyncEnumerator(_shutdownCts.Token);
 
             ValueTask<bool>? nextTask = pages.MoveNextAsync();
             while (nextTask.HasValue)
@@ -224,10 +229,21 @@ namespace Akka.Persistence.Azure.Journal
                 else
                     nextTask = null;
 
-                if (currentPage.Values.Count > 0)
+                // ** Intentional behaviour **
+                // Send the batch as a chunk of 100 items. This is intentional because Azure Table Storage
+                // does not support transaction with more than 100 entries.
+                //
+                // ExecuteBatchAsLimitedBatches breaks atomicity on any transaction/batch write operations with more than
+                // 100 entries.
+                var response = await Table.ExecuteBatchAsLimitedBatches(currentPage.Values
+                    .Select(entity => new TableTransactionAction(TableTransactionActionType.Delete, entity)).ToList(), _shutdownCts.Token);
+                
+                if (_log.IsDebugEnabled && _settings.VerboseLogging)
                 {
-                    await Table.SubmitTransactionAsync(currentPage.Values
-                        .Select(entity => new TableTransactionAction(TableTransactionActionType.Delete, entity)));
+                    foreach (var r in response)
+                    {
+                        _log.Debug("Azure table storage wrote entities with status code [{0}]", r.Status);
+                    }
                 }
             }
 
@@ -238,7 +254,7 @@ namespace Akka.Persistence.Azure.Journal
         {
             _log.Debug("Initializing Azure Table Storage...");
 
-            InitCloudStorage(5)
+            InitCloudStorage(5, _shutdownCts.Token)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
 
             _log.Debug("Successfully started Azure Table Storage!");
@@ -247,20 +263,27 @@ namespace Akka.Persistence.Azure.Journal
             base.PreStart();
         }
 
+        protected override void PostStop()
+        {
+            _shutdownCts.Cancel();
+            _shutdownCts.Dispose();
+            base.PostStop();
+        }
+
         protected override bool ReceivePluginInternal(object message)
         {
             switch (message)
             {
                 case ReplayTaggedMessages replay:
-                    ReplayTaggedMessagesAsync(replay)
+                    ReplayTaggedMessagesAsync(replay, _shutdownCts.Token)
                         .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
                     break;
                 case SubscribePersistenceId subscribe:
                     AddPersistenceIdSubscriber(Sender, subscribe.PersistenceId);
                     Context.Watch(Sender);
                     break;
-                case SubscribeAllPersistenceIds subscribe:
-                    AddAllPersistenceIdSubscriber(Sender);
+                case SubscribeAllPersistenceIds _:
+                    AddAllPersistenceIdSubscriber(Sender, _shutdownCts.Token);
                     Context.Watch(Sender);
                     break;
                 case SubscribeTag subscribe:
@@ -353,10 +376,16 @@ namespace Akka.Persistence.Azure.Journal
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 _log.Debug("Attempting to write batch of {0} messages to Azure storage", batchItems.Count);
 
-                            var response = await Table.SubmitTransactionAsync(batchItems);
+                            // ** Intentional behaviour **
+                            // Send the batch as a chunk of 100 items. This is intentional because Azure Table Storage
+                            // does not support transaction with more than 100 entries.
+                            //
+                            // ExecuteBatchAsLimitedBatches breaks atomicity on any transaction/batch write operations with more than
+                            // 100 entries.
+                            var response = await Table.ExecuteBatchAsLimitedBatches(batchItems, _shutdownCts.Token);
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                             {
-                                foreach (var r in response.Value)
+                                foreach (var r in response)
                                 {
                                     _log.Debug("Azure table storage wrote entities with status code [{0}]", r.Status);
                                 }
@@ -383,10 +412,16 @@ namespace Akka.Persistence.Azure.Journal
                             new AllPersistenceIdsEntry(PartitionKeyEscapeHelper.Escape(item.Key)).WriteEntity()));
                     }
 
-                    var allPersistenceResponse = await Table.SubmitTransactionAsync(allPersistenceIdsBatch);
+                    // ** Intentional behaviour **
+                    // Send the batch as a chunk of 100 items. This is intentional because Azure Table Storage
+                    // does not support transaction with more than 100 entries.
+                    //
+                    // ExecuteBatchAsLimitedBatches breaks atomicity on any transaction/batch write operations with more than
+                    // 100 entries.
+                    var allPersistenceResponse = await Table.ExecuteBatchAsLimitedBatches(allPersistenceIdsBatch, _shutdownCts.Token);
 
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                        foreach (var r in allPersistenceResponse.Value)
+                        foreach (var r in allPersistenceResponse)
                             _log.Debug("Azure table storage wrote entity with status code [{0}]", r.Status);
 
                     if (HasPersistenceIdSubscribers || HasAllPersistenceIdSubscribers)
@@ -405,10 +440,16 @@ namespace Akka.Persistence.Azure.Journal
                                 eventTagsBatch.Add(new TableTransactionAction(TableTransactionActionType.UpsertReplace, item.WriteEntity()));
                             }
 
-                            var eventTagsResponse = await Table.SubmitTransactionAsync(eventTagsBatch);
+                            // ** Intentional behaviour **
+                            // Send the batch as a chunk of 100 items. This is intentional because Azure Table Storage
+                            // does not support transaction with more than 100 entries.
+                            //
+                            // ExecuteBatchAsLimitedBatches breaks atomicity on any transaction/batch write operations with more than
+                            // 100 entries.
+                            var eventTagsResponse = await Table.ExecuteBatchAsLimitedBatches(eventTagsBatch, _shutdownCts.Token);
 
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
-                                foreach (var r in eventTagsResponse.Value)
+                                foreach (var r in eventTagsResponse)
                                     _log.Debug("Azure table storage wrote entity with status code [{0}]", r.Status);
 
                             if (HasTagSubscribers && taggedEntries.Count != 0)
@@ -439,8 +480,8 @@ namespace Akka.Persistence.Azure.Journal
         }
 
         private AsyncPageable<TableEntity> GenerateAllPersistenceIdsQuery(
-            int? maxPerPage = null,
-            CancellationToken cancellationToken = default)
+            int? maxPerPage,
+            CancellationToken cancellationToken)
         {
             return Table.QueryAsync<TableEntity>(
                 filter: $"PartitionKey eq '{AllPersistenceIdsEntry.PartitionKeyValue}'",
@@ -452,8 +493,8 @@ namespace Akka.Persistence.Azure.Journal
 
         private AsyncPageable<TableEntity> HighestSequenceNumberQuery(
             string persistenceId,
-            int? maxPerPage = null,
-            CancellationToken cancellationToken = default)
+            int? maxPerPage,
+            CancellationToken cancellationToken)
         {
             return Table.QueryAsync<TableEntity>(
                 filter: $"PartitionKey eq '{PartitionKeyEscapeHelper.Escape(persistenceId)}' and " +
@@ -467,8 +508,8 @@ namespace Akka.Persistence.Azure.Journal
         private AsyncPageable<TableEntity> PersistentJournalEntryDeleteQuery(
             string persistenceId,
             long toSequenceNr,
-            int? maxPerPage = null,
-            CancellationToken cancellationToken = default)
+            int? maxPerPage,
+            CancellationToken cancellationToken)
         {
             return Table.QueryAsync<TableEntity>(
                 filter: $"PartitionKey eq '{PartitionKeyEscapeHelper.Escape(persistenceId)}' and " +
@@ -483,8 +524,8 @@ namespace Akka.Persistence.Azure.Journal
             string persistenceId,
             long fromSequenceNr,
             long toSequenceNr,
-            int? maxPerPage = null,
-            CancellationToken cancellationToken = default)
+            int? maxPerPage,
+            CancellationToken cancellationToken)
         {
             return Table.QueryAsync<TableEntity>(
                 filter: $"PartitionKey eq '{EventTagEntry.PartitionKeyValue}' and " +
@@ -500,8 +541,8 @@ namespace Akka.Persistence.Azure.Journal
             string persistentId,
             long fromSequenceNumber,
             long toSequenceNumber,
-            int? maxPerPage = null,
-            CancellationToken cancellationToken = default)
+            int? maxPerPage,
+            CancellationToken cancellationToken)
         {
             var filter = $"PartitionKey eq '{PartitionKeyEscapeHelper.Escape(persistentId)}' and " +
                          $"RowKey ne '{HighestSequenceNrEntry.RowKeyValue}'";
@@ -517,8 +558,8 @@ namespace Akka.Persistence.Azure.Journal
 
         private AsyncPageable<TableEntity> TaggedMessageQuery(
             ReplayTaggedMessages replay,
-            int? maxPerPage = null,
-            CancellationToken cancellationToken = default)
+            int? maxPerPage,
+            CancellationToken cancellationToken)
         {
             return Table.QueryAsync<TableEntity>(
                 filter: $"PartitionKey eq '{PartitionKeyEscapeHelper.Escape(EventTagEntry.GetPartitionKey(replay.Tag))}' and " +
@@ -529,13 +570,13 @@ namespace Akka.Persistence.Azure.Journal
                 cancellationToken: cancellationToken);
         }
 
-        private async Task AddAllPersistenceIdSubscriber(IActorRef subscriber)
+        private async Task AddAllPersistenceIdSubscriber(IActorRef subscriber, CancellationToken cancellationToken)
         {
             lock (_allPersistenceIdSubscribers)
             {
                 _allPersistenceIdSubscribers.Add(subscriber);
             }
-            subscriber.Tell(new CurrentPersistenceIds(await GetAllPersistenceIds()));
+            subscriber.Tell(new CurrentPersistenceIds(await GetAllPersistenceIds(cancellationToken)));
         }
 
         private void AddPersistenceIdSubscriber(IActorRef subscriber, string persistenceId)
@@ -560,18 +601,21 @@ namespace Akka.Persistence.Azure.Journal
             subscriptions.Add(subscriber);
         }
 
-        private async Task<IEnumerable<string>> GetAllPersistenceIds()
+        private async Task<IEnumerable<string>> GetAllPersistenceIds(CancellationToken cancellationToken)
         {
-            return await GenerateAllPersistenceIdsQuery().Select(item => item.RowKey).ToListAsync();
+            return await GenerateAllPersistenceIdsQuery(null, cancellationToken)
+                .Select(item => item.RowKey).ToListAsync(cancellationToken);
         }
 
-        private async Task InitCloudStorage(int remainingTries)
+        private async Task InitCloudStorage(int remainingTries, CancellationToken cancellationToken)
         {
             try
             {
                 var tableClient = _tableServiceClient.GetTableClient(_settings.TableName);
                 
-                using (var cts = new CancellationTokenSource(_settings.ConnectTimeout))
+                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(_settings.ConnectTimeout);
+                using (cts)
                 {
                     if (!_settings.AutoInitialize)
                     {
@@ -603,15 +647,19 @@ namespace Akka.Persistence.Azure.Journal
                 _log.Error(ex, "[{0}] more tries to initialize table storage remaining...", remainingTries);
                 if (remainingTries == 0)
                     throw;
-                await Task.Delay(RetryInterval[remainingTries]);
-                await InitCloudStorage(remainingTries - 1);
+                
+                await Task.Delay(RetryInterval[remainingTries], cancellationToken);
+                if (cancellationToken.IsCancellationRequested)
+                    throw;
+                
+                await InitCloudStorage(remainingTries - 1, cancellationToken);
             }
         }
 
-        private async Task<bool> IsTableExist(string name, CancellationToken token)
+        private async Task<bool> IsTableExist(string name, CancellationToken cancellationToken)
         {
-            var tables = await _tableServiceClient.QueryAsync(t => t.Name == name, cancellationToken: token)
-                .ToListAsync(token)
+            var tables = await _tableServiceClient.QueryAsync(t => t.Name == name, cancellationToken: cancellationToken)
+                .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
             return tables.Count > 0;
         }
@@ -657,15 +705,16 @@ namespace Akka.Persistence.Azure.Journal
         /// Replays all events with given tag within provided boundaries from current database.
         /// </summary>
         /// <param name="replay">TBD</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
-        private async Task<long> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
+        private async Task<long> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay, CancellationToken cancellationToken)
         {
             // In order to actually break at the limit we ask for we have to
             //    keep a separate counter and track it ourselves.
             var counter = 0;
             var maxOrderingId = 0L;
 
-            var pages = TaggedMessageQuery(replay).AsPages().GetAsyncEnumerator();
+            var pages = TaggedMessageQuery(replay, null, cancellationToken).AsPages().GetAsyncEnumerator(cancellationToken);
             ValueTask<bool>? nextTask = pages.MoveNextAsync();
             
             while (nextTask != null)

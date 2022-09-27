@@ -6,6 +6,7 @@
 
 using System;
 using Akka.Actor.Setup;
+using Azure.Core;
 using Azure.Data.Tables;
 using Azure.Identity;
 
@@ -39,7 +40,7 @@ namespace Akka.Persistence.Azure.Journal
         public bool? VerboseLogging { get; set; }
 
         /// <summary>
-        ///     Flag that we're running in development mode. When this is set, <see cref="DefaultAzureCredential"/> and
+        ///     Flag that we're running in development mode. When this is set, <see cref="TokenCredential"/> and
         ///     <see cref="ConnectionString"/> will be ignored, replaced with "UseDevelopmentStorage=true" for local
         ///     connection to Azurite.
         /// </summary>
@@ -57,9 +58,19 @@ namespace Akka.Persistence.Azure.Journal
         public Uri ServiceUri { get; set; }
 
         /// <summary>
-        ///     The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
-        public DefaultAzureCredential DefaultAzureCredential { get; set; }
+        [Obsolete(message:"Use AzureCredential instead")]
+        public TokenCredential DefaultAzureCredential
+        {
+            get => AzureCredential;
+            set => AzureCredential = value;
+        }
+
+        /// <summary>
+        ///     The <see cref="TokenCredential"/> used to sign API requests.
+        /// </summary>
+        public TokenCredential AzureCredential { get; set; }
 
         /// <summary>
         ///     Optional client options that define the transport pipeline policies for authentication,
@@ -83,8 +94,8 @@ namespace Akka.Persistence.Azure.Journal
                 settings = settings.WithDevelopment(Development.Value);
             if (AutoInitialize != null)
                 settings = settings.WithAutoInitialize(AutoInitialize.Value);
-            if (ServiceUri != null && DefaultAzureCredential != null)
-                settings = settings.WithAzureCredential(ServiceUri, DefaultAzureCredential, TableClientOptions);
+            if (ServiceUri != null && AzureCredential != null)
+                settings = settings.WithAzureCredential(ServiceUri, AzureCredential, TableClientOptions);
 
             return settings;
         }

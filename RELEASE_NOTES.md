@@ -1,3 +1,12 @@
+#### 0.9.2 September 27 2022 ####
+
+* [Bump Akka.NET version from 1.4.40 to 1.4.43](https://github.com/akkadotnet/akka.net/releases/tag/1.4.43)
+* [Bump Akka.Persistence.Hosting from 0.4.2 to 0.4.3](https://github.com/petabridge/Akka.Persistence.Azure/pull/245)
+* [Bump Azure.Identity from 1.6.1 to 1.7.0](https://github.com/petabridge/Akka.Persistence.Azure/pull/247)
+* [Clean up all async operations during actor stop](https://github.com/petabridge/Akka.Persistence.Azure/pull/249)
+* [Refactor `DefaultAzureCredential` to `TokenCredential`](https://github.com/petabridge/Akka.Persistence.Azure/pull/250)
+* [Chunk batch transactions to 100 item chunk batches](https://github.com/petabridge/Akka.Persistence.Azure/pull/254)
+
 #### 0.9.1 August 29 2022 ####
 
 * [Bump Akka.NET version from 1.4.39 to 1.4.40](https://github.com/akkadotnet/akka.net/releases/tag/1.4.40)

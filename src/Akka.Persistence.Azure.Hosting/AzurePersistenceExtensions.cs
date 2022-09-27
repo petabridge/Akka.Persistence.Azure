@@ -10,6 +10,7 @@ using Akka.Hosting;
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Snapshot;
 using Akka.Persistence.Hosting;
+using Azure.Core;
 using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Storage.Blobs;
@@ -36,7 +37,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     This is likely to be similar to "https://{account_name}.table.core.windows.net".
         /// </param>
         /// <param name="defaultAzureCredential">
-        ///     The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </param>
         /// <param name="tableClientOptions">
         ///     Optional client options that define the transport pipeline policies for authentication,
@@ -57,7 +58,7 @@ namespace Akka.Persistence.Azure.Hosting
         /// </returns>        
         public static AkkaConfigurationBuilder WithAzureTableJournal(this AkkaConfigurationBuilder builder,
             Uri serviceUri,
-            DefaultAzureCredential defaultAzureCredential,
+            TokenCredential defaultAzureCredential,
             TableClientOptions tableClientOptions = null,
             bool autoInitialize = true,
             string tableName = DefaultTableName,
@@ -72,7 +73,7 @@ namespace Akka.Persistence.Azure.Hosting
             var setup = new AzureTableStorageJournalSetup
             {
                 ServiceUri = serviceUri,
-                DefaultAzureCredential = defaultAzureCredential,
+                AzureCredential = defaultAzureCredential,
                 TableClientOptions = tableClientOptions,
                 AutoInitialize = autoInitialize,
                 TableName = tableName
@@ -204,7 +205,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     This is likely to be similar to "https://{account_name}.blob.core.windows.net".
         /// </param>
         /// <param name="defaultAzureCredential">
-        ///     The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </param>
         /// <param name="blobClientOptions">
         ///     Optional client options that define the transport pipeline policies for authentication,
@@ -222,7 +223,7 @@ namespace Akka.Persistence.Azure.Hosting
         public static AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(
             this AkkaConfigurationBuilder builder,
             Uri serviceUri,
-            DefaultAzureCredential defaultAzureCredential,
+            TokenCredential defaultAzureCredential,
             BlobClientOptions blobClientOptions = null,
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName)
@@ -236,7 +237,7 @@ namespace Akka.Persistence.Azure.Hosting
             var setup = new AzureBlobSnapshotSetup
             {
                 ServiceUri = serviceUri,
-                DefaultAzureCredential = defaultAzureCredential,
+                AzureCredential = defaultAzureCredential,
                 BlobClientOptions = blobClientOptions,
                 AutoInitialize = autoInitialize,
                 ContainerName = containerName
@@ -396,7 +397,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     This is likely to be similar to "https://{account_name}.table.core.windows.net".
         /// </param>
         /// <param name="defaultAzureCredential">
-        ///     The <see cref="DefaultAzureCredential"/> used to sign API requests.
+        ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </param>
         /// <param name="blobClientOptions">
         ///     Optional client options that define the transport pipeline policies for authentication,
@@ -426,7 +427,7 @@ namespace Akka.Persistence.Azure.Hosting
             this AkkaConfigurationBuilder builder,
             Uri blobStorageServiceUri,
             Uri tableStorageServiceUri,
-            DefaultAzureCredential defaultAzureCredential,
+            TokenCredential defaultAzureCredential,
             BlobClientOptions blobClientOptions = null,
             TableClientOptions tableClientOptions = null,
             bool autoInitialize = true,
