@@ -66,6 +66,15 @@ namespace Akka.Persistence.Azure.Journal
             if (setup.HasValue)
                 _settings = setup.Value.Apply(_settings);
             
+            var multiSetup = Context.System.Settings.Setup.Get<AzureTableStorageMultiJournalSetup>();
+            if (multiSetup.HasValue)
+            {
+                var journalId = Self.Path.Name.SplitDottedPathHonouringQuotes().Last();
+                setup = multiSetup.Value.Get(journalId);
+                if(setup.HasValue)
+                    _settings = setup.Value.Apply(_settings);
+            }
+            
             _serialization = new SerializationHelper(Context.System);
 
             if (_settings.Development)

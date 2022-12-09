@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Snapshot;
+using Akka.Util.Internal;
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -59,6 +60,15 @@ namespace Akka.Persistence.Azure.Snapshot
             var setup = Context.System.Settings.Setup.Get<AzureBlobSnapshotSetup>();
             if (setup.HasValue)
                 _settings = setup.Value.Apply(_settings);
+            
+            var multiSetup = Context.System.Settings.Setup.Get<AzureBlobMultiSnapshotSetup>();
+            if (multiSetup.HasValue)
+            {
+                var snapshotId = Self.Path.Name.SplitDottedPathHonouringQuotes().Last();
+                setup = multiSetup.Value.Get(snapshotId);
+                if(setup.HasValue)
+                    _settings = setup.Value.Apply(_settings);
+            }
             
             if (_settings.Development)
             {
