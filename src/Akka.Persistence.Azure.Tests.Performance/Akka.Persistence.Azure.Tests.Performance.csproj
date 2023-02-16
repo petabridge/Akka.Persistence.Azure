@@ -1,15 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\common.props" />
-
-
+  
   <PropertyGroup>    
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <TargetFramework>$(NetCoreTestVersion)</TargetFramework>
+    <TargetFrameworks>$(NetCoreTestVersion);$(NetVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NBench" Version="2.0.1" />
+    <PackageReference Include="NBench" />
   </ItemGroup>
 
   <ItemGroup>
