@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>    
-    <TargetFrameworks>$(NetCoreTestVersion);$(NetVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
