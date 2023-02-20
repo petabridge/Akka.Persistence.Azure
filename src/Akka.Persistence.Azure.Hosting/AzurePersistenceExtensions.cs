@@ -298,7 +298,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
         /// </param>
         /// <param name="identifier">
-        ///     The journal identifier, defaults to "azure-table"
+        ///     The journal identifier, defaults to "azure-blob-store"
         /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
@@ -311,7 +311,7 @@ namespace Akka.Persistence.Azure.Hosting
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName,
             bool isDefault = true,
-            string identifier = "azure-table")
+            string identifier = "azure-blob-store")
         {
             if (serviceUri is null)
                 throw new ArgumentNullException(nameof(serviceUri));
@@ -350,7 +350,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
         /// </param>
         /// <param name="identifier">
-        ///     The journal identifier, defaults to "azure-table"
+        ///     The journal identifier, defaults to "azure-blob-store"
         /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
@@ -361,7 +361,7 @@ namespace Akka.Persistence.Azure.Hosting
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName,
             bool isDefault = true,
-            string identifier = "azure-table")
+            string identifier = "azure-blob-store")
         {
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ArgumentNullException(nameof(connectionString));
