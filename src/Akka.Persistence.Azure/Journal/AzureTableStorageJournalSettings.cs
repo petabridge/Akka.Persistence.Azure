@@ -20,6 +20,7 @@ namespace Akka.Persistence.Azure.Journal
     /// </summary>
     public sealed class AzureTableStorageJournalSettings
     {
+        public const string JournalConfigPath = "akka.persistence.journal.azure-table";
         private static readonly string[] ReservedTableNames = {"tables"};
         
         [Obsolete]
@@ -194,10 +195,9 @@ namespace Akka.Persistence.Azure.Journal
         /// <returns>A new settings instance.</returns>
         public static AzureTableStorageJournalSettings Create(ActorSystem system)
         {
-            var config = system.Settings.Config.GetConfig("akka.persistence.journal.azure-table");
+            var config = system.Settings.Config.GetConfig(JournalConfigPath);
             if (config is null)
-                throw new ConfigurationException(
-                    "Could not find HOCON config at path 'akka.persistence.journal.azure-table'");
+                throw new ConfigurationException($"Could not find HOCON config at path '{JournalConfigPath}'");
             return Create(config);
         }
         
