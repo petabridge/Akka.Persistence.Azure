@@ -21,6 +21,8 @@ namespace Akka.Persistence.Azure.Snapshot
     /// </summary>
     public sealed class AzureBlobSnapshotStoreSettings
     {
+        public const string SnapshotStoreConfigPath = "akka.persistence.snapshot-store.azure-blob-store";
+        
         [Obsolete]
         public AzureBlobSnapshotStoreSettings(
             string connectionString, 
@@ -212,10 +214,9 @@ namespace Akka.Persistence.Azure.Snapshot
         /// <returns>A new settings instance.</returns>
         public static AzureBlobSnapshotStoreSettings Create(ActorSystem system)
         {
-            var config = system.Settings.Config.GetConfig("akka.persistence.snapshot-store.azure-blob-store");
+            var config = system.Settings.Config.GetConfig(SnapshotStoreConfigPath);
             if (config is null)
-                throw new ConfigurationException(
-                    "Could not find HOCON config at path 'akka.persistence.snapshot-store.azure-blob-store'");
+                throw new ConfigurationException($"Could not find HOCON config at path '{SnapshotStoreConfigPath}'");
             return Create(config);
         }
         

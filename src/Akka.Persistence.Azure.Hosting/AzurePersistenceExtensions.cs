@@ -26,8 +26,7 @@ namespace Akka.Persistence.Azure.Hosting
         public const string DefaultBlobContainerName = "akka-persistence-default-container";
         
         /// <summary>
-        ///     Add an AzureTableStorage journal as the default Akka.Persistence
-        ///     implementations for a given <see cref="ActorSystem"/>.
+        ///     Add an AzureTableStorage journal Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
         /// </summary>
         /// <param name="builder">
         ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
@@ -53,16 +52,24 @@ namespace Akka.Persistence.Azure.Hosting
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
         ///     to set up event adapters.
         /// </param>
+        /// <param name="isDefault">
+        ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
+        /// </param>
+        /// <param name="identifier">
+        ///     The journal identifier, defaults to "azure-table"
+        /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
         /// </returns>        
         public static AkkaConfigurationBuilder WithAzureTableJournal(this AkkaConfigurationBuilder builder,
             Uri serviceUri,
             TokenCredential defaultAzureCredential,
-            TableClientOptions tableClientOptions = null,
+            TableClientOptions? tableClientOptions = null,
             bool autoInitialize = true,
             string tableName = DefaultTableName,
-            Action<AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null)
+            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null,
+            bool isDefault = true,
+            string identifier = "azure-table")
         {
             if (serviceUri is null)
                 throw new ArgumentNullException(nameof(serviceUri));
@@ -70,7 +77,7 @@ namespace Akka.Persistence.Azure.Hosting
             if (defaultAzureCredential is null)
                 throw new ArgumentNullException(nameof(defaultAzureCredential));
             
-            var setup = new AzureTableStorageJournalSetup
+            var options = new AzureTableStorageJournalOptions(isDefault, identifier)
             {
                 ServiceUri = serviceUri,
                 AzureCredential = defaultAzureCredential,
@@ -78,12 +85,15 @@ namespace Akka.Persistence.Azure.Hosting
                 AutoInitialize = autoInitialize,
                 TableName = tableName
             };
-            return WithAzureTableJournal(builder, setup, eventAdapterConfigurator);
+            
+            if (eventAdapterConfigurator is { })
+                eventAdapterConfigurator(options.Adapters);
+            
+            return WithAzureTableJournal(builder, options);
         }
 
         /// <summary>
-        ///     Add an AzureTableStorage journal as the default Akka.Persistence
-        ///     implementations for a given <see cref="ActorSystem"/>.
+        ///     Add an AzureTableStorage journal Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
         /// </summary>
         /// <param name="builder">
         ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
@@ -101,6 +111,12 @@ namespace Akka.Persistence.Azure.Hosting
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
         ///     to set up event adapters.
         /// </param>
+        /// <param name="isDefault">
+        ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
+        /// </param>
+        /// <param name="identifier">
+        ///     The journal identifier, defaults to "azure-table"
+        /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
         /// </returns>
@@ -108,18 +124,24 @@ namespace Akka.Persistence.Azure.Hosting
             string connectionString, 
             bool autoInitialize = true,
             string tableName = DefaultTableName,
-            Action<AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null)
+            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null,
+            bool isDefault = true,
+            string identifier = "azure-table")
         {
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ArgumentNullException(nameof(connectionString));
             
-            var setup = new AzureTableStorageJournalSetup
+            var options = new AzureTableStorageJournalOptions(isDefault, identifier)
             {
                 ConnectionString = connectionString,
                 AutoInitialize = autoInitialize,
                 TableName = tableName
             };
-            return WithAzureTableJournal(builder, setup, eventAdapterConfigurator);
+            
+            if (eventAdapterConfigurator is { })
+                eventAdapterConfigurator(options.Adapters);
+            
+            return WithAzureTableJournal(builder, options);
         }
 
         /// <summary>
@@ -143,7 +165,7 @@ namespace Akka.Persistence.Azure.Hosting
         public static AkkaConfigurationBuilder WithAzureTableJournal(
             this AkkaConfigurationBuilder builder,
             Action<AzureTableStorageJournalSetup> configure,
-            Action<AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null)
+            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null)
         {
             if (configure is null)
                 throw new ArgumentNullException(nameof(configure));
@@ -153,6 +175,35 @@ namespace Akka.Persistence.Azure.Hosting
             return WithAzureTableJournal(builder, setup, eventAdapterConfigurator);
         }
 
+        /// <summary>
+        ///     Add an AzureTableStorage journal Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="builder">
+        ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
+        /// </param>
+        /// <param name="configure">
+        ///     A delegate that can be used to configure an <see cref="AzureTableStorageJournalOptions"/> instance
+        ///     to set up the AzureTableStorage journal.
+        /// </param>
+        /// <param name="isDefault">
+        ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
+        /// </param>
+        /// <returns>
+        ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
+        /// </returns>
+        public static AkkaConfigurationBuilder WithAzureTableJournal(
+            this AkkaConfigurationBuilder builder,
+            Action<AzureTableStorageJournalOptions> configure,
+            bool isDefault = true)
+        {
+            if (configure is null)
+                throw new ArgumentNullException(nameof(configure));
+            
+            var options = new AzureTableStorageJournalOptions(isDefault);
+            configure(options);
+            return WithAzureTableJournal(builder, options);
+        }
+        
         /// <summary>
         ///     Add an AzureTableStorage journal as the default Akka.Persistence
         ///     implementations for a given <see cref="ActorSystem"/>.
@@ -174,7 +225,7 @@ namespace Akka.Persistence.Azure.Hosting
         public static AkkaConfigurationBuilder WithAzureTableJournal(
             this AkkaConfigurationBuilder builder,
             AzureTableStorageJournalSetup setup,
-            Action<AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null)
+            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null)
         {
             if (setup is null)
                 throw new ArgumentNullException(nameof(setup));
@@ -194,8 +245,34 @@ namespace Akka.Persistence.Azure.Hosting
         }
         
         /// <summary>
-        ///     Add an AzureBlobStorage snapshot-store as the default Akka.Persistence
-        ///     implementations for a given <see cref="ActorSystem"/>.
+        ///     Add an AzureTableStorage journal Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="builder">
+        ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
+        /// </param>
+        /// <param name="options">
+        ///     An <see cref="AzureTableStorageJournalOptions"/> instance that will be used to set up
+        ///     the AzureTableStorage journal.
+        /// </param>
+        /// <returns>
+        ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
+        /// </returns>
+        public static AkkaConfigurationBuilder WithAzureTableJournal(
+            this AkkaConfigurationBuilder builder,
+            AzureTableStorageJournalOptions options)
+        {
+            if (options is null)
+                throw new ArgumentNullException(nameof(options));
+
+            builder.AddHocon(options.ToConfig(), HoconAddMode.Prepend);
+            options.Apply(builder);
+            builder.AddHocon(options.DefaultConfig, HoconAddMode.Append);
+            
+            return builder;
+        }
+        
+        /// <summary>
+        ///     Add an AzureBlobStorage snapshot-store Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
         /// </summary>
         /// <param name="builder">
         ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
@@ -217,6 +294,12 @@ namespace Akka.Persistence.Azure.Hosting
         /// <param name="containerName">
         ///     The table of the container we'll be using to serialize these blobs.
         /// </param>
+        /// <param name="isDefault">
+        ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
+        /// </param>
+        /// <param name="identifier">
+        ///     The journal identifier, defaults to "azure-table"
+        /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
         /// </returns>
@@ -224,9 +307,11 @@ namespace Akka.Persistence.Azure.Hosting
             this AkkaConfigurationBuilder builder,
             Uri serviceUri,
             TokenCredential defaultAzureCredential,
-            BlobClientOptions blobClientOptions = null,
+            BlobClientOptions? blobClientOptions = null,
             bool autoInitialize = true,
-            string containerName = DefaultBlobContainerName)
+            string containerName = DefaultBlobContainerName,
+            bool isDefault = true,
+            string identifier = "azure-table")
         {
             if (serviceUri is null)
                 throw new ArgumentNullException(nameof(serviceUri));
@@ -234,7 +319,7 @@ namespace Akka.Persistence.Azure.Hosting
             if (defaultAzureCredential is null)
                 throw new ArgumentNullException(nameof(defaultAzureCredential));
             
-            var setup = new AzureBlobSnapshotSetup
+            var options = new AzureBlobSnapshotOptions(isDefault, identifier)
             {
                 ServiceUri = serviceUri,
                 AzureCredential = defaultAzureCredential,
@@ -243,12 +328,11 @@ namespace Akka.Persistence.Azure.Hosting
                 ContainerName = containerName
             };
             
-            return WithAzureBlobsSnapshotStore(builder, setup);
+            return WithAzureBlobsSnapshotStore(builder, options);
         }
 
         /// <summary>
-        ///     Add an AzureBlobStorage snapshot-store as the default Akka.Persistence
-        ///     implementations for a given <see cref="ActorSystem"/>.
+        ///     Add an AzureBlobStorage snapshot-store Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
         /// </summary>
         /// <param name="builder">
         ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
@@ -262,6 +346,12 @@ namespace Akka.Persistence.Azure.Hosting
         /// <param name="containerName">
         ///     The table of the container we'll be using to serialize these blobs.
         /// </param>
+        /// <param name="isDefault">
+        ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
+        /// </param>
+        /// <param name="identifier">
+        ///     The journal identifier, defaults to "azure-table"
+        /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
         /// </returns>
@@ -269,19 +359,21 @@ namespace Akka.Persistence.Azure.Hosting
             this AkkaConfigurationBuilder builder,
             string connectionString, 
             bool autoInitialize = true,
-            string containerName = DefaultBlobContainerName)
+            string containerName = DefaultBlobContainerName,
+            bool isDefault = true,
+            string identifier = "azure-table")
         {
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ArgumentNullException(nameof(connectionString));
 
-            var setup = new AzureBlobSnapshotSetup
+            var options = new AzureBlobSnapshotOptions(isDefault, identifier)
             {
                 ConnectionString = connectionString,
                 AutoInitialize = autoInitialize,
                 ContainerName = containerName
             };
 
-            return WithAzureBlobsSnapshotStore(builder, setup);
+            return WithAzureBlobsSnapshotStore(builder, options);
         }
 
         /// <summary>
@@ -312,6 +404,36 @@ namespace Akka.Persistence.Azure.Hosting
         }
         
         /// <summary>
+        ///     Add an AzureBlobStorage snapshot-store Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="builder">
+        ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
+        /// </param>
+        /// <param name="configure">
+        ///     A delegate that can be used to configure an <see cref="AzureBlobSnapshotOptions"/> instance
+        ///     to set up the AzureBlobStorage snapshot-store.
+        /// </param>
+        /// <param name="isDefault">
+        ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
+        /// </param>
+        /// <returns>
+        ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
+        /// </returns>
+        public static AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(
+            this AkkaConfigurationBuilder builder,
+            Action<AzureBlobSnapshotOptions> configure,
+            bool isDefault = true)
+        {
+            if (configure is null)
+                throw new ArgumentNullException(nameof(configure));
+            
+            var options = new AzureBlobSnapshotOptions(isDefault);
+            configure(options);
+            
+            return WithAzureBlobsSnapshotStore(builder, options);
+        }
+        
+        /// <summary>
         ///     Add an AzureBlobStorage snapshot-store as the default Akka.Persistence
         ///     implementations for a given <see cref="ActorSystem"/>.
         /// </summary>
@@ -337,6 +459,33 @@ namespace Akka.Persistence.Azure.Hosting
             
             // PUSH DEFAULT CONFIG TO END
             builder.AddHocon(AzurePersistence.DefaultConfig, HoconAddMode.Append);
+
+            return builder;
+        }
+
+        /// <summary>
+        ///     Add an AzureBlobStorage snapshot-store Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="builder">
+        ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
+        /// </param>
+        /// <param name="options">
+        ///     An <see cref="AzureBlobSnapshotOptions"/> instance that will be used to set up
+        ///     the AzureBlobStorage snapshot-store.
+        /// </param>
+        /// <returns>
+        ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
+        /// </returns>
+        public static AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(
+            this AkkaConfigurationBuilder builder,
+            AzureBlobSnapshotOptions options)
+        {
+            if (options is null)
+                throw new ArgumentNullException(nameof(options));
+
+            builder.AddHocon(options.ToConfig(), HoconAddMode.Prepend);
+            options.Apply(builder);
+            builder.AddHocon(options.DefaultConfig, HoconAddMode.Append);
 
             return builder;
         }
@@ -373,7 +522,7 @@ namespace Akka.Persistence.Azure.Hosting
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName,
             string tableName = DefaultTableName,
-            Action<AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null)
+            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null)
         {
             builder.WithAzureTableJournal(connectionString, autoInitialize, tableName, eventAdapterConfigurator);
             builder.WithAzureBlobsSnapshotStore(connectionString, autoInitialize, containerName);
@@ -428,12 +577,12 @@ namespace Akka.Persistence.Azure.Hosting
             Uri blobStorageServiceUri,
             Uri tableStorageServiceUri,
             TokenCredential defaultAzureCredential,
-            BlobClientOptions blobClientOptions = null,
-            TableClientOptions tableClientOptions = null,
+            BlobClientOptions? blobClientOptions = null,
+            TableClientOptions? tableClientOptions = null,
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName,
             string tableName = DefaultTableName,
-            Action<AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null)
+            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null)
         {
             builder.WithAzureTableJournal(tableStorageServiceUri, defaultAzureCredential, tableClientOptions, autoInitialize, tableName, eventAdapterConfigurator);
             builder.WithAzureBlobsSnapshotStore(blobStorageServiceUri, defaultAzureCredential, blobClientOptions, autoInitialize, containerName);

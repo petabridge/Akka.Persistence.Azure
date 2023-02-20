@@ -6,6 +6,7 @@
 
 using System;
 using Akka.Configuration;
+using Akka.Persistence.Azure.Hosting;
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Query;
 using Akka.Persistence.Azure.Snapshot;
@@ -21,28 +22,26 @@ namespace Akka.Persistence.Azure.Tests
 {
     public class AzurePersistenceConfigSpec
     {
-        private const string SnapshotStorePath = "akka.persistence.snapshot-store.azure-blob-store";
-        private const string JournalPath = "akka.persistence.journal.azure-table";
-
         private static readonly AzureBlobSnapshotStoreSettings DefaultSnapshotSettings =
-            AzureBlobSnapshotStoreSettings.Create(AzurePersistence.DefaultConfig.GetConfig(SnapshotStorePath));
+            AzureBlobSnapshotStoreSettings.Create(AzurePersistence.DefaultConfig
+                .GetConfig(AzureBlobSnapshotStoreSettings.SnapshotStoreConfigPath));
 
         private static readonly AzureTableStorageJournalSettings DefaultJournalSettings =
-            AzureTableStorageJournalSettings.Create(AzurePersistence.DefaultConfig.GetConfig(JournalPath));
+            AzureTableStorageJournalSettings.Create(AzurePersistence.DefaultConfig
+                .GetConfig(AzureTableStorageJournalSettings.JournalConfigPath));
         
         [Fact]
         public void ShouldLoadDefaultConfig()
         {
-            AzurePersistence.DefaultConfig.HasPath(SnapshotStorePath).Should().BeTrue();
-            AzurePersistence.DefaultConfig.HasPath(JournalPath).Should().BeTrue();
+            AzurePersistence.DefaultConfig.HasPath(AzureBlobSnapshotStoreSettings.SnapshotStoreConfigPath).Should().BeTrue();
+            AzurePersistence.DefaultConfig.HasPath(AzureTableStorageJournalSettings.JournalConfigPath).Should().BeTrue();
             AzurePersistence.DefaultConfig.HasPath(AzureTableStorageReadJournal.Identifier).Should().BeTrue();
         }
 
         [Fact]
         public void ShouldParseDefaultSnapshotConfig()
         {
-            var settings =
-                AzureBlobSnapshotStoreSettings.Create(AzurePersistence.DefaultConfig.GetConfig(SnapshotStorePath));
+            var settings = DefaultSnapshotSettings;
 
             settings.ConnectionString.Should().BeEmpty();
             settings.ContainerName.Should().Be("akka-persistence-default-container");
@@ -123,6 +122,47 @@ namespace Akka.Persistence.Azure.Tests
             settings.BlobClientOptions.Should().Be(options);
         }
 
+        [Fact(DisplayName = "AzureBlobSnapshotStoreOptions should override settings values")]
+        public void SnapshotOptionsTest()
+        {
+            var uri = new Uri("https://whatever.com");
+            var credentials = new DefaultAzureCredential();
+            var blobOptions = new BlobClientOptions();
+            var options = new AzureBlobSnapshotOptions(false, "abcd")
+            {
+                ConnectionString = "abc",
+                ContainerName = "bcd",
+                ConnectTimeout = 1.Seconds(),
+                RequestTimeout = 2.Seconds(),
+                VerboseLogging = true,
+                Development = true,
+                AutoInitialize = false,
+                ContainerPublicAccessType = PublicAccessType.Blob,
+                ServiceUri = uri,
+                AzureCredential = credentials,
+                BlobClientOptions = blobOptions
+            };
+
+            var settings = AzureBlobSnapshotStoreSettings.Create(
+                options.ToConfig().WithFallback(options.DefaultConfig).GetConfig(options.PluginId));
+
+            var setup = new AzureBlobSnapshotSetup();
+            options.Apply(setup);
+            settings = setup.Apply(settings);
+            
+            settings.ConnectionString.Should().Be("abc");
+            settings.ContainerName.Should().Be("bcd");
+            settings.ConnectTimeout.Should().Be(1.Seconds());
+            settings.RequestTimeout.Should().Be(2.Seconds());
+            settings.VerboseLogging.Should().BeTrue();
+            settings.Development.Should().BeTrue();
+            settings.AutoInitialize.Should().BeFalse();
+            settings.ContainerPublicAccessType.Should().Be(PublicAccessType.Blob);
+            settings.ServiceUri.Should().Be(uri);
+            settings.AzureCredential.Should().Be(credentials);
+            settings.BlobClientOptions.Should().Be(blobOptions);
+        }
+
         [Fact]
         public void ShouldParseTableConfig()
         {
@@ -200,6 +240,45 @@ namespace Akka.Persistence.Azure.Tests
             settings.ServiceUri.Should().Be(uri);
             settings.AzureCredential.Should().Be(credentials);
             settings.TableClientOptions.Should().Be(options);
+        }
+        
+        [Fact(DisplayName = "AzureTableStorageJournalOptions should override settings values")]
+        public void JournalOptionsTest()
+        {
+            var uri = new Uri("https://whatever.com");
+            var credentials = new DefaultAzureCredential();
+            var clientOptions = new TableClientOptions();
+            var options = new AzureTableStorageJournalOptions(false, "abcd")
+            {
+                ConnectionString = "abc",
+                TableName = "bcd",
+                ConnectTimeout = 1.Seconds(),
+                RequestTimeout = 2.Seconds(),
+                VerboseLogging = true,
+                Development = true,
+                AutoInitialize = false,
+                ServiceUri = uri,
+                AzureCredential = credentials,
+                TableClientOptions = clientOptions
+            };
+
+            var settings = AzureTableStorageJournalSettings.Create(
+                options.ToConfig().WithFallback(options.DefaultConfig).GetConfig(options.PluginId));
+
+            var setup = new AzureTableStorageJournalSetup();
+            options.Apply(setup);
+            settings = setup.Apply(settings);
+
+            settings.ConnectionString.Should().Be("abc");
+            settings.TableName.Should().Be("bcd");
+            settings.ConnectTimeout.Should().Be(1.Seconds());
+            settings.RequestTimeout.Should().Be(2.Seconds());
+            settings.VerboseLogging.Should().BeTrue();
+            settings.Development.Should().BeTrue();
+            settings.AutoInitialize.Should().BeFalse();
+            settings.ServiceUri.Should().Be(uri);
+            settings.AzureCredential.Should().Be(credentials);
+            settings.TableClientOptions.Should().Be(clientOptions);
         }
         
         [Theory]

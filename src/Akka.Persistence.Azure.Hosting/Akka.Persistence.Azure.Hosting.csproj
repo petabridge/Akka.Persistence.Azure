@@ -3,6 +3,7 @@
     <PropertyGroup>
 		<TargetFrameworks>$(NetStandardLibVersion);$(NetVersion)</TargetFrameworks>
         <Description>Akka.Hosting support for Akka.Persistence.Azure.</Description>
+        <Nullable>enable</Nullable>
         <LangVersion>8.0</LangVersion>
     </PropertyGroup>
 
