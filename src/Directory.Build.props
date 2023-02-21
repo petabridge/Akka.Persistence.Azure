@@ -19,7 +19,7 @@
     <XunitVersion>2.4.2</XunitVersion>
     <AkkaVersion>1.4.49</AkkaVersion>
     <FluentAssertionsVersion>6.10.0</FluentAssertionsVersion>
-    <TestSdkVersion>17.4.1</TestSdkVersion>
+    <TestSdkVersion>17.5.0</TestSdkVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
 	<NetVersion>net6.0</NetVersion>
