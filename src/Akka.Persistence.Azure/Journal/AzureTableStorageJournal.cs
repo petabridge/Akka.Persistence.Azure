@@ -283,7 +283,7 @@ namespace Akka.Persistence.Azure.Journal
                     Context.Watch(Sender);
                     break;
                 case SubscribeAllPersistenceIds _:
-                    AddAllPersistenceIdSubscriber(Sender, _shutdownCts.Token);
+                    var task = AddAllPersistenceIdSubscriber(Sender, _shutdownCts.Token); // Detached task
                     Context.Watch(Sender);
                     break;
                 case SubscribeTag subscribe:
