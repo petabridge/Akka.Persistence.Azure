@@ -41,35 +41,60 @@ namespace Akka.Persistence.Azure.Query.Publishers
         protected abstract void ReceiveIdleRequest();
         protected abstract void ReceiveRecoverySuccess(long highestSequenceNr);
 
-        protected override bool Receive(object message) => message.Match()
-            .With<Request>(_ => ReceiveInitialRequest())
-            .With<EventsByTagPublisher.Continue>(() => { })
-            .With<Cancel>(_ => Context.Stop(Self))
-            .WasHandled;
+        protected override bool Receive(object message)
+        {
+            switch (message)
+            {
+                case Request _:
+                    ReceiveInitialRequest();
+                    return true;
+                case EventsByTagPublisher.Continue _:
+                    // no-op
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
 
-        protected bool Idle(object message) => message.Match()
-            .With<EventsByTagPublisher.Continue>(() => {
-                if (IsTimeForReplay) Replay();
-            })
-            .With<TaggedEventAppended>(() => {
-                if (IsTimeForReplay) Replay();
-            })
-            .With<Request>(ReceiveIdleRequest)
-            .With<Cancel>(() => Context.Stop(Self))
-            .WasHandled;
+        protected bool Idle(object message)
+        {
+            switch (message)
+            {
+                case EventsByTagPublisher.Continue _:
+                    if (IsTimeForReplay) 
+                        Replay();
+                    return true;
+                case TaggedEventAppended _:
+                    if (IsTimeForReplay) 
+                        Replay();
+                    return true;
+                case Request _:
+                    ReceiveIdleRequest();
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
 
         protected void Replay()
         {
             var limit = MaxBufferSize - Buffer.Length;
             Log.Debug("request replay for tag [{0}] from [{1}] to [{2}] limit [{3}]", Tag, CurrentOffset, ToOffset, limit);
             JournalRef.Tell(new ReplayTaggedMessages(CurrentOffset, ToOffset, limit, Tag, Self));
-            Context.Become(Replaying(limit));
+            Context.Become(Replaying);
         }
 
-        protected Receive Replaying(int limit)
+        protected bool Replaying(object message)
         {
-            return message => message.Match()
-                .With<ReplayedTaggedMessage>(replayed => {
+            switch (message)
+            {
+                case ReplayedTaggedMessage replayed:
                     Buffer.Add(new EventEnvelope(
                         offset: new Sequence(replayed.Offset),
                         persistenceId: replayed.Persistent.PersistenceId,
@@ -79,21 +104,36 @@ namespace Akka.Persistence.Azure.Query.Publishers
 
                     CurrentOffset = replayed.Offset;
                     Buffer.DeliverBuffer(TotalDemand);
-                })
-                .With<RecoverySuccess>(success => {
+                    return true;
+                
+                case RecoverySuccess success:
                     Log.Debug("replay completed for tag [{0}], currOffset [{1}]", Tag, CurrentOffset);
                     ReceiveRecoverySuccess(success.HighestSequenceNr);
-                })
-                .With<ReplayMessagesFailure>(failure => {
+                    return true;
+                
+                case ReplayMessagesFailure failure:
                     Log.Debug("replay failed for tag [{0}], due to [{1}]", Tag, failure.Cause.Message);
                     Buffer.DeliverBuffer(TotalDemand);
                     OnErrorThenStop(failure.Cause);
-                })
-                .With<Request>(_ => Buffer.DeliverBuffer(TotalDemand))
-                .With<EventsByTagPublisher.Continue>(() => { })
-                .With<TaggedEventAppended>(() => { })
-                .With<Cancel>(() => Context.Stop(Self))
-                .WasHandled;
+                    return true;
+                
+                case Request _:
+                    Buffer.DeliverBuffer(TotalDemand);
+                    return true;
+                
+                case EventsByTagPublisher.Continue _:
+                    return true;
+                
+                case TaggedEventAppended _:
+                    return true;
+                
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                
+                default:
+                    return false;
+            }
         }
     }
 }

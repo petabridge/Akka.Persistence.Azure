@@ -17,7 +17,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.4.2</XunitVersion>
-    <AkkaVersion>1.4.49</AkkaVersion>
+    <AkkaVersion>1.5.0-beta6</AkkaVersion>
+    <AkkaHostingVersion>1.5.0-beta6</AkkaHostingVersion>
     <FluentAssertionsVersion>6.10.0</FluentAssertionsVersion>
     <TestSdkVersion>17.5.0</TestSdkVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
