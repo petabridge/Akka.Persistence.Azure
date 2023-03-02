@@ -95,48 +95,53 @@ namespace Akka.Persistence.Azure.Query.Publishers
             var limit = MaxBufferSize - Buffer.Length;
             Log.Debug("request replay for persistenceId [{0}] from [{1}] to [{2}] limit [{3}]", PersistenceId, CurrentSequenceNr, ToSequenceNr, limit);
             JournalRef.Tell(new ReplayMessages(CurrentSequenceNr, ToSequenceNr, limit, PersistenceId, Self));
-            Context.Become(Replaying);
+            Context.Become(Replaying(limit));
         }
 
-        protected bool Replaying(object message)
+        protected Receive Replaying(int limit)
         {
-            switch (message)
+            bool Receive(object message)
             {
-                case ReplayedMessage replayed:
-                    var seqNr = replayed.Persistent.SequenceNr;
-                    Buffer.Add(new EventEnvelope(
-                        offset: new Sequence(seqNr),
-                        persistenceId: PersistenceId,
-                        sequenceNr: seqNr,
-                        @event: replayed.Persistent.Payload,
-                        timestamp: replayed.Persistent.Timestamp));
-                    CurrentSequenceNr = seqNr + 1;
-                    Buffer.DeliverBuffer(TotalDemand);
-                    return true;
-                case RecoverySuccess success:
-                    Log.Debug("replay completed for persistenceId [{0}], currSeqNo [{1}]", PersistenceId, CurrentSequenceNr);
-                    ReceiveRecoverySuccess(success.HighestSequenceNr);
-                    return true;
-                case ReplayMessagesFailure failure:
-                    Log.Debug("replay failed for persistenceId [{0}], due to [{1}]", PersistenceId, failure.Cause.Message);
-                    Buffer.DeliverBuffer(TotalDemand);
-                    OnErrorThenStop(failure.Cause);
-                    return true;
-                case Request _:
-                    Buffer.DeliverBuffer(TotalDemand);
-                    return true;
-                case EventsByPersistenceIdPublisher.Continue _:
-                    // skip during replay
-                    return true;
-                case EventAppended _:
-                    // skip during replay
-                    return true;
-                case Cancel _:
-                    Context.Stop(Self);
-                    return true;
-                default:
-                    return false;
+                switch (message)
+                {
+                    case ReplayedMessage replayed:
+                        var seqNr = replayed.Persistent.SequenceNr;
+                        Buffer.Add(new EventEnvelope(
+                            offset: new Sequence(seqNr),
+                            persistenceId: PersistenceId,
+                            sequenceNr: seqNr,
+                            @event: replayed.Persistent.Payload,
+                            timestamp: replayed.Persistent.Timestamp));
+                        CurrentSequenceNr = seqNr + 1;
+                        Buffer.DeliverBuffer(TotalDemand);
+                        return true;
+                    case RecoverySuccess success:
+                        Log.Debug("replay completed for persistenceId [{0}], currSeqNo [{1}]", PersistenceId, CurrentSequenceNr);
+                        ReceiveRecoverySuccess(success.HighestSequenceNr);
+                        return true;
+                    case ReplayMessagesFailure failure:
+                        Log.Debug("replay failed for persistenceId [{0}], due to [{1}]", PersistenceId, failure.Cause.Message);
+                        Buffer.DeliverBuffer(TotalDemand);
+                        OnErrorThenStop(failure.Cause);
+                        return true;
+                    case Request _:
+                        Buffer.DeliverBuffer(TotalDemand);
+                        return true;
+                    case EventsByPersistenceIdPublisher.Continue _:
+                        // skip during replay
+                        return true;
+                    case EventAppended _:
+                        // skip during replay
+                        return true;
+                    case Cancel _:
+                        Context.Stop(Self);
+                        return true;
+                    default:
+                        return false;
+                }
             }
+
+            return Receive;
         }
     }
 }
