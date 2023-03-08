@@ -1,3 +1,8 @@
+#### 1.5.0 March 02 2023 ####
+
+* [Targets Akka.NET v1.5.0](https://github.com/akkadotnet/akka.net/releases/tag/1.4.43)
+* [Targets Akka.Hosting v1.5.0](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.0)
+
 #### 0.9.2 September 27 2022 ####
 
 * [Bump Akka.NET version from 1.4.40 to 1.4.43](https://github.com/akkadotnet/akka.net/releases/tag/1.4.43)

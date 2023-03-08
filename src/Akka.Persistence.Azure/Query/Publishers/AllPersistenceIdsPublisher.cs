@@ -27,37 +27,57 @@ namespace Akka.Persistence.Azure.Query.Publishers
             _journalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
+        protected override bool Receive(object message)
+        {
+            switch (message)
+            {
+                case Request _:
+                    _journalRef.Tell(SubscribeAllPersistenceIds.Instance);
+                    Become(Active);
+                    return true;
+                
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                
+                default:
+                    return false;
+            }
+        }
 
-
-        protected override bool Receive(object message) => message.Match()
-            .With<Request>(_ => {
-                _journalRef.Tell(SubscribeAllPersistenceIds.Instance);
-                Become(Active);
-            })
-            .With<Cancel>(_ => Context.Stop(Self))
-            .WasHandled;
-
-        private bool Active(object message) => message.Match()
-            .With<CurrentPersistenceIds>(current => {
-                _buffer.AddRange(current.AllPersistenceIds);
-                _buffer.DeliverBuffer(TotalDemand);
-
-                if (!_liveQuery && _buffer.IsEmpty)
-                    OnCompleteThenStop();
-            })
-            .With<PersistenceIdAdded>(added => {
-                if (_liveQuery)
-                {
-                    _buffer.Add(added.PersistenceId);
+        private bool Active(object message)
+        {
+            switch (message)
+            {
+                case CurrentPersistenceIds current:
+                    _buffer.AddRange(current.AllPersistenceIds);
                     _buffer.DeliverBuffer(TotalDemand);
-                }
-            })
-            .With<Request>(_ => {
-                _buffer.DeliverBuffer(TotalDemand);
-                if (!_liveQuery && _buffer.IsEmpty)
-                    OnCompleteThenStop();
-            })
-            .With<Cancel>(_ => Context.Stop(Self))
-            .WasHandled;
+
+                    if (!_liveQuery && _buffer.IsEmpty)
+                        OnCompleteThenStop();
+                    return true;
+                
+                case PersistenceIdAdded added:
+                    if (_liveQuery)
+                    {
+                        _buffer.Add(added.PersistenceId);
+                        _buffer.DeliverBuffer(TotalDemand);
+                    }
+                    return true;
+                
+                case Request _:
+                    _buffer.DeliverBuffer(TotalDemand);
+                    if (!_liveQuery && _buffer.IsEmpty)
+                        OnCompleteThenStop();
+                    return true;
+                
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                
+                default:
+                    return false;
+            }
+        }
     }
 }

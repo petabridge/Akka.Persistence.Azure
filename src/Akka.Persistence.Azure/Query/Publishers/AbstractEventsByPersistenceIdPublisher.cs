@@ -51,25 +51,43 @@ namespace Akka.Persistence.Azure.Query.Publishers
 
         protected bool Init(object message)
         {
-            return message.Match()
-                .With<EventsByPersistenceIdPublisher.Continue>(() => { })
-                .With<Request>(_ => ReceiveInitialRequest())
-                .With<Cancel>(_ => Context.Stop(Self))
-                .WasHandled;
+            switch (message)
+            {
+                case EventsByPersistenceIdPublisher.Continue _:
+                    // no-op
+                    return true;
+                case Request _:
+                    ReceiveInitialRequest();
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         protected bool Idle(object message)
         {
-            return message.Match()
-                .With<EventsByPersistenceIdPublisher.Continue>(() => {
-                    if (IsTimeForReplay) Replay();
-                })
-                .With<EventAppended>(() => {
-                    if (IsTimeForReplay) Replay();
-                })
-                .With<Request>(_ => ReceiveIdleRequest())
-                .With<Cancel>(_ => Context.Stop(Self))
-                .WasHandled;
+            switch (message)
+            {
+                case EventsByPersistenceIdPublisher.Continue _:
+                    if (IsTimeForReplay) 
+                        Replay();
+                    return true;
+                case EventAppended _:
+                    if (IsTimeForReplay) 
+                        Replay();
+                    return true;
+                case Request _:
+                    ReceiveIdleRequest();
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         protected void Replay()
@@ -82,32 +100,48 @@ namespace Akka.Persistence.Azure.Query.Publishers
 
         protected Receive Replaying(int limit)
         {
-            return message => message.Match()
-                .With<ReplayedMessage>(replayed => {
-                    var seqNr = replayed.Persistent.SequenceNr;
-                    Buffer.Add(new EventEnvelope(
-                        offset: new Sequence(seqNr),
-                        persistenceId: PersistenceId,
-                        sequenceNr: seqNr,
-                        @event: replayed.Persistent.Payload,
-                        timestamp: replayed.Persistent.Timestamp));
-                    CurrentSequenceNr = seqNr + 1;
-                    Buffer.DeliverBuffer(TotalDemand);
-                })
-                .With<RecoverySuccess>(success => {
-                    Log.Debug("replay completed for persistenceId [{0}], currSeqNo [{1}]", PersistenceId, CurrentSequenceNr);
-                    ReceiveRecoverySuccess(success.HighestSequenceNr);
-                })
-                .With<ReplayMessagesFailure>(failure => {
-                    Log.Debug("replay failed for persistenceId [{0}], due to [{1}]", PersistenceId, failure.Cause.Message);
-                    Buffer.DeliverBuffer(TotalDemand);
-                    OnErrorThenStop(failure.Cause);
-                })
-                .With<Request>(_ => Buffer.DeliverBuffer(TotalDemand))
-                .With<EventsByPersistenceIdPublisher.Continue>(() => { }) // skip during replay
-                .With<EventAppended>(() => { }) // skip during replay
-                .With<Cancel>(_ => Context.Stop(Self))
-                .WasHandled;
+            bool Receive(object message)
+            {
+                switch (message)
+                {
+                    case ReplayedMessage replayed:
+                        var seqNr = replayed.Persistent.SequenceNr;
+                        Buffer.Add(new EventEnvelope(
+                            offset: new Sequence(seqNr),
+                            persistenceId: PersistenceId,
+                            sequenceNr: seqNr,
+                            @event: replayed.Persistent.Payload,
+                            timestamp: replayed.Persistent.Timestamp));
+                        CurrentSequenceNr = seqNr + 1;
+                        Buffer.DeliverBuffer(TotalDemand);
+                        return true;
+                    case RecoverySuccess success:
+                        Log.Debug("replay completed for persistenceId [{0}], currSeqNo [{1}]", PersistenceId, CurrentSequenceNr);
+                        ReceiveRecoverySuccess(success.HighestSequenceNr);
+                        return true;
+                    case ReplayMessagesFailure failure:
+                        Log.Debug("replay failed for persistenceId [{0}], due to [{1}]", PersistenceId, failure.Cause.Message);
+                        Buffer.DeliverBuffer(TotalDemand);
+                        OnErrorThenStop(failure.Cause);
+                        return true;
+                    case Request _:
+                        Buffer.DeliverBuffer(TotalDemand);
+                        return true;
+                    case EventsByPersistenceIdPublisher.Continue _:
+                        // skip during replay
+                        return true;
+                    case EventAppended _:
+                        // skip during replay
+                        return true;
+                    case Cancel _:
+                        Context.Stop(Self);
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
+            return Receive;
         }
     }
 }
