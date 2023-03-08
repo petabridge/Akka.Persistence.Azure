@@ -19,10 +19,10 @@ namespace Akka.Persistence.Azure.Journal
         private readonly Dictionary<string, AzureTableStorageJournalSetup> _setups =
             new Dictionary<string, AzureTableStorageJournalSetup>();
 
-        public AzureTableStorageJournalSetup? Get(string journalId = "azure-table")
+        public AzureTableStorageJournalSetup? Get(string journalId)
              => _setups.TryGetValue(journalId, out var setup) ? setup : null;
 
-        public void Set(AzureTableStorageJournalSetup setup, string journalId = "azure-table")
+        public void Set(string journalId, AzureTableStorageJournalSetup setup)
             => _setups[journalId] = setup;
     }
     
@@ -75,7 +75,7 @@ namespace Akka.Persistence.Azure.Journal
         ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
         [Obsolete(message:"Use AzureCredential instead")]
-        public TokenCredential DefaultAzureCredential
+        public TokenCredential? DefaultAzureCredential
         {
             get => AzureCredential;
             set => AzureCredential = value;
