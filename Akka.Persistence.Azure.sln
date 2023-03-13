@@ -19,6 +19,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{320BFA6C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Azure.Hosting", "src\Akka.Persistence.Azure.Hosting\Akka.Persistence.Azure.Hosting.csproj", "{64C6B877-9262-456B-8A1C-60C4F272DA19}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{34372787-606F-4D85-A24F-534A1E8348E3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Azure.Sample.MultiJournal", "src\Akka.Persistence.Azure.Sample.MultiJournal\Akka.Persistence.Azure.Sample.MultiJournal.csproj", "{C79F19DE-30AC-4F1E-A3FA-949276413AB9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,11 +49,18 @@ Global
 		{64C6B877-9262-456B-8A1C-60C4F272DA19}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{64C6B877-9262-456B-8A1C-60C4F272DA19}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{64C6B877-9262-456B-8A1C-60C4F272DA19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C79F19DE-30AC-4F1E-A3FA-949276413AB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C79F19DE-30AC-4F1E-A3FA-949276413AB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C79F19DE-30AC-4F1E-A3FA-949276413AB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C79F19DE-30AC-4F1E-A3FA-949276413AB9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A2D867B3-6A2B-46B6-B249-81408CFD7A50}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C79F19DE-30AC-4F1E-A3FA-949276413AB9} = {34372787-606F-4D85-A24F-534A1E8348E3}
 	EndGlobalSection
 EndGlobal
