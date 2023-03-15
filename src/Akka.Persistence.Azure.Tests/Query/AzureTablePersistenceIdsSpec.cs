@@ -22,7 +22,5 @@ namespace Akka.Persistence.Azure.Tests.Query
                 Sys.ReadJournalFor<AzureTableStorageReadJournal>(
                     AzureTableStorageReadJournal.Identifier);
         }
-
-        protected override bool AllocatesAllPersistenceIDsPublisher => false;
     }
 }
