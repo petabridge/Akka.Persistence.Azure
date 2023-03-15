@@ -1,6 +1,6 @@
 ﻿// -----------------------------------------------------------------------
 // <copyright file="AzureTableStorageJournalSettings.cs" company="Petabridge, LLC">
-//      Copyright (C) 2015 - 2022 Petabridge, LLC <https://petabridge.com>
+//      Copyright (C) 2015 - 2023 Petabridge, LLC <https://petabridge.com>
 // </copyright>
 // -----------------------------------------------------------------------
 
