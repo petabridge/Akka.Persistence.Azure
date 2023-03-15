@@ -114,11 +114,15 @@ namespace Akka.Persistence.Azure.Hosting
             if (AzureCredential is null || ServiceUri is null)
                 throw new ConfigurationException($"Both {nameof(ServiceUri)} and {nameof(AzureCredential)} need to be declared to use {nameof(AzureCredential)}");
 
-            var setup = builder.Setups.FirstOrDefault(s => s is AzureTableStorageJournalSetup) as AzureTableStorageJournalSetup;
+            var multiSetup = builder.Setups.FirstOrDefault(s => s is AzureTableStorageMultiJournalSetup) as AzureTableStorageMultiJournalSetup;
+            multiSetup ??= new AzureTableStorageMultiJournalSetup();
+            
+            var setup = multiSetup.Get(Identifier);
             setup ??= new AzureTableStorageJournalSetup();
             Apply(setup);
+            multiSetup.Set(Identifier, setup);
             
-            builder.AddSetup(setup);
+            builder.AddSetup(multiSetup);
         }
 
         internal void Apply(AzureTableStorageJournalSetup setup)
@@ -126,6 +130,6 @@ namespace Akka.Persistence.Azure.Hosting
             setup.ServiceUri = ServiceUri;
             setup.AzureCredential = AzureCredential;
             setup.TableClientOptions = TableClientOptions;
-        }
+        }        
     }
 }

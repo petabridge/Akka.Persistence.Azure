@@ -5,14 +5,28 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Actor.Setup;
 using Azure.Core;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 
+#nullable enable
 namespace Akka.Persistence.Azure.Snapshot
 {
+    public sealed class AzureBlobMultiSnapshotSetup : Setup
+    {
+        private readonly Dictionary<string, AzureBlobSnapshotSetup> _setups =
+            new Dictionary<string, AzureBlobSnapshotSetup>();
+
+        public AzureBlobSnapshotSetup? Get(string journalId = "azure-table")
+            => _setups.TryGetValue(journalId, out var setup) ? setup : null;
+
+        public void Set(AzureBlobSnapshotSetup setup, string journalId = "azure-table")
+            => _setups[journalId] = setup;
+    }
+    
     /// <summary>
     ///     Setup class for <see cref="AzureBlobSnapshotStore"/>.
     ///     Any populated properties will override its respective HOCON setting.
@@ -37,7 +51,7 @@ namespace Akka.Persistence.Azure.Snapshot
         public static AzureBlobSnapshotSetup Create(
             Uri serviceUri, 
             TokenCredential defaultAzureCredential,
-            BlobClientOptions blobClientOptions = default)
+            BlobClientOptions? blobClientOptions = default)
             => new AzureBlobSnapshotSetup
             {
                 ServiceUri = serviceUri,
@@ -48,12 +62,12 @@ namespace Akka.Persistence.Azure.Snapshot
         /// <summary>
         ///     The connection string for connecting to Windows Azure blob storage account.
         /// </summary>
-        public string ConnectionString { get; set; }
+        public string? ConnectionString { get; set; }
 
         /// <summary>
         ///     The table of the container we'll be using to serialize these blobs.
         /// </summary>
-        public string ContainerName { get; set; }
+        public string? ContainerName { get; set; }
 
         /// <summary>
         ///     Initial timeout to use when connecting to Azure Container Storage for the first time.
@@ -91,13 +105,13 @@ namespace Akka.Persistence.Azure.Snapshot
         ///     A <see cref="Uri"/> referencing the blob service.
         ///     This is likely to be similar to "https://{account_name}.blob.core.windows.net".
         /// </summary>
-        public Uri ServiceUri { get; set; }
+        public Uri? ServiceUri { get; set; }
 
         /// <summary>
         ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
         [Obsolete(message:"Use AzureCredential instead")]
-        public TokenCredential DefaultAzureCredential
+        public TokenCredential? DefaultAzureCredential
         {
             get => AzureCredential;
             set => AzureCredential = value;
@@ -106,13 +120,13 @@ namespace Akka.Persistence.Azure.Snapshot
         /// <summary>
         ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
-        public TokenCredential AzureCredential { get; set; }
+        public TokenCredential? AzureCredential { get; set; }
 
         /// <summary>
         ///     Optional client options that define the transport pipeline policies for authentication,
         ///     retries, etc., that are applied to every request.
         /// </summary>
-        public BlobClientOptions BlobClientOptions { get; set; }
+        public BlobClientOptions? BlobClientOptions { get; set; }
 
         internal AzureBlobSnapshotStoreSettings Apply(AzureBlobSnapshotStoreSettings settings)
         {

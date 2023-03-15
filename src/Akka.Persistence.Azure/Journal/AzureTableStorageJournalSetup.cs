@@ -5,24 +5,38 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Actor.Setup;
 using Azure.Core;
 using Azure.Data.Tables;
 using Azure.Identity;
 
+#nullable enable
 namespace Akka.Persistence.Azure.Journal
 {
+    public sealed class AzureTableStorageMultiJournalSetup : Setup
+    {
+        private readonly Dictionary<string, AzureTableStorageJournalSetup> _setups =
+            new Dictionary<string, AzureTableStorageJournalSetup>();
+
+        public AzureTableStorageJournalSetup? Get(string journalId)
+             => _setups.TryGetValue(journalId, out var setup) ? setup : null;
+
+        public void Set(string journalId, AzureTableStorageJournalSetup setup)
+            => _setups[journalId] = setup;
+    }
+    
     public sealed class AzureTableStorageJournalSetup : Setup
     {
         /// <summary>
         ///     The connection string for connecting to Windows Azure table storage.
         /// </summary>
-        public string ConnectionString { get; set; }
+        public string? ConnectionString { get; set; }
 
         /// <summary>
         ///     The table of the table we'll be connecting to.
         /// </summary>
-        public string TableName { get; set; }
+        public string? TableName { get; set; }
 
         /// <summary>
         ///     Initial timeout to use when connecting to Azure Table Storage for the first time.
@@ -55,13 +69,13 @@ namespace Akka.Persistence.Azure.Journal
         ///     A <see cref="Uri"/> referencing the Azure Storage Table service.
         ///     This is likely to be similar to "https://{account_name}.table.core.windows.net".
         /// </summary>
-        public Uri ServiceUri { get; set; }
+        public Uri? ServiceUri { get; set; }
 
         /// <summary>
         ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
         [Obsolete(message:"Use AzureCredential instead")]
-        public TokenCredential DefaultAzureCredential
+        public TokenCredential? DefaultAzureCredential
         {
             get => AzureCredential;
             set => AzureCredential = value;
@@ -70,13 +84,13 @@ namespace Akka.Persistence.Azure.Journal
         /// <summary>
         ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
-        public TokenCredential AzureCredential { get; set; }
+        public TokenCredential? AzureCredential { get; set; }
 
         /// <summary>
         ///     Optional client options that define the transport pipeline policies for authentication,
         ///     retries, etc., that are applied to every request.
         /// </summary>
-        public TableClientOptions TableClientOptions { get; set; }
+        public TableClientOptions? TableClientOptions { get; set; }
 
         internal AzureTableStorageJournalSettings Apply(AzureTableStorageJournalSettings settings)
         {
