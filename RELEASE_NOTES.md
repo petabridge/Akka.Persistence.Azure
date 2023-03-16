@@ -1,6 +1,48 @@
+#### 1.5.1 March 16 2023 ####
+
+* [Update Akka.NET v1.5.1](https://github.com/akkadotnet/akka.net/releases/tag/1.5.1)
+* [Bump Azure.Storage.Blobs to 12.15.0](https://github.com/petabridge/Akka.Persistence.Azure/pull/287)
+* [Add multi journal support](https://github.com/petabridge/Akka.Persistence.Azure/pull/272)
+
+**Multi Journal Support**
+
+You can now add more than one Akka.Persistence.Azure settings and use them singularly for different Akka plugins.
+
+In the example below, we set up two separate journal options with two distinct identifier, one is being used as default persistence plugin, and the other are being used as the journal for cluster sharding.
+
+```csharp
+var persistenceJournal = new AzureTableStorageJournalOptions(true)
+{
+    Identifier = "azure-journal",
+    ConnectionString = connectionString
+};
+var shardJournal = new AzureTableStorageJournalOptions(false)
+{
+    Identifier = "azure-shard-journal",
+    ConnectionString = shardConnectionString
+};
+builder
+    .WithClustering()
+    .WithAzureTableJournal(persistenceJournal)
+    .WithAzureTableJournal(shardJournal)
+    .WithAzureBlobsSnapshotStore(new AzureBlobSnapshotOptions
+    {
+        ConnectionString = connectionString
+    })
+    .WithShardRegion<ShardRegionKey>(
+        "region-1",
+        Customer.Props,
+        new MessageExtractor(10),
+        new ShardOptions
+        {
+            JournalOptions = shardJournal,
+            StateStoreMode = StateStoreMode.Persistence
+        });
+```
+
 #### 1.5.0 March 02 2023 ####
 
-* [Targets Akka.NET v1.5.0](https://github.com/akkadotnet/akka.net/releases/tag/1.4.43)
+* [Targets Akka.NET v1.5.0](https://github.com/akkadotnet/akka.net/releases/tag/1.5.0)
 * [Targets Akka.Hosting v1.5.0](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.0)
 
 #### 0.9.2 September 27 2022 ####
