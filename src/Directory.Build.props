@@ -15,7 +15,7 @@
     <AkkaVersion>1.5.8</AkkaVersion>
     <AkkaHostingVersion>1.5.7</AkkaHostingVersion>
     <FluentAssertionsVersion>6.10.0</FluentAssertionsVersion>
-    <TestSdkVersion>17.6.0</TestSdkVersion>
+    <TestSdkVersion>17.6.2</TestSdkVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetVersion>net6.0</NetVersion>
