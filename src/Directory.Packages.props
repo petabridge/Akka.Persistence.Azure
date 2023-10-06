@@ -19,7 +19,7 @@
   <ItemGroup>
 	  <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
 	  <PackageVersion Include="xunit" Version="2.5.0" />
-	  <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.0" />
+	  <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.1" />
   </ItemGroup>
 	<!-- SourceLink support for all Akka.NET projects -->
 	<ItemGroup>
