@@ -1,11 +1,11 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+	  <AkkaVersion>1.5.13</AkkaVersion>
+	  <AkkaHostingVersion>1.5.13</AkkaHostingVersion>
   </PropertyGroup>
   <!-- App dependencies -->
   <ItemGroup>
-	  <PackageVersion Include="Akka.Persistence.TCK" Version="$(AkkaVersion)" />
-	  <PackageVersion Include="Docker.DotNet" Version="3.125.15" />
 	  <PackageVersion Include="Akka.Persistence.Query" Version="$(AkkaVersion)" />
 	  <PackageVersion Include="Azure.Data.Tables" Version="12.8.1" />
 	  <PackageVersion Include="Azure.Identity" Version="1.10.1" />
@@ -13,17 +13,18 @@
 	  <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
 	  <PackageVersion Include="Akka.Persistence.Hosting" Version="$(AkkaHostingVersion)" />
 	  <PackageVersion Include="Akka.Cluster.Hosting" Version="$(AkkaHostingVersion)" />
-	  <PackageVersion Include="NBench" Version="2.0.1" />
   </ItemGroup>
   <!-- Test dependencies -->  
   <ItemGroup>
-	  <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+	  <PackageVersion Include="NBench" Version="2.0.1" />
+	  <PackageVersion Include="Docker.DotNet" Version="3.125.15" />
+	  <PackageVersion Include="Akka.Persistence.TCK" Version="$(AkkaVersion)" />
+	  <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
 	  <PackageVersion Include="xunit" Version="2.5.1" />
 	  <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.1" />
   </ItemGroup>
-	<!-- SourceLink support for all Akka.NET projects -->
-	<ItemGroup>
-		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
-	</ItemGroup>
-	
+  <!-- SourceLink support for all Akka.NET projects -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
+  </ItemGroup>
 </Project>
