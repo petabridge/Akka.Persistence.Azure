@@ -1,26 +1,19 @@
 <Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Generated.props', '$(MSBuildThisFileDirectory)'))" />
+  
   <PropertyGroup>
     <Copyright>Copyright © 2017-2023 Petabridge</Copyright>
     <Authors>Petabridge</Authors>
-    <VersionPrefix>1.5.0</VersionPrefix>
-    <PackageReleaseNotes>[Targets Akka.NET v1.5.0](https://github.com/akkadotnet/akka.net/releases/tag/1.4.43)
-[Targets Akka.Hosting v1.5.0](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.0)</PackageReleaseNotes>
-    <PackageIcon>logo.png</PackageIcon>
-    <PackageProjectUrl>https://github.com/petabridge/Akka.Persistence.Azure/</PackageProjectUrl>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
-    <XunitVersion>2.4.2</XunitVersion>
-    <AkkaVersion>1.5.13</AkkaVersion>
-    <AkkaHostingVersion>1.5.13</AkkaHostingVersion>
-    <FluentAssertionsVersion>6.10.0</FluentAssertionsVersion>
-    <TestSdkVersion>17.7.2</TestSdkVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetVersion>net6.0</NetVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
   </PropertyGroup>
+
+  <!-- NuGet package properties -->
   <PropertyGroup>
     <!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -29,7 +22,13 @@
     <!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageIcon>logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/petabridge/Akka.Persistence.Azure/</PackageProjectUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
   </PropertyGroup>
+
+  <!-- GitHub SourceLink -->
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>

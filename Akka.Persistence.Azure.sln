@@ -15,13 +15,26 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{320BFA6C
 		build.fsx = build.fsx
 		build.ps1 = build.ps1
 		build.sh = build.sh
+		src\Directory.Build.props = src\Directory.Build.props
+		src\Directory.Packages.props = src\Directory.Packages.props
+		src\xunitRunner.props = src\xunitRunner.props
+		src\Directory.Generated.props = src\Directory.Generated.props
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Azure.Hosting", "src\Akka.Persistence.Azure.Hosting\Akka.Persistence.Azure.Hosting.csproj", "{64C6B877-9262-456B-8A1C-60C4F272DA19}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{34372787-606F-4D85-A24F-534A1E8348E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Azure.Sample.MultiJournal", "src\Akka.Persistence.Azure.Sample.MultiJournal\Akka.Persistence.Azure.Sample.MultiJournal.csproj", "{C79F19DE-30AC-4F1E-A3FA-949276413AB9}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build-system", "build-system", "{04D5BFA0-A936-4DD1-ABDE-9B91B4492017}"
+	ProjectSection(SolutionItems) = preProject
+		build-system\azure-pipeline.template.yaml = build-system\azure-pipeline.template.yaml
+		build-system\linux-pr-validation.yaml = build-system\linux-pr-validation.yaml
+		build-system\README.md = build-system\README.md
+		build-system\windows-pr-validation.yaml = build-system\windows-pr-validation.yaml
+		build-system\windows-release.yaml = build-system\windows-release.yaml
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Azure.Sample.MultiJournal", "src\samples\Akka.Persistence.Azure.Sample.MultiJournal\Akka.Persistence.Azure.Sample.MultiJournal.csproj", "{B6484116-0111-497C-A49C-A9F5AA323CCB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,10 +62,10 @@ Global
 		{64C6B877-9262-456B-8A1C-60C4F272DA19}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{64C6B877-9262-456B-8A1C-60C4F272DA19}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{64C6B877-9262-456B-8A1C-60C4F272DA19}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C79F19DE-30AC-4F1E-A3FA-949276413AB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C79F19DE-30AC-4F1E-A3FA-949276413AB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C79F19DE-30AC-4F1E-A3FA-949276413AB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C79F19DE-30AC-4F1E-A3FA-949276413AB9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6484116-0111-497C-A49C-A9F5AA323CCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6484116-0111-497C-A49C-A9F5AA323CCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6484116-0111-497C-A49C-A9F5AA323CCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6484116-0111-497C-A49C-A9F5AA323CCB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -61,6 +74,7 @@ Global
 		SolutionGuid = {A2D867B3-6A2B-46B6-B249-81408CFD7A50}
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{C79F19DE-30AC-4F1E-A3FA-949276413AB9} = {34372787-606F-4D85-A24F-534A1E8348E3}
+		{04D5BFA0-A936-4DD1-ABDE-9B91B4492017} = {320BFA6C-930A-4B7F-9FA4-76CDD0F0E552}
+		{B6484116-0111-497C-A49C-A9F5AA323CCB} = {34372787-606F-4D85-A24F-534A1E8348E3}
 	EndGlobalSection
 EndGlobal
