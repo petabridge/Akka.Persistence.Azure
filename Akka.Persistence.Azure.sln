@@ -19,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{320BFA6C
 		src\Directory.Packages.props = src\Directory.Packages.props
 		src\xunitRunner.props = src\xunitRunner.props
 		src\Directory.Generated.props = src\Directory.Generated.props
+		README.md = README.md
+		RELEASE_NOTES.md = RELEASE_NOTES.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Azure.Hosting", "src\Akka.Persistence.Azure.Hosting\Akka.Persistence.Azure.Hosting.csproj", "{64C6B877-9262-456B-8A1C-60C4F272DA19}"
