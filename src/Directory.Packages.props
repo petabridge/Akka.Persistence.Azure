@@ -14,8 +14,9 @@
 	  <PackageVersion Include="Akka.Persistence.Hosting" Version="$(AkkaHostingVersion)" />
 	  <PackageVersion Include="Akka.Cluster.Hosting" Version="$(AkkaHostingVersion)" />
   </ItemGroup>
-  <!-- Test dependencies -->  
+  <!-- Test dependencies -->
   <ItemGroup>
+      <PackageVersion Include="Akka.Cluster.Sharding" Version="$(AkkaVersion)" />
 	  <PackageVersion Include="NBench" Version="2.0.1" />
 	  <PackageVersion Include="Docker.DotNet" Version="3.125.15" />
 	  <PackageVersion Include="Akka.Persistence.TCK" Version="$(AkkaVersion)" />
