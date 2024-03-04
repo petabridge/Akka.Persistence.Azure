@@ -14,6 +14,7 @@ using Akka.Cluster.Sharding;
 using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Persistence.Azure.Tests;
@@ -89,7 +90,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
     {
         // basic test, shard actor should wake up and persist message
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-        var persistActor = _probe.ExpectMsg<IActorRef>();
+        var persistActor = _probe.ExpectMsg<IActorRef>(20.Seconds());
         _probe.Watch(persistActor);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "a"));
