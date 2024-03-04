@@ -1,4 +1,4 @@
-#### 1.5.17.1 March 4 2023 ####
+#### 1.5.17.1 March 4 2024 ####
 
 * [Update Akka.NET v1.5.17.1](https://github.com/akkadotnet/akka.net/releases/tag/1.5.17.1)
 * [Update Akka.Hosting v1.5.17.1](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.17.1)
