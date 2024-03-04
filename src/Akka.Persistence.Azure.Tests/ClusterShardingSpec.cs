@@ -148,7 +148,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
         foreach (var _ in Enumerable.Range(0, 100))
         {
             _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-            var persistActor = _probe.ExpectMsg<IActorRef>();
+            var persistActor = _probe.ExpectMsg<IActorRef>(20.Seconds());
             if (oldActor is not null)
                 persistActor.Should().NotBe(oldActor);
             _probe.Watch(persistActor);
