@@ -721,7 +721,6 @@ namespace Akka.Persistence.Azure.Journal
             // In order to actually break at the limit we ask for we have to
             //    keep a separate counter and track it ourselves.
             var counter = 0;
-            var currentOrderingId = 0L;
             var maxPerPage = Math.Min(replay.Max, 1000);
 
             await using var pages = TaggedMessageQuery(replay, (int)maxPerPage, cancellationToken).AsPages().GetAsyncEnumerator(cancellationToken);
@@ -755,8 +754,6 @@ namespace Akka.Persistence.Azure.Journal
                         counter++;
                     }
 
-                    currentOrderingId = Math.Max(currentOrderingId, entry.UtcTicks);
-                    
                     if (counter >= replay.Max)
                         return new ReplayTaggedMessageSuccess(false);
                 }
