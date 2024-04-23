@@ -194,18 +194,19 @@ namespace Akka.Persistence.Azure.Query
         /// </summary>
         public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset = null)
         {
-            offset = offset ?? new Sequence(0L);
-            switch (offset)
+            offset = offset switch
             {
-                case Sequence seq:
-                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value, DateTime.UtcNow.Ticks, null, _maxBufferSize, _writeJournalPluginId))
-                        .MapMaterializedValue(_ => NotUsed.Instance)
-                        .Named($"CurrentEventsByTag-{tag}");
-                case NoOffset _:
-                    return CurrentEventsByTag(tag, new Sequence(0L));
-                default:
-                    throw new ArgumentException($"{GetType().Name} does not support {offset.GetType().Name} offsets");
-            }
+                null => new Sequence(0L),
+                NoOffset _ => new Sequence(0L),
+                _ => offset
+            };
+            
+            if(offset is not Sequence seq)
+                throw new ArgumentException($"{GetType().Name} does not support {offset.GetType().Name} offsets");
+            
+            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value, DateTime.UtcNow.Ticks, null, _maxBufferSize, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named($"CurrentEventsByTag-{tag}");
         }
     }
 
