@@ -172,6 +172,16 @@ namespace Akka.Persistence.Azure.Query
         }
     }
 
+    public sealed class ReplayTaggedMessageSuccess
+    {
+        public ReplayTaggedMessageSuccess(bool completed)
+        {
+            Completed = completed;
+        }
+
+        public bool Completed { get; }
+    }
+
     /// <summary>
     /// Subscribe the `sender` to current and new persistenceIds.
     /// Used by query-side. The journal will send one <see cref="CurrentPersistenceIds"/> to the

@@ -11,7 +11,7 @@ namespace Akka.Persistence.Azure.Query.Publishers
     internal sealed class CurrentEventsByTagPublisher 
         : AbstractEventsByTagPublisher
     {
-        private long _toOffset;
+        private bool _completed;
 
         public CurrentEventsByTagPublisher(
             string tag, 
@@ -21,16 +21,16 @@ namespace Akka.Persistence.Azure.Query.Publishers
             string writeJournalPluginId)
             : base(tag, fromOffset, maxBufferSize, writeJournalPluginId)
         {
-            _toOffset = toOffset;
+            ToOffset = toOffset;
         }
 
-        protected override long ToOffset => _toOffset;
+        protected override long ToOffset { get; }
 
         protected override void ReceiveIdleRequest()
         {
             Buffer.DeliverBuffer(TotalDemand);
 
-            if (Buffer.IsEmpty && CurrentOffset > ToOffset)
+            if (Buffer.IsEmpty && _completed)
                 OnCompleteThenStop();
             else
                 Self.Tell(EventsByTagPublisher.Continue.Instance);
@@ -41,14 +41,14 @@ namespace Akka.Persistence.Azure.Query.Publishers
             Replay();
         }
 
-        protected override void ReceiveRecoverySuccess(long highestSequenceNr)
+        protected override void ReceiveRecoverySuccess(bool completed)
         {
+            if (completed)
+                _completed = true;
+            
             Buffer.DeliverBuffer(TotalDemand);
 
-            if (highestSequenceNr < ToOffset)
-                _toOffset = highestSequenceNr;
-
-            if (Buffer.IsEmpty && CurrentOffset > ToOffset)
+            if (Buffer.IsEmpty && _completed)
                 OnCompleteThenStop();
             else
                 Self.Tell(EventsByTagPublisher.Continue.Instance);
