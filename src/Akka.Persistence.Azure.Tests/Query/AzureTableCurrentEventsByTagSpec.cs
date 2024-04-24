@@ -52,8 +52,8 @@ namespace Akka.Persistence.Azure.Tests.Query
             foreach (var str in allMessages)
             {
                 a.Tell(str);
-                ExpectMsg($"{str}-done");
             }
+            ReceiveN(2000);
 
             var probe = queries.CurrentEventsByTag("green", Offset.NoOffset())
                 .RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
