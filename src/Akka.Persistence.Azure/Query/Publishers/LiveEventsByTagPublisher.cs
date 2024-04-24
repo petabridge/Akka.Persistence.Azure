@@ -47,7 +47,7 @@ namespace Akka.Persistence.Azure.Query.Publishers
                 OnCompleteThenStop();
         }
 
-        protected override void ReceiveRecoverySuccess(long highestSequenceNr)
+        protected override void ReceiveRecoverySuccess(bool completed)
         {
             Buffer.DeliverBuffer(TotalDemand);
             if (Buffer.IsEmpty && CurrentOffset > ToOffset)

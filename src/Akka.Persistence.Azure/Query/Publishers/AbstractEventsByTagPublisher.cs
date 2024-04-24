@@ -28,7 +28,7 @@ namespace Akka.Persistence.Azure.Query.Publishers
             JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         protected string Tag { get; }
         protected long FromOffset { get; }
         protected abstract long ToOffset { get; }
@@ -39,7 +39,7 @@ namespace Akka.Persistence.Azure.Query.Publishers
 
         protected abstract void ReceiveInitialRequest();
         protected abstract void ReceiveIdleRequest();
-        protected abstract void ReceiveRecoverySuccess(long highestSequenceNr);
+        protected abstract void ReceiveRecoverySuccess(bool completed);
 
         protected override bool Receive(object message)
         {
@@ -106,9 +106,9 @@ namespace Akka.Persistence.Azure.Query.Publishers
                     Buffer.DeliverBuffer(TotalDemand);
                     return true;
                 
-                case RecoverySuccess success:
-                    Log.Debug("replay completed for tag [{0}], currOffset [{1}]", Tag, CurrentOffset);
-                    ReceiveRecoverySuccess(success.HighestSequenceNr);
+                case ReplayTaggedMessageSuccess success:
+                    Log.Debug("replay completed for tag [{0}], currOffset [{1}], completed: {2}", Tag, CurrentOffset, success.Completed);
+                    ReceiveRecoverySuccess(success.Completed);
                     return true;
                 
                 case ReplayMessagesFailure failure:

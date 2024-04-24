@@ -285,7 +285,7 @@ namespace Akka.Persistence.Azure.Journal
             {
                 case ReplayTaggedMessages replay:
                     ReplayTaggedMessagesAsync(replay, _shutdownCts.Token)
-                        .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
+                        .PipeTo(replay.ReplyTo, failure: e => new ReplayMessagesFailure(e));
                     break;
                 case SubscribePersistenceId subscribe:
                     AddPersistenceIdSubscriber(Sender, subscribe.PersistenceId);
@@ -716,29 +716,22 @@ namespace Akka.Persistence.Azure.Journal
         /// <param name="replay">TBD</param>
         /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
-        private async Task<long> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay, CancellationToken cancellationToken)
+        private async Task<ReplayTaggedMessageSuccess> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay, CancellationToken cancellationToken)
         {
             // In order to actually break at the limit we ask for we have to
             //    keep a separate counter and track it ourselves.
             var counter = 0;
-            var maxOrderingId = 0L;
+            var maxPerPage = Math.Min(replay.Max, 1000);
 
-            var pages = TaggedMessageQuery(replay, null, cancellationToken).AsPages().GetAsyncEnumerator(cancellationToken);
-            ValueTask<bool>? nextTask = pages.MoveNextAsync();
-            
-            while (nextTask != null)
+            await using var pages = TaggedMessageQuery(replay, (int)maxPerPage, cancellationToken).AsPages().GetAsyncEnumerator(cancellationToken);
+            while (await pages.MoveNextAsync())
             {
-                await nextTask.Value;
                 var currentPage = pages.Current;
-
-                if (currentPage.ContinuationToken != null)
-                    nextTask = pages.MoveNextAsync();
-                else
-                    nextTask = null;
-                
                 foreach (var entry in currentPage.Values.Select(entity => new EventTagEntry(entity)).OrderBy(x => x.UtcTicks))
                 {
                     var deserialized = _serialization.PersistentFromBytes(entry.Payload);
+                    if (entry.UtcTicks >= replay.ToOffset)
+                        return new ReplayTaggedMessageSuccess(true);
 
                     var persistent =
                         new Persistent(
@@ -761,16 +754,15 @@ namespace Akka.Persistence.Azure.Journal
                         counter++;
                     }
 
-                    maxOrderingId = Math.Max(maxOrderingId, entry.UtcTicks);
+                    if (counter >= replay.Max)
+                        return new ReplayTaggedMessageSuccess(false);
                 }
 
                 if (counter >= replay.Max)
-                {
-                    break;
-                }
+                    return new ReplayTaggedMessageSuccess(false);
             }
 
-            return maxOrderingId;
+            return new ReplayTaggedMessageSuccess(true);
         }
 
         private bool TryAddPersistenceId(string persistenceId)
