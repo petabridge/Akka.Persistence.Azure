@@ -1,9 +1,7 @@
-#### 1.5.19 April 24 2024 ####
+#### 1.5.26 July 3 2024 ####
 
-* [Update Akka.NET v1.5.19](https://github.com/akkadotnet/akka.net/releases/tag/1.5.19)
-* [Update Akka.Hosting v1.5.19](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.19)
-* [Fix tag query message replay logic](https://github.com/petabridge/Akka.Persistence.Azure/pull/387)
-* [Bump Azure.Identity to 1.11.0](https://github.com/petabridge/Akka.Persistence.Azure/pull/384)
+* [Update Akka.NET v1.5.26](https://github.com/akkadotnet/akka.net/releases/tag/1.5.26)
+* [Update Akka.Hosting v1.5.25](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.25)
 
 #### 1.5.17.1 March 4 2024 ####
 
