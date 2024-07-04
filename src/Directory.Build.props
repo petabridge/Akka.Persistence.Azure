@@ -7,8 +7,6 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
-    <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
-    <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetVersion>net6.0</NetVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
   </PropertyGroup>
