@@ -260,10 +260,10 @@ namespace Akka.Persistence.Azure.Snapshot
             cts.CancelAfter(_settings.RequestTimeout);
             using (cts)
             {
-                var response = await blobClient.DownloadAsync(cts.Token);
+                var response = await blobClient.GetPropertiesAsync(cancellationToken: cts.Token);
                 if (response.HasValue)
                 {
-                    var timestamp = new DateTime(long.Parse(response.Value.Details.Metadata[TimeStampMetaDataKey])); 
+                    var timestamp = new DateTime(long.Parse(response.Value.Metadata[TimeStampMetaDataKey])); 
                     if(timestamp <= metadata.Timestamp)
                         await blobClient.DeleteAsync(cancellationToken: cts.Token);
                 }
