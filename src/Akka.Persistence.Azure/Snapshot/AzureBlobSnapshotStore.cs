@@ -260,7 +260,21 @@ namespace Akka.Persistence.Azure.Snapshot
             cts.CancelAfter(_settings.RequestTimeout);
             using (cts)
             {
-                await blobClient.DeleteIfExistsAsync(cancellationToken: cts.Token);
+                if (metadata.Timestamp == DateTime.MinValue)
+                {
+                    // Short-circuit the timestamp query if the metadata does not require us to check for timestamp
+                    await blobClient.DeleteIfExistsAsync(cancellationToken: cts.Token);
+                }
+                else
+                {
+                    var response = await blobClient.GetPropertiesAsync(cancellationToken: cts.Token);
+                    if (response.HasValue)
+                    {
+                        var timestamp = new DateTime(long.Parse(response.Value.Metadata[TimeStampMetaDataKey])); 
+                        if(timestamp <= metadata.Timestamp)
+                            await blobClient.DeleteAsync(cancellationToken: cts.Token);
+                    }
+                }
             }
         }
 
