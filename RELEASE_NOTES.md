@@ -1,3 +1,11 @@
+#### 1.5.28 September 11th 2024 ####
+
+* [Update Akka.NET v1.5.28](https://github.com/akkadotnet/akka.net/releases/tag/1.5.28)
+* [Update Akka.Hosting v1.5.28](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.28)
+* [Bump Azure.Identity to 1.12.0](https://github.com/petabridge/Akka.Persistence.Azure/pull/413)
+* [Bump Azure.Data.Tables to 12.9.0](https://github.com/petabridge/Akka.Persistence.Azure/pull/417)
+* [Bump Azure.Storage.Blobs to 12.21.2](https://github.com/petabridge/Akka.Persistence.Azure/pull/421)
+
 #### 1.5.26 July 3 2024 ####
 
 * [Update Akka.NET v1.5.26](https://github.com/akkadotnet/akka.net/releases/tag/1.5.26)
