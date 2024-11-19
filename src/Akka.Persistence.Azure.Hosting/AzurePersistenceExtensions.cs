@@ -268,6 +268,9 @@ namespace Akka.Persistence.Azure.Hosting
             options.Apply(builder);
             builder.AddHocon(options.DefaultConfig, HoconAddMode.Append);
             
+            // Need to add persistence default settings to make sure that persistence message serializer is loaded properly
+            builder.AddHocon(Persistence.DefaultConfig(), HoconAddMode.Append);
+            
             return builder;
         }
         
@@ -486,6 +489,9 @@ namespace Akka.Persistence.Azure.Hosting
             builder.AddHocon(options.ToConfig(), HoconAddMode.Prepend);
             options.Apply(builder);
             builder.AddHocon(options.DefaultConfig, HoconAddMode.Append);
+            
+            // Need to add persistence default settings to make sure that persistence snapshot message serializer is loaded properly
+            builder.AddHocon(Persistence.DefaultConfig(), HoconAddMode.Append);
 
             return builder;
         }
