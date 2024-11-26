@@ -117,6 +117,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
         // recovery test, shard actor should wake up and recover
         _shardRegion.Tell(new ShardEnvelope(PId, "die"));
         await _probe.ExpectTerminatedAsync(persistActor);
+        await Task.Delay(20);
 
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
         var newPersistActor = _probe.ExpectMsg<IActorRef>();
@@ -129,6 +130,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
         // recovery test, shard actor should wake up and recover after state reset
         _shardRegion.Tell(new ShardEnvelope(PId, "reset"));
         await _probe.ExpectTerminatedAsync(newPersistActor);
+        await Task.Delay(20);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
         var resetActor = _probe.ExpectMsg<IActorRef>();
@@ -174,6 +176,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
             oldActor = persistActor;
             _shardRegion.Tell(new ShardEnvelope(PId, "reset"));
             await _probe.ExpectTerminatedAsync(persistActor);
+            await Task.Delay(20);
         }
     }
     
