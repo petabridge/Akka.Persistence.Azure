@@ -302,9 +302,10 @@ namespace Akka.Persistence.Azure.Snapshot
                     .Where(x => FilterBlobTimestamp(criteria, x));
 
                 var deleteTasks = new List<Task>();
+                var container = Container;
                 await foreach (var blob in filtered.WithCancellation(cts.Token))
                 {
-                    var blobClient = Container.GetBlobClient(blob.Name);
+                    var blobClient = container.GetBlobClient(blob.Name);
                     deleteTasks.Add(blobClient.DeleteIfExistsAsync(cancellationToken: cts.Token));
                 }
 
