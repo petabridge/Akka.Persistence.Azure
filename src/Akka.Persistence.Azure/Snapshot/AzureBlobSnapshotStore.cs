@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Snapshot;
+using Akka.Util;
 using Akka.Util.Internal;
 using Azure;
 using Azure.Storage.Blobs;
@@ -42,13 +43,12 @@ namespace Akka.Persistence.Azure.Snapshot
         private const string TimeStampMetaDataKey = "Timestamp";
         private const string SeqNoMetaDataKey = "SeqNo";
 
-        private readonly Lazy<BlobContainerClient> _containerClient;
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly SerializationHelper _serialization;
         private readonly AzureBlobSnapshotStoreSettings _settings;
-        private readonly BlobServiceClient _serviceClient;
 
         private readonly CancellationTokenSource _shutdownCts;
+        private AtomicBoolean _initialized = new();
 
         public AzureBlobSnapshotStore(Config config = null)
         {
@@ -70,32 +70,40 @@ namespace Akka.Persistence.Azure.Snapshot
                     _settings = setup.Value.Apply(_settings);
             }
             
-            if (_settings.Development)
+            _shutdownCts = new CancellationTokenSource();
+        }
+
+        public BlobContainerClient Container
+        {
+            get
             {
-                _serviceClient = new BlobServiceClient(connectionString: "UseDevelopmentStorage=true");
+                if (!_initialized.Value)
+                    throw new Exception("Blob storage has not been initialized yet. PreStart() has not been invoked");
+                return BlobServiceClient.GetBlobContainerClient(_settings.ContainerName);
             }
-            else
+        }
+
+        private BlobServiceClient BlobServiceClient
+        {
+            get
             {
-                _serviceClient = _settings.ServiceUri != null && _settings.AzureCredential != null
-                    ? _serviceClient = new BlobServiceClient(
+                if (_settings.Development)
+                    return new BlobServiceClient(connectionString: "UseDevelopmentStorage=true");
+                
+                return _settings.ServiceUri != null && _settings.AzureCredential != null
+                    ? new BlobServiceClient(
                         serviceUri: _settings.ServiceUri, 
                         credential: _settings.AzureCredential,
                         options: _settings.BlobClientOptions)
-                    : _serviceClient = new BlobServiceClient(connectionString: _settings.ConnectionString);
+                    : new BlobServiceClient(connectionString: _settings.ConnectionString);
             }
-
-            _shutdownCts = new CancellationTokenSource();
-            _containerClient = new Lazy<BlobContainerClient>(() => 
-                InitCloudStorage(5, _shutdownCts.Token).GetAwaiter().GetResult());
         }
 
-        public BlobContainerClient Container => _containerClient.Value;
-
-        private async Task<BlobContainerClient> InitCloudStorage(int remainingTries, CancellationToken cancellationToken)
+        private async Task InitCloudStorage(int remainingTries, CancellationToken cancellationToken)
         {
             try
             {
-                var blobClient = _serviceClient.GetBlobContainerClient(_settings.ContainerName);
+                var blobClient = BlobServiceClient.GetBlobContainerClient(_settings.ContainerName);
 
                 var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(_settings.ConnectTimeout);
@@ -115,7 +123,8 @@ namespace Akka.Persistence.Azure.Snapshot
                         
                         _log.Info("Successfully connected to existing container {0}", _settings.ContainerName);
                         
-                        return blobClient;
+                        _initialized.CompareAndSet(false, true);
+                        return;
                     }
                 
                     if (await blobClient.ExistsAsync(cts.Token))
@@ -136,7 +145,7 @@ namespace Akka.Persistence.Azure.Snapshot
                         }
                     }
 
-                    return blobClient;
+                    _initialized.CompareAndSet(false, true);
                 }
             }
             catch (Exception ex)
@@ -148,7 +157,7 @@ namespace Akka.Persistence.Azure.Snapshot
                 if (cancellationToken.IsCancellationRequested)
                     throw;
                 
-                return await InitCloudStorage(remainingTries - 1, cancellationToken);
+                await InitCloudStorage(remainingTries - 1, cancellationToken);
             }
         }
 
@@ -156,8 +165,7 @@ namespace Akka.Persistence.Azure.Snapshot
         {
             _log.Debug("Initializing Azure Container Storage...");
 
-            // forces loading of the value
-            var name = Container.Name;
+            InitCloudStorage(5, _shutdownCts.Token).GetAwaiter().GetResult();
 
             _log.Debug("Successfully started Azure Container Storage!");
 
@@ -294,9 +302,10 @@ namespace Akka.Persistence.Azure.Snapshot
                     .Where(x => FilterBlobTimestamp(criteria, x));
 
                 var deleteTasks = new List<Task>();
+                var container = Container;
                 await foreach (var blob in filtered.WithCancellation(cts.Token))
                 {
-                    var blobClient = Container.GetBlobClient(blob.Name);
+                    var blobClient = container.GetBlobClient(blob.Name);
                     deleteTasks.Add(blobClient.DeleteIfExistsAsync(cancellationToken: cts.Token));
                 }
 
