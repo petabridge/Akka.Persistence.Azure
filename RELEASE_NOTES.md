@@ -1,3 +1,13 @@
+#### 1.5.31 December 3rd 2024 ####
+
+* [Update Akka.NET v1.5.31](https://github.com/akkadotnet/akka.net/releases/tag/1.5.31)
+* [Update Akka.Hosting v1.5.31](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.31.1)
+* [Bump Azure.Identity from 1.12.0 to 1.13.1](https://github.com/petabridge/Akka.Persistence.Azure/pull/443)
+* [Bump Azure.Storage.Blobs from 12.21.2 to 12.23.0](https://github.com/petabridge/Akka.Persistence.Azure/pull/448)
+* [Bump Azure.Data.Tables from 12.9.0 to 12.9.1](https://github.com/petabridge/Akka.Persistence.Azure/pull/430)
+* [Fix missing Persistence.DefaultConfig](https://github.com/petabridge/Akka.Persistence.Azure/pull/450)
+* [Fix possible credential caching issue](https://github.com/petabridge/Akka.Persistence.Azure/pull/453)
+
 #### 1.5.28 September 11th 2024 ####
 
 * [Update Akka.NET v1.5.28](https://github.com/akkadotnet/akka.net/releases/tag/1.5.28)
