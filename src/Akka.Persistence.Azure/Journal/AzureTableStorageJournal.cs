@@ -18,7 +18,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
-using Akka.Util;
 using Azure;
 using Azure.Data.Tables;
 using Debug = System.Diagnostics.Debug;
@@ -52,9 +51,10 @@ namespace Akka.Persistence.Azure.Journal
         private readonly Dictionary<string, ISet<IActorRef>> _persistenceIdSubscribers = new Dictionary<string, ISet<IActorRef>>();
         private readonly SerializationHelper _serialization;
         private readonly AzureTableStorageJournalSettings _settings;
+        private readonly TableServiceClient _tableServiceClient;
+        private TableClient _tableStorage_DoNotUseDirectly;
         private readonly Dictionary<string, ISet<IActorRef>> _tagSubscribers = new Dictionary<string, ISet<IActorRef>>();
         private readonly CancellationTokenSource _shutdownCts;
-        private AtomicBoolean _initialized = new();
 
         public AzureTableStorageJournal(Config config = null)
         {
@@ -77,6 +77,21 @@ namespace Akka.Persistence.Azure.Journal
             
             _serialization = new SerializationHelper(Context.System);
 
+            if (_settings.Development)
+            {
+                _tableServiceClient = new TableServiceClient(connectionString: "UseDevelopmentStorage=true");
+            }
+            else
+            {
+                // Use TokenCredential if both ServiceUri and TokenCredential are populated in the settings 
+                _tableServiceClient = _settings.ServiceUri != null && _settings.AzureCredential != null
+                    ? new TableServiceClient(
+                        endpoint: _settings.ServiceUri,
+                        tokenCredential: _settings.AzureCredential,
+                        options: _settings.TableClientOptions)
+                    : new TableServiceClient(connectionString: _settings.ConnectionString);
+            }
+
             _shutdownCts = new CancellationTokenSource();
         }
 
@@ -84,9 +99,9 @@ namespace Akka.Persistence.Azure.Journal
         {
             get
             {
-                if (!_initialized.Value)
+                if (_tableStorage_DoNotUseDirectly == null)
                     throw new Exception("Table storage has not been initialized yet. PreStart() has not been invoked");
-                return TableServiceClient.GetTableClient(_settings.TableName);
+                return _tableStorage_DoNotUseDirectly;
             }
         }
 
@@ -96,23 +111,6 @@ namespace Akka.Persistence.Azure.Journal
 
         protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
 
-        private TableServiceClient TableServiceClient
-        {
-            get
-            {
-                if (_settings.Development)
-                    return new TableServiceClient(connectionString: "UseDevelopmentStorage=true");
-                
-                // Use TokenCredential if both ServiceUri and TokenCredential are populated in the settings 
-                return _settings.ServiceUri != null && _settings.AzureCredential != null
-                    ? new TableServiceClient(
-                        endpoint: _settings.ServiceUri,
-                        tokenCredential: _settings.AzureCredential,
-                        options: _settings.TableClientOptions)
-                    : new TableServiceClient(connectionString: _settings.ConnectionString);
-            }
-        }
-        
         public override async Task<long> ReadHighestSequenceNrAsync(
             string persistenceId,
             long fromSequenceNr)
@@ -265,7 +263,8 @@ namespace Akka.Persistence.Azure.Journal
         {
             _log.Debug("Initializing Azure Table Storage...");
 
-            InitCloudStorage(5, _shutdownCts.Token).GetAwaiter().GetResult();
+            InitCloudStorage(5, _shutdownCts.Token)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
 
             _log.Debug("Successfully started Azure Table Storage!");
 
@@ -621,7 +620,7 @@ namespace Akka.Persistence.Azure.Journal
         {
             try
             {
-                var tableClient = TableServiceClient.GetTableClient(_settings.TableName);
+                var tableClient = _tableServiceClient.GetTableClient(_settings.TableName);
                 
                 var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(_settings.ConnectTimeout);
@@ -640,7 +639,8 @@ namespace Akka.Persistence.Azure.Journal
                         }
                         
                         _log.Info("Successfully connected to existing table", _settings.TableName);
-                        _initialized.CompareAndSet(false, true);
+
+                        _tableStorage_DoNotUseDirectly = tableClient;
                         return;
                     }
                     
@@ -648,8 +648,7 @@ namespace Akka.Persistence.Azure.Journal
                         _log.Info("Created Azure Cloud Table", _settings.TableName);
                     else
                         _log.Info("Successfully connected to existing table", _settings.TableName);
-
-                    _initialized.CompareAndSet(false, true);
+                    _tableStorage_DoNotUseDirectly = tableClient;
                 }
             }
             catch (Exception ex)
@@ -668,7 +667,7 @@ namespace Akka.Persistence.Azure.Journal
 
         private async Task<bool> IsTableExist(string name, CancellationToken cancellationToken)
         {
-            var tables = await TableServiceClient.QueryAsync(t => t.Name == name, cancellationToken: cancellationToken)
+            var tables = await _tableServiceClient.QueryAsync(t => t.Name == name, cancellationToken: cancellationToken)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
             return tables.Count > 0;
