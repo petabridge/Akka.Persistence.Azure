@@ -12,7 +12,6 @@ using Akka.Persistence.Azure.Snapshot;
 using Akka.Persistence.Hosting;
 using Azure.Core;
 using Azure.Data.Tables;
-using Azure.Identity;
 using Azure.Storage.Blobs;
 
 namespace Akka.Persistence.Azure.Hosting
@@ -25,6 +24,58 @@ namespace Akka.Persistence.Azure.Hosting
         public const string DefaultTableName = "AkkaPersistenceDefaultTable";
         public const string DefaultBlobContainerName = "akka-persistence-default-container";
         
+        /// <summary>
+        ///     Add an AzureTableStorage journal Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="builder">
+        ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
+        /// </param>
+        /// <param name="tableServiceClientFactory">
+        ///     The Azure <see cref="TableServiceClient"/> to be used by the journal.
+        /// </param>
+        /// <param name="autoInitialize">
+        ///     Automatically create the Table Storage table and Storage blob if no existing table is found
+        /// </param>
+        /// <param name="tableName">
+        ///     The Azure table we'll be connecting to.
+        /// </param>
+        /// <param name="eventAdapterConfigurator">
+        ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
+        ///     to set up event adapters.
+        /// </param>
+        /// <param name="isDefault">
+        ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
+        /// </param>
+        /// <param name="identifier">
+        ///     The journal identifier, defaults to "azure-table"
+        /// </param>
+        /// <returns>
+        ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
+        /// </returns>        
+        public static AkkaConfigurationBuilder WithAzureTableJournal(this AkkaConfigurationBuilder builder,
+            Func<TableServiceClient> tableServiceClientFactory,
+            bool autoInitialize = true,
+            string tableName = DefaultTableName,
+            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null,
+            bool isDefault = true,
+            string identifier = "azure-table")
+        {
+            if (tableServiceClientFactory is null)
+                throw new ArgumentNullException(nameof(tableServiceClientFactory));
+            
+            var options = new AzureTableStorageJournalOptions(isDefault, identifier)
+            {
+                TableServiceClientFactory = tableServiceClientFactory,
+                AutoInitialize = autoInitialize,
+                TableName = tableName
+            };
+            
+            if (eventAdapterConfigurator != null)
+                eventAdapterConfigurator(options.Adapters);
+            
+            return WithAzureTableJournal(builder, options);
+        }
+
         /// <summary>
         ///     Add an AzureTableStorage journal Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
         /// </summary>
@@ -274,6 +325,51 @@ namespace Akka.Persistence.Azure.Hosting
             return builder;
         }
         
+        /// <summary>
+        ///     Add an AzureBlobStorage snapshot-store Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="builder">
+        ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
+        /// </param>
+        /// <param name="blobServiceClientFactory">
+        ///     The Azure <see cref="BlobServiceClient"/> to be used by the snapshot store.
+        /// </param>
+        /// <param name="autoInitialize">
+        ///     Automatically create the Table Storage table and Storage blob if no existing table is found
+        /// </param>
+        /// <param name="containerName">
+        ///     The table of the container we'll be using to serialize these blobs.
+        /// </param>
+        /// <param name="isDefault">
+        ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
+        /// </param>
+        /// <param name="identifier">
+        ///     The journal identifier, defaults to "azure-blob-store"
+        /// </param>
+        /// <returns>
+        ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
+        /// </returns>
+        public static AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(
+            this AkkaConfigurationBuilder builder,
+            Func<BlobServiceClient> blobServiceClientFactory,
+            bool autoInitialize = true,
+            string containerName = DefaultBlobContainerName,
+            bool isDefault = true,
+            string identifier = "azure-blob-store")
+        {
+            if (blobServiceClientFactory is null)
+                throw new ArgumentNullException(nameof(blobServiceClientFactory));
+            
+            var options = new AzureBlobSnapshotOptions(isDefault, identifier)
+            {
+                BlobServiceClientFactory = blobServiceClientFactory,
+                AutoInitialize = autoInitialize,
+                ContainerName = containerName
+            };
+            
+            return WithAzureBlobsSnapshotStore(builder, options);
+        }
+
         /// <summary>
         ///     Add an AzureBlobStorage snapshot-store Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
         /// </summary>
@@ -592,6 +688,50 @@ namespace Akka.Persistence.Azure.Hosting
         {
             builder.WithAzureTableJournal(tableStorageServiceUri, defaultAzureCredential, tableClientOptions, autoInitialize, tableName, eventAdapterConfigurator);
             builder.WithAzureBlobsSnapshotStore(blobStorageServiceUri, defaultAzureCredential, blobClientOptions, autoInitialize, containerName);
+
+            return builder;
+        }
+
+        /// <summary>
+        ///     Adds both AzureTableStorage journal and AzureBlobStorage snapshot-store as the default Akka.Persistence
+        ///     implementations for a given <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="builder">
+        ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
+        /// </param>
+        /// <param name="tableServiceClientFactory">
+        ///     The Azure <see cref="TableServiceClient"/> to be used by the journal.
+        /// </param>
+        /// <param name="blobServiceClientFactory">
+        ///     The Azure <see cref="BlobServiceClient"/> to be used by the snapshot store.
+        /// </param>
+        /// <param name="autoInitialize">
+        ///     Automatically create the Table Storage table and Storage blob if no existing table is found
+        /// </param>
+        /// <param name="containerName">
+        ///     The table of the container we'll be using to serialize these blobs.
+        /// </param>
+        /// <param name="tableName">
+        ///     The Azure table we'll be connecting to.
+        /// </param>
+        /// <param name="eventAdapterConfigurator">
+        ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
+        ///     to set up event adapters.
+        /// </param>
+        /// <returns>
+        ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
+        /// </returns>
+        public static AkkaConfigurationBuilder WithAzurePersistence(
+            this AkkaConfigurationBuilder builder,
+            Func<TableServiceClient> tableServiceClientFactory,
+            Func<BlobServiceClient> blobServiceClientFactory,
+            bool autoInitialize = true,
+            string containerName = DefaultBlobContainerName,
+            string tableName = DefaultTableName,
+            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null)
+        {
+            builder.WithAzureTableJournal(tableServiceClientFactory, autoInitialize, tableName, eventAdapterConfigurator);
+            builder.WithAzureBlobsSnapshotStore(blobServiceClientFactory, autoInitialize, containerName);
 
             return builder;
         }

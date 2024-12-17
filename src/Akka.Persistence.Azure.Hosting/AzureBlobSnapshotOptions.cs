@@ -93,6 +93,12 @@ namespace Akka.Persistence.Azure.Hosting
         /// </summary>
         public BlobClientOptions? BlobClientOptions { get; set; }
 
+        /// <summary>
+        ///     The Azure <see cref="BlobServiceClientFactory"/> to be used by the journal.
+        ///     When set, this will override any connection string or token credential in this setup.
+        /// </summary>
+        public Func<BlobServiceClient>? BlobServiceClientFactory { get; set; }
+        
         protected override StringBuilder Build(StringBuilder sb)
         {
             if (ConnectionString is { })
@@ -139,6 +145,7 @@ namespace Akka.Persistence.Azure.Hosting
             setup.ServiceUri = ServiceUri;
             setup.AzureCredential = AzureCredential;
             setup.BlobClientOptions = BlobClientOptions;
+            setup.BlobServiceClientFactory = BlobServiceClientFactory;
         }
     }
 }
