@@ -11,21 +11,22 @@ using Akka.Configuration;
 using Akka.Persistence.Azure.Util;
 using Azure.Core;
 using Azure.Data.Tables;
-using Azure.Identity;
 
+#nullable enable
 namespace Akka.Persistence.Azure.Journal
 {
     /// <summary>
-    ///     Defines all of the configuration settings used by the `akka.persistence.journal.azure-table` plugin.
+    ///     Defines all the configuration settings used by the `akka.persistence.journal.azure-table` plugin.
     /// </summary>
     public sealed class AzureTableStorageJournalSettings
     {
         public const string JournalConfigPath = "akka.persistence.journal.azure-table";
         private static readonly string[] ReservedTableNames = {"tables"};
         
-        [Obsolete]
+        // ReSharper disable IntroduceOptionalParameters.Global
+        [Obsolete(message:"Use constructor with serviceUri, defaultAzureCredential, tableClientOptions, and tableServiceClientFactory argument instead.")]
         public AzureTableStorageJournalSettings(
-            string connectionString, 
+            string? connectionString, 
             string tableName, 
             TimeSpan connectTimeout,
             TimeSpan requestTimeout, 
@@ -42,20 +43,49 @@ namespace Akka.Persistence.Azure.Journal
                 autoInitialize: autoInitialize,
                 serviceUri: null,
                 defaultAzureCredential: null,
-                tableClientOptions: null)
+                tableClientOptions: null, 
+                tableServiceClientFactory: null)
         { }
             
+        [Obsolete(message:"Use constructor with tableServiceClientFactory argument instead.")]
         public AzureTableStorageJournalSettings(
-            string connectionString, 
+            string? connectionString,
+            string tableName,
+            TimeSpan connectTimeout,
+            TimeSpan requestTimeout,
+            bool verboseLogging,
+            bool development,
+            bool autoInitialize,
+            Uri? serviceUri,
+            TokenCredential? defaultAzureCredential,
+            TableClientOptions? tableClientOptions)
+            : this(
+                connectionString: connectionString,
+                tableName: tableName,
+                connectTimeout: connectTimeout,
+                requestTimeout: requestTimeout,
+                verboseLogging: verboseLogging,
+                development: development,
+                autoInitialize: autoInitialize,
+                serviceUri: serviceUri,
+                defaultAzureCredential: defaultAzureCredential,
+                tableClientOptions: tableClientOptions, 
+                tableServiceClientFactory: null)
+        { }
+        // ReSharper restore IntroduceOptionalParameters.Global
+        
+        public AzureTableStorageJournalSettings(
+            string? connectionString, 
             string tableName, 
             TimeSpan connectTimeout,
             TimeSpan requestTimeout, 
             bool verboseLogging,
             bool development, 
             bool autoInitialize,
-            Uri serviceUri,
-            TokenCredential defaultAzureCredential,
-            TableClientOptions tableClientOptions)
+            Uri? serviceUri,
+            TokenCredential? defaultAzureCredential,
+            TableClientOptions? tableClientOptions,
+            Func<TableServiceClient>? tableServiceClientFactory)
         {
             if(string.IsNullOrWhiteSpace(tableName))
                 throw new ConfigurationException("[AzureTableStorageJournal] Table name is null or empty.");
@@ -73,17 +103,17 @@ namespace Akka.Persistence.Azure.Journal
             ConnectTimeout = connectTimeout;
             RequestTimeout = requestTimeout;
             VerboseLogging = verboseLogging;
-            Development = development;
             AutoInitialize = autoInitialize;
             ServiceUri = serviceUri;
             AzureCredential = defaultAzureCredential;
             TableClientOptions = tableClientOptions;
+            TableServiceClientFactory = tableServiceClientFactory;
         }
 
         /// <summary>
         ///     The connection string for connecting to Windows Azure table storage.
         /// </summary>
-        public string ConnectionString { get; }
+        public string? ConnectionString { get; }
 
         /// <summary>
         ///     The table of the table we'll be connecting to.
@@ -110,7 +140,8 @@ namespace Akka.Persistence.Azure.Journal
         ///     <see cref="ConnectionString"/> will be ignored, replaced with "UseDevelopmentStorage=true" for local
         ///     connection to Azurite.
         /// </summary>
-        public bool Development { get; }
+        [Obsolete(message: "The Development property is not being applied anymore. Please set ConnectionString to 'UseDevelopmentStorage=true' instead.")]
+        public bool Development => false;
         
         /// <summary>
         ///     Automatically create the Table Storage table if no existing table is found
@@ -121,24 +152,30 @@ namespace Akka.Persistence.Azure.Journal
         ///     A <see cref="Uri"/> referencing the Azure Table Storage service.
         ///     This is likely to be similar to "https://{account_name}.table.core.windows.net".
         /// </summary>
-        public Uri ServiceUri { get; }
+        public Uri? ServiceUri { get; }
 
         /// <summary>
         ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
         [Obsolete(message: "Use AzureCredential instead")]
-        public TokenCredential DefaultAzureCredential => AzureCredential;
+        public TokenCredential? DefaultAzureCredential => AzureCredential;
 
         /// <summary>
         ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
-        public TokenCredential AzureCredential { get; }
+        public TokenCredential? AzureCredential { get; }
 
         /// <summary>
         ///     Optional client options that define the transport pipeline policies for authentication,
         ///     retries, etc., that are applied to every request.
         /// </summary>
-        public TableClientOptions TableClientOptions { get; }
+        public TableClientOptions? TableClientOptions { get; }
+        
+        /// <summary>
+        ///     A factory function that returns an instance of Azure <see cref="TableServiceClient"/> to be used by the journal.
+        ///     When set, this will override any connection string or token credential in this setup.
+        /// </summary>
+        public Func<TableServiceClient>? TableServiceClientFactory { get; }
 
         public AzureTableStorageJournalSettings WithConnectionString(string connectionString)
             => Copy(connectionString: connectionString);
@@ -150,41 +187,44 @@ namespace Akka.Persistence.Azure.Journal
             => Copy(requestTimeout: requestTimeout);
         public AzureTableStorageJournalSettings WithVerboseLogging(bool verboseLogging)
             => Copy(verboseLogging: verboseLogging);
-        public AzureTableStorageJournalSettings WithDevelopment(bool development)
-            => Copy(development: development);
+        [Obsolete(message: "The Development property is not being applied anymore. Please set ConnectionString to 'UseDevelopmentStorage=true' instead.")]
+        public AzureTableStorageJournalSettings WithDevelopment(bool development) => this;
         public AzureTableStorageJournalSettings WithAutoInitialize(bool autoInitialize)
             => Copy(autoInitialize: autoInitialize);
         public AzureTableStorageJournalSettings WithAzureCredential(
             Uri serviceUri,
             TokenCredential defaultAzureCredential,
-            TableClientOptions tableClientOptions = null)
+            TableClientOptions? tableClientOptions = null)
             => Copy(
                 serviceUri: serviceUri,
                 azureCredential: defaultAzureCredential,
                 tableClientOptions: tableClientOptions);
+        public AzureTableStorageJournalSettings WithTableServiceClientFactory(Func<TableServiceClient> tableServiceClientFactory)
+            => Copy(tableServiceClientFactory: tableServiceClientFactory);
         
         private AzureTableStorageJournalSettings Copy(
-            string connectionString = null,
-            string tableName = null,
+            string? connectionString = null,
+            string? tableName = null,
             TimeSpan? connectTimeout = null,
             TimeSpan? requestTimeout = null,
             bool? verboseLogging = null,
-            bool? development = null,
             bool? autoInitialize = null,
-            Uri serviceUri = null,
-            TokenCredential azureCredential = null,
-            TableClientOptions tableClientOptions = null)
+            Uri? serviceUri = null,
+            TokenCredential? azureCredential = null,
+            TableClientOptions? tableClientOptions = null,
+            Func<TableServiceClient>? tableServiceClientFactory = null)
             => new AzureTableStorageJournalSettings(
                 connectionString: connectionString ?? ConnectionString,
                 tableName: tableName ?? TableName,
                 connectTimeout: connectTimeout ?? ConnectTimeout,
                 requestTimeout: requestTimeout ?? RequestTimeout,
                 verboseLogging: verboseLogging ?? VerboseLogging,
-                development: development ?? Development,
+                development: false,
                 autoInitialize: autoInitialize ?? AutoInitialize,
                 serviceUri: serviceUri ?? ServiceUri,
                 defaultAzureCredential: azureCredential ?? AzureCredential,
-                tableClientOptions: tableClientOptions ?? TableClientOptions);
+                tableClientOptions: tableClientOptions ?? TableClientOptions,
+                tableServiceClientFactory: tableServiceClientFactory);
 
         /// <summary>
         ///     Creates an <see cref="AzureTableStorageJournalSettings" /> instance using the
@@ -230,7 +270,8 @@ namespace Akka.Persistence.Azure.Journal
                 autoInitialize: autoInitialize,
                 serviceUri: null,
                 defaultAzureCredential: null,
-                tableClientOptions: null);
+                tableClientOptions: null,
+                tableServiceClientFactory: null);
         }
     }
 }
