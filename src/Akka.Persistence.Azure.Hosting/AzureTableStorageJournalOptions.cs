@@ -83,6 +83,12 @@ namespace Akka.Persistence.Azure.Hosting
         /// </summary>
         public TableClientOptions? TableClientOptions { get; set; }
 
+        /// <summary>
+        ///     The Azure <see cref="TableServiceClientFactory"/> to be used by the journal.
+        ///     When set, this will override any connection string or token credential in this setup.
+        /// </summary>
+        public Func<TableServiceClient>? TableServiceClientFactory { get; set; }
+        
         protected override StringBuilder Build(StringBuilder sb)
         {
             if(ConnectionString is { })
@@ -130,6 +136,7 @@ namespace Akka.Persistence.Azure.Hosting
             setup.ServiceUri = ServiceUri;
             setup.AzureCredential = AzureCredential;
             setup.TableClientOptions = TableClientOptions;
+            setup.TableServiceClientFactory = TableServiceClientFactory;
         }        
     }
 }

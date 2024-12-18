@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using Akka.Actor.Setup;
 using Azure.Core;
 using Azure.Data.Tables;
-using Azure.Identity;
 
 #nullable enable
 namespace Akka.Persistence.Azure.Journal
@@ -28,6 +27,45 @@ namespace Akka.Persistence.Azure.Journal
     
     public sealed class AzureTableStorageJournalSetup : Setup
     {
+        /// <summary>
+        ///     Create a new <see cref="AzureTableStorageJournalSetup"/>
+        /// </summary>
+        /// <param name="serviceUri">
+        ///     A <see cref="Uri"/> referencing the blob service.
+        ///     This is likely to be similar to "https://{account_name}.blob.core.windows.net".
+        /// </param>
+        /// <param name="defaultAzureCredential">
+        ///     The <see cref="TokenCredential"/> used to sign requests.
+        /// </param>
+        /// <param name="tableClientOptions">
+        ///     Optional client options that define the transport pipeline policies for authentication,
+        ///     retries, etc., that are applied to every request.
+        /// </param>
+        /// <returns>A new <see cref="AzureTableStorageJournalSetup"/> instance</returns>
+        public static AzureTableStorageJournalSetup Create(
+            Uri serviceUri, 
+            TokenCredential defaultAzureCredential,
+            TableClientOptions? tableClientOptions = null)
+            => new ()
+            {
+                ServiceUri = serviceUri,
+                AzureCredential = defaultAzureCredential,
+                TableClientOptions = tableClientOptions
+            };
+
+        /// <summary>
+        ///     Create a new <see cref="AzureTableStorageJournalSetup"/>
+        /// </summary>
+        /// <param name="tableServiceClientFactory">
+        ///     A <see cref="TableServiceClientFactory"/> to be used as the backing journal storage.
+        /// </param>
+        /// <returns>A new <see cref="AzureTableStorageJournalSetup"/> instance</returns>
+        public static AzureTableStorageJournalSetup Create(Func<TableServiceClient> tableServiceClientFactory)
+            => new ()
+            {
+                TableServiceClientFactory = tableServiceClientFactory,
+            };
+
         /// <summary>
         ///     The connection string for connecting to Windows Azure table storage.
         /// </summary>
@@ -58,6 +96,7 @@ namespace Akka.Persistence.Azure.Journal
         ///     <see cref="ConnectionString"/> will be ignored, replaced with "UseDevelopmentStorage=true" for local
         ///     connection to Azurite.
         /// </summary>
+        [Obsolete(message: "The Development property is not being applied anymore. Please set ConnectionString to 'UseDevelopmentStorage=true' instead.")]
         public bool? Development { get; set; }
         
         /// <summary>
@@ -92,6 +131,12 @@ namespace Akka.Persistence.Azure.Journal
         /// </summary>
         public TableClientOptions? TableClientOptions { get; set; }
 
+        /// <summary>
+        ///     The Azure <see cref="TableServiceClientFactory"/> to be used by the journal.
+        ///     When set, this will override any connection string or token credential in this setup.
+        /// </summary>
+        public Func<TableServiceClient>? TableServiceClientFactory { get; set; }
+        
         internal AzureTableStorageJournalSettings Apply(AzureTableStorageJournalSettings settings)
         {
             if (ConnectionString != null)
@@ -104,12 +149,12 @@ namespace Akka.Persistence.Azure.Journal
                 settings = settings.WithRequestTimeout(RequestTimeout.Value);
             if (VerboseLogging != null)
                 settings = settings.WithVerboseLogging(VerboseLogging.Value);
-            if (Development != null)
-                settings = settings.WithDevelopment(Development.Value);
             if (AutoInitialize != null)
                 settings = settings.WithAutoInitialize(AutoInitialize.Value);
             if (ServiceUri != null && AzureCredential != null)
                 settings = settings.WithAzureCredential(ServiceUri, AzureCredential, TableClientOptions);
+            if(TableServiceClientFactory != null)
+                settings = settings.WithTableServiceClientFactory(TableServiceClientFactory);
 
             return settings;
         }

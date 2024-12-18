@@ -9,10 +9,10 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Util;
 using Azure.Core;
-using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 
+#nullable enable
 namespace Akka.Persistence.Azure.Snapshot
 {
     /// <summary>
@@ -23,21 +23,34 @@ namespace Akka.Persistence.Azure.Snapshot
     {
         public const string SnapshotStoreConfigPath = "akka.persistence.snapshot-store.azure-blob-store";
         
-        [Obsolete]
+        // ReSharper disable IntroduceOptionalParameters.Global
+        [Obsolete(message:"Use constructor with containerPublicAccessType, serviceUri, defaultAzureCredential, tableClientOptions, and blobServiceClient argument instead.")]
         public AzureBlobSnapshotStoreSettings(
-            string connectionString, 
+            string? connectionString, 
             string containerName,
             TimeSpan connectTimeout, 
             TimeSpan requestTimeout, 
             bool verboseLogging, 
             bool development,
             bool autoInitialize)
-            : this(connectionString, containerName, connectTimeout, requestTimeout, verboseLogging, development, autoInitialize, PublicAccessType.BlobContainer)
+            : this(
+                connectionString: connectionString,
+                containerName: containerName,
+                connectTimeout: connectTimeout,
+                requestTimeout: requestTimeout,
+                verboseLogging: verboseLogging,
+                development: development,
+                autoInitialize: autoInitialize,
+                containerPublicAccessType: PublicAccessType.BlobContainer,
+                serviceUri: null,
+                defaultAzureCredential: null,
+                blobClientOption: null, 
+                blobServiceClientFactory: null)
         { }
 
-        [Obsolete]
+        [Obsolete(message:"Use constructor with serviceUri, defaultAzureCredential, tableClientOptions, and blobServiceClient argument instead.")]
         public AzureBlobSnapshotStoreSettings(
-            string connectionString, 
+            string? connectionString, 
             string containerName,
             TimeSpan connectTimeout, 
             TimeSpan requestTimeout, 
@@ -56,9 +69,11 @@ namespace Akka.Persistence.Azure.Snapshot
                 containerPublicAccessType: containerPublicAccessType,
                 serviceUri: null,
                 defaultAzureCredential: null,
-                blobClientOption: null)
+                blobClientOption: null, 
+                blobServiceClientFactory: null)
         { }
 
+        [Obsolete(message:"Use constructor with blobServiceClient argument instead.")]
         public AzureBlobSnapshotStoreSettings(
             string connectionString, 
             string containerName,
@@ -68,9 +83,38 @@ namespace Akka.Persistence.Azure.Snapshot
             bool development, 
             bool autoInitialize, 
             PublicAccessType containerPublicAccessType,
-            Uri serviceUri,
-            TokenCredential defaultAzureCredential,
-            BlobClientOptions blobClientOption)
+            Uri? serviceUri,
+            TokenCredential? defaultAzureCredential,
+            BlobClientOptions? blobClientOption)
+            : this(
+                connectionString: connectionString,
+                containerName: containerName,
+                connectTimeout: connectTimeout,
+                requestTimeout: requestTimeout,
+                verboseLogging: verboseLogging,
+                development: development,
+                autoInitialize: autoInitialize,
+                containerPublicAccessType: containerPublicAccessType,
+                serviceUri: serviceUri,
+                defaultAzureCredential: defaultAzureCredential,
+                blobClientOption: blobClientOption,
+                blobServiceClientFactory: null)
+        { }
+        // ReSharper restore IntroduceOptionalParameters.Global
+            
+        public AzureBlobSnapshotStoreSettings(
+            string? connectionString, 
+            string containerName,
+            TimeSpan connectTimeout, 
+            TimeSpan requestTimeout, 
+            bool verboseLogging, 
+            bool development, 
+            bool autoInitialize, 
+            PublicAccessType containerPublicAccessType,
+            Uri? serviceUri,
+            TokenCredential? defaultAzureCredential,
+            BlobClientOptions? blobClientOption,
+            Func<BlobServiceClient>? blobServiceClientFactory)
         {
             if (string.IsNullOrWhiteSpace(containerName))
                 throw new ConfigurationException("[AzureBlobSnapshotStore] Container name is null or empty.");
@@ -81,18 +125,18 @@ namespace Akka.Persistence.Azure.Snapshot
             RequestTimeout = requestTimeout;
             ConnectTimeout = connectTimeout;
             VerboseLogging = verboseLogging;
-            Development = development;
             AutoInitialize = autoInitialize;
             ContainerPublicAccessType = containerPublicAccessType;
             ServiceUri = serviceUri;
             AzureCredential = defaultAzureCredential;
             BlobClientOptions = blobClientOption;
+            BlobServiceClientFactory = blobServiceClientFactory;
         }
 
         /// <summary>
         ///     The connection string for connecting to Windows Azure blob storage account.
         /// </summary>
-        public string ConnectionString { get; }
+        public string? ConnectionString { get; }
 
         /// <summary>
         ///     The table of the container we'll be using to serialize these blobs.
@@ -119,7 +163,8 @@ namespace Akka.Persistence.Azure.Snapshot
         ///     <see cref="ConnectionString"/> will be ignored, replaced with "UseDevelopmentStorage=true" for local
         ///     connection to Azurite.
         /// </summary>
-        public bool Development { get; }
+        [Obsolete(message: "The Development property is not being applied anymore. Please set ConnectionString to 'UseDevelopmentStorage=true' instead.")]
+        public bool Development => false;
 
         /// <summary>
         ///     Automatically create the Blog Storage container if no existing Blob container is found
@@ -135,25 +180,30 @@ namespace Akka.Persistence.Azure.Snapshot
         ///     A <see cref="Uri"/> referencing the blob service.
         ///     This is likely to be similar to "https://{account_name}.blob.core.windows.net".
         /// </summary>
-        public Uri ServiceUri { get; }
+        public Uri? ServiceUri { get; }
 
         /// <summary>
         ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
         [Obsolete(message:"Use AzureCredential instead")]
-        public TokenCredential DefaultAzureCredential => AzureCredential;
+        public TokenCredential? DefaultAzureCredential => AzureCredential;
 
         /// <summary>
         ///     The <see cref="TokenCredential"/> used to sign API requests.
         /// </summary>
-        public TokenCredential AzureCredential { get; }
-        
+        public TokenCredential? AzureCredential { get; }
         
         /// <summary>
         ///     Optional client options that define the transport pipeline policies for authentication,
         ///     retries, etc., that are applied to every request.
         /// </summary>
-        public BlobClientOptions BlobClientOptions { get; }
+        public BlobClientOptions? BlobClientOptions { get; }
+        
+        /// <summary>
+        ///     A function that returns an Azure <see cref="BlobServiceClient"/> to be used by the snapshot store.
+        ///     When set, this will override any connection string or token credential in this setup.
+        /// </summary>
+        public Func<BlobServiceClient>? BlobServiceClientFactory { get; }
 
         public AzureBlobSnapshotStoreSettings WithConnectionString(string connectionString)
             => Copy(connectionString: connectionString);
@@ -165,8 +215,8 @@ namespace Akka.Persistence.Azure.Snapshot
             => Copy(requestTimeout: requestTimeout);
         public AzureBlobSnapshotStoreSettings WithVerboseLogging(bool verboseLogging)
             => Copy(verboseLogging: verboseLogging);
-        public AzureBlobSnapshotStoreSettings WithDevelopment(bool development)
-            => Copy(development: development);
+        [Obsolete(message: "The Development property is not being applied anymore. Please set ConnectionString to 'UseDevelopmentStorage=true' instead.")]
+        public AzureBlobSnapshotStoreSettings WithDevelopment(bool development) => this;
         public AzureBlobSnapshotStoreSettings WithAutoInitialize(bool autoInitialize)
             => Copy(autoInitialize: autoInitialize);
         public AzureBlobSnapshotStoreSettings WithContainerPublicAccessType(PublicAccessType containerPublicAccessType)
@@ -174,36 +224,39 @@ namespace Akka.Persistence.Azure.Snapshot
         public AzureBlobSnapshotStoreSettings WithAzureCredential(
             Uri serviceUri,
             TokenCredential defaultAzureCredential,
-            BlobClientOptions blobClientOption = null)
+            BlobClientOptions? blobClientOption = null)
             => Copy(
                 serviceUri: serviceUri,
                 azureCredential: defaultAzureCredential,
                 blobClientOption: blobClientOption);
+        public AzureBlobSnapshotStoreSettings WithBlobServiceClientFactory(Func<BlobServiceClient> blobServiceClient)
+            => Copy(blobServiceClientFactory: blobServiceClient);
         
         private AzureBlobSnapshotStoreSettings Copy(
-            string connectionString = null,
-            string containerName = null,
+            string? connectionString = null,
+            string? containerName = null,
             TimeSpan? connectTimeout = null,
             TimeSpan? requestTimeout = null,
             bool? verboseLogging = null,
-            bool? development = null,
             bool? autoInitialize = null,
             PublicAccessType? containerPublicAccessType = null,
-            Uri serviceUri = null,
-            TokenCredential azureCredential = null,
-            BlobClientOptions blobClientOption = null)
-            => new AzureBlobSnapshotStoreSettings(
-                connectionString ?? ConnectionString,
-                containerName ?? ContainerName,
-                connectTimeout ?? ConnectTimeout,
-                requestTimeout ?? RequestTimeout,
-                verboseLogging ?? VerboseLogging,
-                development ?? Development,
-                autoInitialize ?? AutoInitialize,
-                containerPublicAccessType ?? ContainerPublicAccessType,
-                serviceUri ?? ServiceUri,
-                azureCredential ?? AzureCredential,
-                blobClientOption ?? BlobClientOptions);
+            Uri? serviceUri = null,
+            TokenCredential? azureCredential = null,
+            BlobClientOptions? blobClientOption = null,
+            Func<BlobServiceClient>? blobServiceClientFactory = null)
+            => new (
+                connectionString: connectionString ?? ConnectionString,
+                containerName: containerName ?? ContainerName,
+                connectTimeout: connectTimeout ?? ConnectTimeout,
+                requestTimeout: requestTimeout ?? RequestTimeout,
+                verboseLogging: verboseLogging ?? VerboseLogging,
+                development: false,
+                autoInitialize: autoInitialize ?? AutoInitialize,
+                containerPublicAccessType: containerPublicAccessType ?? ContainerPublicAccessType,
+                serviceUri: serviceUri ?? ServiceUri,
+                defaultAzureCredential: azureCredential ?? AzureCredential,
+                blobClientOption: blobClientOption ?? BlobClientOptions,
+                blobServiceClientFactory: blobServiceClientFactory ?? BlobServiceClientFactory);
         
         /// <summary>
         ///     Creates an <see cref="AzureBlobSnapshotStoreSettings" /> instance using the
@@ -256,7 +309,8 @@ namespace Akka.Persistence.Azure.Snapshot
                 containerPublicAccessType: containerPublicAccessType,
                 serviceUri: null,
                 defaultAzureCredential: null,
-                blobClientOption: null);
+                blobClientOption: null, 
+                blobServiceClientFactory: null);
         }
     }
 }

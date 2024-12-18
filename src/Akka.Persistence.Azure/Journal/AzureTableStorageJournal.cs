@@ -18,10 +18,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
+using Akka.Util;
 using Azure;
 using Azure.Data.Tables;
 using Debug = System.Diagnostics.Debug;
 
+#nullable enable
 namespace Akka.Persistence.Azure.Journal
 {
     /// <inheritdoc />
@@ -52,11 +54,10 @@ namespace Akka.Persistence.Azure.Journal
         private readonly SerializationHelper _serialization;
         private readonly AzureTableStorageJournalSettings _settings;
         private readonly TableServiceClient _tableServiceClient;
-        private TableClient _tableStorage_DoNotUseDirectly;
         private readonly Dictionary<string, ISet<IActorRef>> _tagSubscribers = new Dictionary<string, ISet<IActorRef>>();
         private readonly CancellationTokenSource _shutdownCts;
 
-        public AzureTableStorageJournal(Config config = null)
+        public AzureTableStorageJournal(Config? config = null)
         {
             _settings = config is null ? 
                 AzurePersistence.Get(Context.System).TableSettings :
@@ -70,16 +71,16 @@ namespace Akka.Persistence.Azure.Journal
             if (multiSetup.HasValue)
             {
                 var journalId = Self.Path.Name.SplitDottedPathHonouringQuotes().Last();
-                setup = multiSetup.Value.Get(journalId);
+                setup = Option<AzureTableStorageJournalSetup>.Create(multiSetup.Value!.Get(journalId)!);
                 if(setup.HasValue)
                     _settings = setup.Value.Apply(_settings);
             }
             
             _serialization = new SerializationHelper(Context.System);
 
-            if (_settings.Development)
+            if (_settings.TableServiceClientFactory != null)
             {
-                _tableServiceClient = new TableServiceClient(connectionString: "UseDevelopmentStorage=true");
+                _tableServiceClient = _settings.TableServiceClientFactory.Invoke();
             }
             else
             {
@@ -89,21 +90,17 @@ namespace Akka.Persistence.Azure.Journal
                         endpoint: _settings.ServiceUri,
                         tokenCredential: _settings.AzureCredential,
                         options: _settings.TableClientOptions)
-                    : new TableServiceClient(connectionString: _settings.ConnectionString);
+                    : !string.IsNullOrWhiteSpace(_settings.ConnectionString) 
+                        ? new TableServiceClient(connectionString: _settings.ConnectionString)
+                        : throw new ConfigurationException(
+                            "No connection method configured. ConnectionString, AzureCredential, or " +
+                            "TableServiceClientFactory must be specified.");
             }
 
             _shutdownCts = new CancellationTokenSource();
         }
 
-        public TableClient Table
-        {
-            get
-            {
-                if (_tableStorage_DoNotUseDirectly == null)
-                    throw new Exception("Table storage has not been initialized yet. PreStart() has not been invoked");
-                return _tableStorage_DoNotUseDirectly;
-            }
-        }
+        public TableClient Table => _tableServiceClient.GetTableClient(_settings.TableName);
 
         protected bool HasAllPersistenceIdSubscribers => _allPersistenceIdSubscribers.Count != 0;
 
@@ -263,8 +260,7 @@ namespace Akka.Persistence.Azure.Journal
         {
             _log.Debug("Initializing Azure Table Storage...");
 
-            InitCloudStorage(5, _shutdownCts.Token)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+            InitCloudStorage(5, _shutdownCts.Token).GetAwaiter().GetResult();
 
             _log.Debug("Successfully started Azure Table Storage!");
 
@@ -309,12 +305,12 @@ namespace Akka.Persistence.Azure.Journal
             return true;
         }
 
-        protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> atomicWrites)
+        protected override async Task<IImmutableList<Exception?>?> WriteMessagesAsync(IEnumerable<AtomicWrite> atomicWrites)
         {
             try
             {
                 var taggedEntries = new Dictionary<string, List<EventTagEntry>>();
-                var exceptions = new List<Exception>();
+                var exceptions = new List<Exception?>();
                 var highSequenceNumbers = new Dictionary<string, long>();
 
                 using (var currentWrites = atomicWrites.GetEnumerator())
@@ -639,8 +635,6 @@ namespace Akka.Persistence.Azure.Journal
                         }
                         
                         _log.Info("Successfully connected to existing table", _settings.TableName);
-
-                        _tableStorage_DoNotUseDirectly = tableClient;
                         return;
                     }
                     
@@ -648,7 +642,6 @@ namespace Akka.Persistence.Azure.Journal
                         _log.Info("Created Azure Cloud Table", _settings.TableName);
                     else
                         _log.Info("Successfully connected to existing table", _settings.TableName);
-                    _tableStorage_DoNotUseDirectly = tableClient;
                 }
             }
             catch (Exception ex)

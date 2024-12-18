@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using Akka.Actor.Setup;
 using Azure.Core;
-using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 
@@ -51,12 +50,25 @@ namespace Akka.Persistence.Azure.Snapshot
         public static AzureBlobSnapshotSetup Create(
             Uri serviceUri, 
             TokenCredential defaultAzureCredential,
-            BlobClientOptions? blobClientOptions = default)
-            => new AzureBlobSnapshotSetup
+            BlobClientOptions? blobClientOptions = null)
+            => new ()
             {
                 ServiceUri = serviceUri,
                 AzureCredential = defaultAzureCredential,
                 BlobClientOptions = blobClientOptions
+            };
+
+        /// <summary>
+        ///     Create a new <see cref="AzureBlobSnapshotSetup"/>
+        /// </summary>
+        /// <param name="blobServiceClient">
+        ///     A <see cref="BlobServiceClientFactory"/> to be used as the snapshot blob storage.
+        /// </param>
+        /// <returns>A new <see cref="AzureBlobSnapshotSetup"/> instance</returns>
+        public static AzureBlobSnapshotSetup Create(Func<BlobServiceClient> blobServiceClient)
+            => new ()
+            {
+                BlobServiceClientFactory = blobServiceClient,
             };
 
         /// <summary>
@@ -89,6 +101,7 @@ namespace Akka.Persistence.Azure.Snapshot
         ///     <see cref="ConnectionString"/> will be ignored, replaced with "UseDevelopmentStorage=true" for local
         ///     connection to Azurite.
         /// </summary>
+        [Obsolete(message: "The Development property is not being applied anymore. Please set ConnectionString to 'UseDevelopmentStorage=true' instead.")]
         public bool? Development { get; set; }
 
         /// <summary>
@@ -128,6 +141,12 @@ namespace Akka.Persistence.Azure.Snapshot
         /// </summary>
         public BlobClientOptions? BlobClientOptions { get; set; }
 
+        /// <summary>
+        ///     A function that returns an Azure <see cref="BlobServiceClient"/> to be used by the journal.
+        ///     When set, this will override any connection string or token credential in this setup.
+        /// </summary>
+        public Func<BlobServiceClient>? BlobServiceClientFactory { get; set; }
+        
         internal AzureBlobSnapshotStoreSettings Apply(AzureBlobSnapshotStoreSettings settings)
         {
             if (ConnectionString != null)
@@ -140,14 +159,14 @@ namespace Akka.Persistence.Azure.Snapshot
                 settings = settings.WithRequestTimeout(RequestTimeout.Value);
             if (VerboseLogging != null)
                 settings = settings.WithVerboseLogging(VerboseLogging.Value);
-            if (Development != null)
-                settings = settings.WithDevelopment(Development.Value);
             if (AutoInitialize != null)
                 settings = settings.WithAutoInitialize(AutoInitialize.Value);
             if (ContainerPublicAccessType != null)
                 settings = settings.WithContainerPublicAccessType(ContainerPublicAccessType.Value);
             if (ServiceUri != null && AzureCredential != null)
                 settings = settings.WithAzureCredential(ServiceUri, AzureCredential, BlobClientOptions);
+            if(BlobServiceClientFactory != null)
+                settings = settings.WithBlobServiceClientFactory(BlobServiceClientFactory);
 
             return settings;
         }
