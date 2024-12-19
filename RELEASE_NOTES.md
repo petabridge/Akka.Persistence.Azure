@@ -1,4 +1,4 @@
-#### 1.5.32 December 3rd 2024 ####
+#### 1.5.32 December 19th 2024 ####
 
 * [Update Akka.NET v1.5.32](https://github.com/akkadotnet/akka.net/releases/tag/1.5.32)
 * [Update Akka.Hosting v1.5.32](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.31.2)
