@@ -1,3 +1,23 @@
+#### 1.5.32 December 19th 2024 ####
+
+* [Update Akka.NET v1.5.32](https://github.com/akkadotnet/akka.net/releases/tag/1.5.32)
+* [Update Akka.Hosting v1.5.32](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.31.2)
+* [Revert: Fix possible credential caching issue](https://github.com/petabridge/Akka.Persistence.Azure/pull/455)
+* [Add option to inject `TableServiceClient` and `BlobServiceClient` directly](https://github.com/petabridge/Akka.Persistence.Azure/pull/459)
+
+We've added a new way to configure Akka.Persistence.Azure by allowing users to directly inject `TableServiceClient` and `BlobServiceClient` into Azure journal and snapshot store.
+
+```csharp
+var credential = new DefaultAzureCredential();
+var tableClient = new TableServiceClient(tableServiceUri, credential);
+var blobClient = new BlobServiceClient(blobServiceUri, credential);
+
+akkaConfigurationBuilder.WithAzurePersistence(
+        tableServiceClientFactory: () => tableClient,
+        blobServiceClientFactory: () => blobClient
+    );
+```
+
 #### 1.5.31 December 3rd 2024 ####
 
 * [Update Akka.NET v1.5.31](https://github.com/akkadotnet/akka.net/releases/tag/1.5.31)
