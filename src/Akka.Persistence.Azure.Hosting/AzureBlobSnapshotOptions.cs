@@ -127,10 +127,10 @@ namespace Akka.Persistence.Azure.Hosting
 
         internal void Apply(AkkaConfigurationBuilder builder)
         {
-            if (ServiceUri is null && AzureCredential is null) 
+            if (ServiceUri is null && AzureCredential is null && BlobServiceClientFactory is null) 
                 return;
             
-            if (AzureCredential is null || ServiceUri is null)
+            if (BlobServiceClientFactory is null && (AzureCredential is null || ServiceUri is null))
                 throw new ConfigurationException($"Both {nameof(ServiceUri)} and {nameof(AzureCredential)} need to be declared to use {nameof(AzureCredential)}");
 
             var setup = builder.Setups.FirstOrDefault(s => s is AzureBlobSnapshotSetup) as AzureBlobSnapshotSetup;

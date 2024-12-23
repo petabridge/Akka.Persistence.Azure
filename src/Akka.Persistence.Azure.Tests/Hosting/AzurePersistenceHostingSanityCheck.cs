@@ -7,6 +7,9 @@ using Akka.Hosting;
 using Akka.Persistence.Azure.Hosting;
 using Akka.Persistence.Azure.Tests.Helper;
 using Akka.TestKit.Xunit2.Internals;
+using Azure.Data.Tables;
+using Azure.Identity;
+using Azure.Storage.Blobs;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,16 +21,53 @@ namespace Akka.Persistence.Azure.Tests.Hosting
     [Collection("AzureSpecs")]
     public class AzurePersistenceHostingSanityCheck
     {
-        public static async Task<IHost> StartHost(Action<AkkaConfigurationBuilder> testSetup)
+        public enum StartMethod
+        {
+            ConnectionString,
+            TokenCredential,
+            ServiceClient
+        }
+        
+        private static async Task<IHost> StartHost(Action<AkkaConfigurationBuilder> testSetup, StartMethod startMethod)
         {
             var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
             await DbUtils.CleanupCloudTable(conn);
+            
             var host = new HostBuilder()
                 .ConfigureServices(collection =>
                 {
+                    var tableClient = new TableServiceClient(conn);
+                    var blobClient = new BlobServiceClient(conn);
                     collection.AddAkka("MyActorSys", builder =>
                     {
-                        builder.WithAzurePersistence(conn);
+                        switch (startMethod)
+                        {
+                            case StartMethod.ConnectionString:
+                                builder.WithAzurePersistence(conn);
+                                break;
+                            case StartMethod.TokenCredential: // Doesn't work with Azurite
+                                var credential = new DefaultAzureCredential();
+                                builder
+                                    .WithAzureTableJournal(opt =>
+                                    {
+                                        opt.ServiceUri = new Uri("http://127.0.0.1:10002");
+                                        opt.AzureCredential = credential;
+                                    }, true)
+                                    .WithAzureBlobsSnapshotStore(opt =>
+                                    {
+                                        opt.ServiceUri = new Uri("http://127.0.0.1:10000");
+                                        opt.AzureCredential = credential;
+                                    }, true);
+                                break;
+                            case StartMethod.ServiceClient:
+                                builder.WithAzurePersistence(
+                                    tableServiceClientFactory: () => tableClient,
+                                    blobServiceClientFactory: () => blobClient
+                                );
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(startMethod));
+                        }
                         testSetup(builder);
                     });
                 }).Build();
@@ -83,8 +123,11 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             _output = output;
         }
 
-        [Fact]
-        public async Task ShouldLaunchAzurePersistence()
+        [Theory]
+        [InlineData(StartMethod.ConnectionString)]
+        // [InlineData(StartMethod.TokenCredential)] // Doesn't work with Azurite
+        [InlineData(StartMethod.ServiceClient)]
+        public async Task ShouldLaunchAzurePersistence(StartMethod startMethod)
         {
            // arrange
             using var host = await StartHost(builder => {
@@ -100,7 +143,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
                         var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(_output)), "log-test");
                         logger.Tell(new InitializeLogger(system.EventStream));
                     });
-            });
+            }, startMethod);
 
             var actorSystem = host.Services.GetRequiredService<ActorSystem>();
             var actorRegistry = host.Services.GetRequiredService<ActorRegistry>();
