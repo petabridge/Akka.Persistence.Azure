@@ -114,10 +114,10 @@ namespace Akka.Persistence.Azure.Hosting
 
         internal void Apply(AkkaConfigurationBuilder builder)
         {
-            if (ServiceUri is null && AzureCredential is null) 
+            if (ServiceUri is null && AzureCredential is null && TableServiceClientFactory is null) 
                 return;
             
-            if (AzureCredential is null || ServiceUri is null)
+            if (TableServiceClientFactory is null && (AzureCredential is null || ServiceUri is null))
                 throw new ConfigurationException($"Both {nameof(ServiceUri)} and {nameof(AzureCredential)} need to be declared to use {nameof(AzureCredential)}");
 
             var multiSetup = builder.Setups.FirstOrDefault(s => s is AzureTableStorageMultiJournalSetup) as AzureTableStorageMultiJournalSetup;
