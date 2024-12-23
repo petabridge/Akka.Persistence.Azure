@@ -1,3 +1,7 @@
+#### 1.5.32.1 December 23rd 2024 ####
+
+* [Fix service client configuration failure](https://github.com/petabridge/Akka.Persistence.Azure/pull/461)
+
 #### 1.5.32 December 19th 2024 ####
 
 * [Update Akka.NET v1.5.32](https://github.com/akkadotnet/akka.net/releases/tag/1.5.32)
