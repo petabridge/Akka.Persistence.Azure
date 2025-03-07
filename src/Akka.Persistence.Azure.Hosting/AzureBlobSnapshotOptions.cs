@@ -46,6 +46,17 @@ namespace Akka.Persistence.Azure.Hosting
         public string? ContainerName { get; set; }
 
         /// <summary>
+        ///     The "folder" or "directory" where snapshot files will be stored.
+        ///     Note that Azure Blob Storage does not implement a true folder tree structure,
+        ///     "folder" names are actually a simple prefix to the blob file name.
+        /// </summary>
+        /// <example>
+        ///     If you set this setting to "folder1/folder2", then the snapshots will be stored as:
+        ///         /{account name}/akka-persistence-default-container/folder1/folder2/snapshot-{persistence id}-{sequence number}
+        /// </example>
+        public string? Folders { get; set; }
+        
+        /// <summary>
         ///     Initial timeout to use when connecting to Azure Container Storage for the first time.
         /// </summary>
         public TimeSpan? ConnectTimeout { get; set; }
@@ -107,6 +118,9 @@ namespace Akka.Persistence.Azure.Hosting
             if (ContainerName is { })
                 sb.AppendLine($"container-name = {ContainerName.ToHocon()}");
 
+            if (Folders is { })
+                sb.AppendLine($"folders = {ContainerName.ToHocon()}");
+            
             if (ConnectTimeout is { })
                 sb.AppendLine($"connect-timeout = {ConnectTimeout.ToHocon()}");
 

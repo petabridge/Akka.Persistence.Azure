@@ -37,20 +37,26 @@ namespace Akka.Persistence.Azure.Util
         /// into lexicographical order for a particular snapshot.
         /// </summary>
         /// <param name="metadata">The metadata used for the current snapshot.</param>
+        /// <param name="folders">Folder prefix added to the front of the file name</param>
         /// <returns>A Uri-friendly snapshot blob name.</returns>
-        public static string ToSnapshotBlobId(this SnapshotMetadata metadata)
+        public static string ToSnapshotBlobId(this SnapshotMetadata metadata, string folders)
         {
-            return $"snapshot-{Uri.EscapeDataString(metadata.PersistenceId)}-{metadata.SequenceNr.ToJournalRowKey()}";
+            return string.IsNullOrWhiteSpace(folders)
+                ? $"snapshot-{Uri.EscapeDataString(metadata.PersistenceId)}-{metadata.SequenceNr.ToJournalRowKey()}"
+                : $"{folders}/snapshot-{Uri.EscapeDataString(metadata.PersistenceId)}-{metadata.SequenceNr.ToJournalRowKey()}";
         }
 
         /// <summary>
         /// Used to help search for the most recent snapshot in Azure Blob storage.
         /// </summary>
         /// <param name="persistentId">The ID of the persistent entity.</param>
+        /// <param name="folders">Folder prefix added to the front of the file name</param>
         /// <returns>The prefix of a blob store search string.</returns>
-        public static string ToSnapshotSearchQuery(string persistentId)
+        public static string ToSnapshotSearchQuery(string persistentId, string folders)
         {
-            return $"snapshot-{Uri.EscapeDataString(persistentId)}";
+            return string.IsNullOrWhiteSpace(folders)
+                ? $"snapshot-{Uri.EscapeDataString(persistentId)}"
+                : $"{folders}/snapshot-{Uri.EscapeDataString(persistentId)}";
         }
     }
 }
