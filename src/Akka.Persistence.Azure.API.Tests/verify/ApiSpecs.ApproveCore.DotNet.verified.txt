@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Azure.Tests")]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Azure.API.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Azure.Tests")]
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
 namespace Akka.Persistence.Azure
 {
