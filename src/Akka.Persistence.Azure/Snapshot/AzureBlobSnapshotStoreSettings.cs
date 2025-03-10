@@ -331,7 +331,7 @@ namespace Akka.Persistence.Azure.Snapshot
             
             var connectionString = config.GetString("connection-string");
             var containerName = config.GetString("container-name");
-            var folders = config.GetString("folders").Trim().Trim('/');
+            var folders = config.GetString("folders", string.Empty).Trim().Trim('/');
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
