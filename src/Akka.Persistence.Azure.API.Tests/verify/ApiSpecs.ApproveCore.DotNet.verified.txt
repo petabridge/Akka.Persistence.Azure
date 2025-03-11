@@ -273,7 +273,11 @@ namespace Akka.Persistence.Azure.Snapshot
         public AzureBlobSnapshotStoreSettings([System.Runtime.CompilerServices.NullableAttribute(2)] string connectionString, string containerName, System.TimeSpan connectTimeout, System.TimeSpan requestTimeout, bool verboseLogging, bool development, bool autoInitialize, Azure.Storage.Blobs.Models.PublicAccessType containerPublicAccessType) { }
         [System.ObsoleteAttribute("Use constructor with blobServiceClient argument instead.")]
         public AzureBlobSnapshotStoreSettings([System.Runtime.CompilerServices.NullableAttribute(1)] string connectionString, [System.Runtime.CompilerServices.NullableAttribute(1)] string containerName, System.TimeSpan connectTimeout, System.TimeSpan requestTimeout, bool verboseLogging, bool development, bool autoInitialize, Azure.Storage.Blobs.Models.PublicAccessType containerPublicAccessType, System.Uri serviceUri, Azure.Core.TokenCredential defaultAzureCredential, Azure.Storage.Blobs.BlobClientOptions blobClientOption) { }
+        [System.ObsoleteAttribute("Use constructor with folders argument instead.")]
         public AzureBlobSnapshotStoreSettings(string connectionString, [System.Runtime.CompilerServices.NullableAttribute(1)] string containerName, System.TimeSpan connectTimeout, System.TimeSpan requestTimeout, bool verboseLogging, bool development, bool autoInitialize, Azure.Storage.Blobs.Models.PublicAccessType containerPublicAccessType, System.Uri serviceUri, Azure.Core.TokenCredential defaultAzureCredential, Azure.Storage.Blobs.BlobClientOptions blobClientOption, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Func<Azure.Storage.Blobs.BlobServiceClient> blobServiceClientFactory) { }
+        public AzureBlobSnapshotStoreSettings(string connectionString, [System.Runtime.CompilerServices.NullableAttribute(1)] string containerName, [System.Runtime.CompilerServices.NullableAttribute(1)] string folders, System.TimeSpan connectTimeout, System.TimeSpan requestTimeout, bool verboseLogging, bool development, bool autoInitialize, Azure.Storage.Blobs.Models.PublicAccessType containerPublicAccessType, System.Uri serviceUri, Azure.Core.TokenCredential defaultAzureCredential, Azure.Storage.Blobs.BlobClientOptions blobClientOption, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
                 1})] System.Func<Azure.Storage.Blobs.BlobServiceClient> blobServiceClientFactory) { }
         public bool AutoInitialize { get; }
@@ -296,12 +300,14 @@ namespace Akka.Persistence.Azure.Snapshot
         [System.ObsoleteAttribute("The Development property is not being applied anymore. Please set ConnectionStrin" +
             "g to \'UseDevelopmentStorage=true\' instead.")]
         public bool Development { get; }
+        public string Folders { get; }
         public System.TimeSpan RequestTimeout { get; }
         [System.Runtime.CompilerServices.NullableAttribute(2)]
         public System.Uri ServiceUri { get; }
         public bool VerboseLogging { get; }
         public static Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStoreSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStoreSettings Create(Akka.Configuration.Config config) { }
+        public static string SanitizeFolder([System.Runtime.CompilerServices.NullableAttribute(2)] string folder) { }
         public Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStoreSettings WithAutoInitialize(bool autoInitialize) { }
         public Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStoreSettings WithAzureCredential(System.Uri serviceUri, Azure.Core.TokenCredential defaultAzureCredential, [System.Runtime.CompilerServices.NullableAttribute(2)] Azure.Storage.Blobs.BlobClientOptions blobClientOption = null) { }
         public Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStoreSettings WithBlobServiceClientFactory(System.Func<Azure.Storage.Blobs.BlobServiceClient> blobServiceClient) { }

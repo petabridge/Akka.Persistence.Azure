@@ -183,7 +183,7 @@ namespace Akka.Persistence.Azure.Snapshot
             using(cts)
             {
                 var results = Container.GetBlobsAsync(
-                    prefix: SeqNoHelper.ToSnapshotSearchQuery(persistenceId), 
+                    prefix: SeqNoHelper.ToSnapshotSearchQuery(persistenceId, _settings.Folders), 
                     traits: BlobTraits.Metadata,
                     cancellationToken: cts.Token);
 
@@ -227,7 +227,7 @@ namespace Akka.Persistence.Azure.Snapshot
 
         protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
-            var blobClient = Container.GetBlockBlobClient(metadata.ToSnapshotBlobId());
+            var blobClient = Container.GetBlockBlobClient(metadata.ToSnapshotBlobId(_settings.Folders));
             var snapshotData = _serialization.SnapshotToBytes(new Serialization.Snapshot(snapshot));
 
             var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token);
@@ -256,7 +256,7 @@ namespace Akka.Persistence.Azure.Snapshot
 
         protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
-            var blobClient = Container.GetBlobClient(metadata.ToSnapshotBlobId());
+            var blobClient = Container.GetBlobClient(metadata.ToSnapshotBlobId(_settings.Folders));
 
             var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token);
             cts.CancelAfter(_settings.RequestTimeout);
@@ -287,7 +287,7 @@ namespace Akka.Persistence.Azure.Snapshot
             using (cts)
             {
                 var items = Container.GetBlobsAsync(
-                    prefix: SeqNoHelper.ToSnapshotSearchQuery(persistenceId), 
+                    prefix: SeqNoHelper.ToSnapshotSearchQuery(persistenceId, _settings.Folders), 
                     traits: BlobTraits.Metadata,
                     cancellationToken: cts.Token);
 

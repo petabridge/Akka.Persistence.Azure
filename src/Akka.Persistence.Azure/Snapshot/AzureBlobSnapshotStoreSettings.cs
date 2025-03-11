@@ -100,11 +100,42 @@ namespace Akka.Persistence.Azure.Snapshot
                 blobClientOption: blobClientOption,
                 blobServiceClientFactory: null)
         { }
-        // ReSharper restore IntroduceOptionalParameters.Global
-            
+
+        [Obsolete(message:"Use constructor with folders argument instead.")]
         public AzureBlobSnapshotStoreSettings(
             string? connectionString, 
             string containerName,
+            TimeSpan connectTimeout, 
+            TimeSpan requestTimeout, 
+            bool verboseLogging, 
+            bool development, 
+            bool autoInitialize, 
+            PublicAccessType containerPublicAccessType,
+            Uri? serviceUri,
+            TokenCredential? defaultAzureCredential,
+            BlobClientOptions? blobClientOption,
+            Func<BlobServiceClient>? blobServiceClientFactory)
+            : this(
+                connectionString: connectionString,
+                containerName: containerName,
+                folders: string.Empty,
+                connectTimeout: connectTimeout,
+                requestTimeout: requestTimeout,
+                verboseLogging: verboseLogging,
+                development: development,
+                autoInitialize: autoInitialize,
+                containerPublicAccessType: containerPublicAccessType,
+                serviceUri: serviceUri,
+                defaultAzureCredential: defaultAzureCredential,
+                blobClientOption: blobClientOption,
+                blobServiceClientFactory: blobServiceClientFactory)
+        { }
+        // ReSharper restore IntroduceOptionalParameters.Global
+        
+        public AzureBlobSnapshotStoreSettings(
+            string? connectionString, 
+            string containerName,
+            string folders,
             TimeSpan connectTimeout, 
             TimeSpan requestTimeout, 
             bool verboseLogging, 
@@ -122,6 +153,7 @@ namespace Akka.Persistence.Azure.Snapshot
             NameValidator.ValidateContainerName(containerName);
             ConnectionString = connectionString;
             ContainerName = containerName;
+            Folders = folders;
             RequestTimeout = requestTimeout;
             ConnectTimeout = connectTimeout;
             VerboseLogging = verboseLogging;
@@ -142,6 +174,17 @@ namespace Akka.Persistence.Azure.Snapshot
         ///     The table of the container we'll be using to serialize these blobs.
         /// </summary>
         public string ContainerName { get; }
+        
+        /// <summary>
+        ///     The "folder" or "directory" where snapshot files will be stored.
+        ///     Note that Azure Blob Storage does not implement a true folder tree structure,
+        ///     "folder" names are actually a simple prefix to the blob file name.
+        /// </summary>
+        /// <example>
+        ///     If you set this setting to "folder1/folder2", then the snapshots will be stored as:
+        ///         /{account name}/akka-persistence-default-container/folder1/folder2/snapshot-{persistence id}-{sequence number}
+        /// </example>
+        public string Folders { get; }
 
         /// <summary>
         ///     Initial timeout to use when connecting to Azure Container Storage for the first time.
@@ -235,6 +278,7 @@ namespace Akka.Persistence.Azure.Snapshot
         private AzureBlobSnapshotStoreSettings Copy(
             string? connectionString = null,
             string? containerName = null,
+            string? folders = null,
             TimeSpan? connectTimeout = null,
             TimeSpan? requestTimeout = null,
             bool? verboseLogging = null,
@@ -247,6 +291,7 @@ namespace Akka.Persistence.Azure.Snapshot
             => new (
                 connectionString: connectionString ?? ConnectionString,
                 containerName: containerName ?? ContainerName,
+                folders: folders ?? Folders,
                 connectTimeout: connectTimeout ?? ConnectTimeout,
                 requestTimeout: requestTimeout ?? RequestTimeout,
                 verboseLogging: verboseLogging ?? VerboseLogging,
@@ -273,6 +318,9 @@ namespace Akka.Persistence.Azure.Snapshot
             return Create(config);
         }
         
+        public static string SanitizeFolder(string? folder)
+            => folder?.Trim().Trim('/') ?? string.Empty;
+        
         /// <summary>
         ///     Creates an <see cref="AzureBlobSnapshotStoreSettings" /> instance using the
         ///     `akka.persistence.snapshot-store.azure-blob-store` HOCON configuration section.
@@ -286,6 +334,7 @@ namespace Akka.Persistence.Azure.Snapshot
             
             var connectionString = config.GetString("connection-string");
             var containerName = config.GetString("container-name");
+            var folders = SanitizeFolder(config.GetString("folders"));
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);
@@ -301,6 +350,7 @@ namespace Akka.Persistence.Azure.Snapshot
             return new AzureBlobSnapshotStoreSettings(
                 connectionString: connectionString, 
                 containerName: containerName, 
+                folders: folders,
                 connectTimeout: connectTimeout, 
                 requestTimeout: requestTimeout,
                 verboseLogging: verbose,

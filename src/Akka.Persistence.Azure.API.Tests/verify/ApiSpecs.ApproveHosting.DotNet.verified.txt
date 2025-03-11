@@ -18,6 +18,7 @@ namespace Akka.Persistence.Azure.Hosting
         public string ContainerName { get; set; }
         public System.Nullable<Azure.Storage.Blobs.Models.PublicAccessType> ContainerPublicAccessType { get; set; }
         public System.Nullable<bool> Development { get; set; }
+        public string Folders { get; set; }
         [System.Runtime.CompilerServices.NullableAttribute(1)]
         public override string Identifier { get; set; }
         [System.Runtime.CompilerServices.NullableAttribute(1)]
