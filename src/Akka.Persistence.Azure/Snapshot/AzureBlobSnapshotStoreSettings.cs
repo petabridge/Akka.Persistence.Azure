@@ -318,6 +318,9 @@ namespace Akka.Persistence.Azure.Snapshot
             return Create(config);
         }
         
+        public static string SanitizeFolder(string? folder)
+            => folder?.Trim().Trim('/') ?? string.Empty;
+        
         /// <summary>
         ///     Creates an <see cref="AzureBlobSnapshotStoreSettings" /> instance using the
         ///     `akka.persistence.snapshot-store.azure-blob-store` HOCON configuration section.
@@ -331,7 +334,7 @@ namespace Akka.Persistence.Azure.Snapshot
             
             var connectionString = config.GetString("connection-string");
             var containerName = config.GetString("container-name");
-            var folders = config.GetString("folders", string.Empty).Trim().Trim('/');
+            var folders = SanitizeFolder(config.GetString("folders"));
             var connectTimeout = config.GetTimeSpan("connect-timeout", TimeSpan.FromSeconds(3));
             var requestTimeout = config.GetTimeSpan("request-timeout", TimeSpan.FromSeconds(3));
             var verbose = config.GetBoolean("verbose-logging", false);

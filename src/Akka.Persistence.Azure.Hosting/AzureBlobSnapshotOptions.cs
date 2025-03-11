@@ -119,7 +119,7 @@ namespace Akka.Persistence.Azure.Hosting
                 sb.AppendLine($"container-name = {ContainerName.ToHocon()}");
 
             if (Folders is { })
-                sb.AppendLine($"folders = {ContainerName.ToHocon()}");
+                sb.AppendLine($"folders = {AzureBlobSnapshotStoreSettings.SanitizeFolder(Folders.ToHocon())}");
             
             if (ConnectTimeout is { })
                 sb.AppendLine($"connect-timeout = {ConnectTimeout.ToHocon()}");
