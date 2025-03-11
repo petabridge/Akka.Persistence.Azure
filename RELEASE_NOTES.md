@@ -1,3 +1,25 @@
+#### 1.5.38 March 11th 2025 ####
+
+* [Update Akka.NET v1.5.38](https://github.com/akkadotnet/akka.net/releases/tag/1.5.38)
+* [Update Akka.Hosting v1.5.38](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.38)
+* [Bump Azure.Identity from 1.13.1 to 1.13.2](https://github.com/petabridge/Akka.Persistence.Azure/pull/472)
+* [Bump Azure.Data.Tables from 12.9.1 to 12.10.0](https://github.com/petabridge/Akka.Persistence.Azure/pull/430)
+* [Add folder support to SnapshotStore](https://github.com/petabridge/Akka.Persistence.Azure/pull/488)
+
+Snapshots can now be stored in Azure Blob Storage "folders" by using `AzureBlobSnapshotOptions.Folders` if you're using Akka.Hosting, or using the "akka.persistence.snapshot-store.azure-blob-store.folders" HOCON settings.
+
+> [!NOTE]
+> 
+> Note that Azure Blob Storage does not implement a true folder tree structure, "folders" are actually a simple prefix to the blob file name.
+
+Example:
+
+If you set "akka.persistence.snapshot-store.azure-blob-store.folders" to "folder1/folder2", then the snapshots will be stored as:
+
+```
+/{account-name}/{container-name}/folder1/folder2/snapshot-{persistence-id}-{sequence-number}
+```
+
 #### 1.5.32.1 December 23rd 2024 ####
 
 * [Fix service client configuration failure](https://github.com/petabridge/Akka.Persistence.Azure/pull/461)
