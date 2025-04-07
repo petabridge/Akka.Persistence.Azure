@@ -4,19 +4,26 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Annotations;
+using Akka.Persistence.Azure.Journal;
+using Akka.Persistence.Azure.TableEntities;
 using Azure;
 using Azure.Data.Tables;
 
+#nullable enable
 namespace Akka.Persistence.Azure
 {
     public static class CloudTableExtensions
     {
         private const int MaxBatchSize = 100;
-        
+
         /// <summary>
         /// <para>
         /// Execute a batch transaction to the service. This method automatically chunks the batch request into chunks
@@ -30,6 +37,7 @@ namespace Akka.Persistence.Azure
         /// <param name="token">Cancellation token</param>
         /// <returns>List of <see cref="Response"/> for each items</returns>
         // TODO Replace this with real transactional execution if Azure Table Storage supports it in the future.
+        [InternalApi]
         public static async Task<IReadOnlyList<Response>> ExecuteBatchAsLimitedBatches(
             this TableClient table,
             List<TableTransactionAction> batch, 
@@ -43,11 +51,52 @@ namespace Akka.Persistence.Azure
 
             var result = new List<Response>();
             var limitedBatchOperationLists = batch.ChunkBy(MaxBatchSize);
-            
-            foreach (var limitedBatchOperationList in limitedBatchOperationLists)
+
+            for (var i = 0; i < limitedBatchOperationLists.Count; i++)
             {
-                var limitedBatchResponse = await table.SubmitTransactionAsync(limitedBatchOperationList, token);
-                result.AddRange(limitedBatchResponse.Value);
+                try
+                {
+                    var limitedBatchOperationList = limitedBatchOperationLists[i];
+                    var limitedBatchResponse = await table.SubmitTransactionAsync(limitedBatchOperationList, token);
+                    result.AddRange(limitedBatchResponse.Value);
+                }
+                catch (Exception ex)
+                {
+                    var failedBatch = limitedBatchOperationLists[i].ToArray();
+                    var sb = new StringBuilder("Failed to execute transaction batch operation");
+                    
+                    TableTransactionAction? failedAction;
+                    if (failedBatch.Length == 1)
+                        failedAction = failedBatch[0];
+                    else if (ex is TableTransactionFailedException { FailedTransactionActionIndex: not null } transactionEx)
+                    {
+                        var batchIndex = transactionEx.FailedTransactionActionIndex.Value;
+                        failedAction = failedBatch[batchIndex];
+                        
+                        sb.Append($" while processing batch index {batchIndex}");
+                    }
+                    else
+                        failedAction = null;
+
+                    if (failedAction is null) 
+                        throw new DatabaseOperationException(sb.ToString(), ex);
+                    
+                    sb.Append($", action type: {failedAction.ActionType}");
+                    var entity = (TableEntity)failedAction.Entity;
+                    sb.Append($", persistence id: {entity.PartitionKey}");
+                    sb.Append($", row key: {entity.RowKey}");
+                    
+                    if (entity.RowKey == HighestSequenceNrEntry.RowKeyValue)
+                        sb.Append($", {HighestSequenceNrEntry.HighestSequenceNrKey}: {entity[HighestSequenceNrEntry.HighestSequenceNrKey]}");
+                    
+                    if(entity.ContainsKey(PersistentJournalEntry.SeqNoKeyName))
+                        sb.Append($", sequence number: {entity.GetInt64(PersistentJournalEntry.SeqNoKeyName)}");
+                    
+                    if(entity.ContainsKey(PersistentJournalEntry.ManifestKeyName))
+                        sb.Append($", manifest: {entity.GetString(PersistentJournalEntry.ManifestKeyName)}");
+                    
+                    throw new DatabaseOperationException(sb.ToString(), ex);
+                }
             }
 
             return result;
