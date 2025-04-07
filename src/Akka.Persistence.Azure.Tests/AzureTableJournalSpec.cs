@@ -15,7 +15,7 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSpecs")]
-    public abstract class AzureTableJournalSpec : JournalSpec
+    public class AzureTableJournalSpec : JournalSpec
     {
         public AzureTableJournalSpec(ITestOutputHelper output)
             : base(AzureConfig(), nameof(AzureTableJournalSpec), output)
