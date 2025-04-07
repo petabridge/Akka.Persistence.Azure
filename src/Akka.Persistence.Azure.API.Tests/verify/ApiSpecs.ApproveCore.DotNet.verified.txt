@@ -130,10 +130,10 @@ namespace Akka.Persistence.Azure.Journal
         public Akka.Persistence.Azure.Journal.AzureTableStorageJournalSetup Get(string journalId) { }
         public void Set(string journalId, Akka.Persistence.Azure.Journal.AzureTableStorageJournalSetup setup) { }
     }
-    public class DatabaseTransactionException : System.Exception
+    public class PersistenceOperationException : System.Exception
     {
-        public DatabaseTransactionException(string message) { }
-        public DatabaseTransactionException(string message, System.Exception innerException) { }
+        public PersistenceOperationException(string message) { }
+        public PersistenceOperationException(string message, System.Exception innerException) { }
     }
 }
 namespace Akka.Persistence.Azure.Query

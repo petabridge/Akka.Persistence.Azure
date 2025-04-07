@@ -79,7 +79,7 @@ namespace Akka.Persistence.Azure
                         failedAction = null;
 
                     if (failedAction is null) 
-                        throw new DatabaseOperationException(sb.ToString(), ex);
+                        throw new PersistenceOperationException(sb.ToString(), ex);
                     
                     sb.Append($", action type: {failedAction.ActionType}");
                     var entity = (TableEntity)failedAction.Entity;
@@ -95,7 +95,7 @@ namespace Akka.Persistence.Azure
                     if(entity.ContainsKey(PersistentJournalEntry.ManifestKeyName))
                         sb.Append($", manifest: {entity.GetString(PersistentJournalEntry.ManifestKeyName)}");
                     
-                    throw new DatabaseOperationException(sb.ToString(), ex);
+                    throw new PersistenceOperationException(sb.ToString(), ex);
                 }
             }
 
