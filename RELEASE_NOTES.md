@@ -1,3 +1,9 @@
+#### 1.5.40 April 7th 2025 ####
+
+* [Update Akka.NET v1.5.40](https://github.com/akkadotnet/akka.net/releases/tag/1.5.40)
+* [Update Akka.Hosting v1.5.40](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.40)
+* [Expand all SubmitTransactionAsync exceptions with extra information](https://github.com/petabridge/Akka.Persistence.Azure/pull/502)
+
 #### 1.5.38 March 11th 2025 ####
 
 * [Update Akka.NET v1.5.38](https://github.com/akkadotnet/akka.net/releases/tag/1.5.38)
