@@ -29,9 +29,9 @@ namespace Akka.Persistence.Azure.TableEntities
     {
         public const string TagsKeyName = "tags";
         public const string UtcTicksKeyName = "utcTicks";
-        private const string ManifestKeyName = "manifest";
+        public const string ManifestKeyName = "manifest";
         private const string PayloadKeyName = "payload";
-        private const string SeqNoKeyName = "seqno";
+        public const string SeqNoKeyName = "seqno";
 
         public PersistentJournalEntry(TableEntity entity)
         {

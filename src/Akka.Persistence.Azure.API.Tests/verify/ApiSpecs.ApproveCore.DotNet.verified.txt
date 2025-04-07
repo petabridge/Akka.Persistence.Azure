@@ -18,6 +18,7 @@ namespace Akka.Persistence.Azure
     }
     public class static CloudTableExtensions
     {
+        [Akka.Annotations.InternalApiAttribute()]
         public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Azure.Response>> ExecuteBatchAsLimitedBatches(this Azure.Data.Tables.TableClient table, System.Collections.Generic.List<Azure.Data.Tables.TableTransactionAction> batch, System.Threading.CancellationToken token) { }
     }
     public class static ListExtensions
@@ -128,6 +129,11 @@ namespace Akka.Persistence.Azure.Journal
         [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         public Akka.Persistence.Azure.Journal.AzureTableStorageJournalSetup Get(string journalId) { }
         public void Set(string journalId, Akka.Persistence.Azure.Journal.AzureTableStorageJournalSetup setup) { }
+    }
+    public class PersistenceOperationException : System.Exception
+    {
+        public PersistenceOperationException(string message) { }
+        public PersistenceOperationException(string message, System.Exception innerException) { }
     }
 }
 namespace Akka.Persistence.Azure.Query
