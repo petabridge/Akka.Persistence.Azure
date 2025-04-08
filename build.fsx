@@ -73,7 +73,7 @@ Target "Build" (fun _ ->
         (fun p -> 
             { p with
                 Project = solutionFile
-                Configuration = configuration }) // "Rebuild"  
+                Configuration = configuration}) // "Rebuild"  
 )
 
 
