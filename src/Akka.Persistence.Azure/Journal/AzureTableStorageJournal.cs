@@ -47,14 +47,10 @@ namespace Akka.Persistence.Azure.Journal
             { 0, TimeSpan.FromMilliseconds(8000) },
         };
 
-        private readonly HashSet<string> _allPersistenceIds = new HashSet<string>();
-        private readonly HashSet<IActorRef> _allPersistenceIdSubscribers = new HashSet<IActorRef>();
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private readonly Dictionary<string, ISet<IActorRef>> _persistenceIdSubscribers = new Dictionary<string, ISet<IActorRef>>();
         private readonly SerializationHelper _serialization;
         private readonly AzureTableStorageJournalSettings _settings;
         private readonly TableServiceClient _tableServiceClient;
-        private readonly Dictionary<string, ISet<IActorRef>> _tagSubscribers = new Dictionary<string, ISet<IActorRef>>();
         private readonly CancellationTokenSource _shutdownCts;
 
         public AzureTableStorageJournal(Config? config = null)
@@ -102,18 +98,10 @@ namespace Akka.Persistence.Azure.Journal
 
         public TableClient Table => _tableServiceClient.GetTableClient(_settings.TableName);
 
-        protected bool HasAllPersistenceIdSubscribers => _allPersistenceIdSubscribers.Count != 0;
-
-        protected bool HasPersistenceIdSubscribers => _persistenceIdSubscribers.Count != 0;
-
-        protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
-
         public override async Task<long> ReadHighestSequenceNrAsync(
             string persistenceId,
             long fromSequenceNr)
         {
-            NotifyNewPersistenceIdAdded(persistenceId);
-
             _log.Debug("Entering method ReadHighestSequenceNrAsync");
 
             var seqNo = await HighestSequenceNumberQuery(persistenceId, null, _shutdownCts.Token)
@@ -133,8 +121,6 @@ namespace Akka.Persistence.Azure.Journal
             long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
-            NotifyNewPersistenceIdAdded(persistenceId);
-
             _log.Debug("Entering method ReplayMessagesAsync for persistentId [{0}] from seqNo range [{1}, {2}] and taking up to max [{3}]", 
                 persistenceId, fromSequenceNr, toSequenceNr, max);
 
@@ -212,8 +198,6 @@ namespace Akka.Persistence.Azure.Journal
 
         protected override async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
-            NotifyNewPersistenceIdAdded(persistenceId);
-
             _log.Debug("Entering method DeleteMessagesToAsync for persistentId [{0}] and up to seqNo [{1}]", persistenceId, toSequenceNr);
 
             var pages = PersistentJournalEntryDeleteQuery(persistenceId, toSequenceNr, null, _shutdownCts.Token)
@@ -279,24 +263,13 @@ namespace Akka.Persistence.Azure.Journal
         {
             switch (message)
             {
+                case SelectCurrentPersistenceIds msg:
+                    GetAllPersistenceIds()
+                        .PipeTo(msg.ReplyTo, success: h => new CurrentPersistenceIds(h.Ids), failure: e => new Status.Failure(e));
+                    return true;
                 case ReplayTaggedMessages replay:
                     ReplayTaggedMessagesAsync(replay, _shutdownCts.Token)
                         .PipeTo(replay.ReplyTo, failure: e => new ReplayMessagesFailure(e));
-                    break;
-                case SubscribePersistenceId subscribe:
-                    AddPersistenceIdSubscriber(Sender, subscribe.PersistenceId);
-                    Context.Watch(Sender);
-                    break;
-                case SubscribeAllPersistenceIds _:
-                    var task = AddAllPersistenceIdSubscriber(Sender, _shutdownCts.Token); // Detached task
-                    Context.Watch(Sender);
-                    break;
-                case SubscribeTag subscribe:
-                    AddTagSubscriber(Sender, subscribe.Tag);
-                    Context.Watch(Sender);
-                    break;
-                case Terminated terminated:
-                    RemoveSubscriber(terminated.ActorRef);
                     break;
                 default:
                     return false;
@@ -326,7 +299,7 @@ namespace Akka.Persistence.Azure.Journal
                             var item = t;
                             Debug.Assert(item != null, nameof(item) + " != null");
 
-                            string[] tags = {};
+                            string[] tags = [];
                             // If the payload is a tagged payload, reset to a non-tagged payload
                             if (item!.Payload is Tagged tagged)
                             {
@@ -429,11 +402,6 @@ namespace Akka.Persistence.Azure.Journal
                         foreach (var r in allPersistenceResponse)
                             _log.Debug("Azure table storage wrote entity with status code [{0}]", r.Status);
 
-                    if (HasPersistenceIdSubscribers || HasAllPersistenceIdSubscribers)
-                    {
-                        highSequenceNumbers.ForEach(x => NotifyNewPersistenceIdAdded(x.Key));
-                    }
-
                     if (taggedEntries.Count > 0)
                     {
                         foreach (var kvp in taggedEntries)
@@ -456,14 +424,6 @@ namespace Akka.Persistence.Azure.Journal
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                                 foreach (var r in eventTagsResponse)
                                     _log.Debug("Azure table storage wrote entity with status code [{0}]", r.Status);
-
-                            if (HasTagSubscribers && taggedEntries.Count != 0)
-                            {
-                                foreach (var tag in taggedEntries.Keys)
-                                {
-                                    NotifyTagChange(tag);
-                                }
-                            }
                         }
                     }
                 }
@@ -491,7 +451,7 @@ namespace Akka.Persistence.Azure.Journal
             return Table.QueryAsync<TableEntity>(
                 filter: $"PartitionKey eq '{AllPersistenceIdsEntry.PartitionKeyValue}'",
                 maxPerPage: maxPerPage,
-                @select: new[] { "RowKey" }, 
+                @select: ["RowKey"], 
                 cancellationToken: cancellationToken
             );
         }
@@ -575,40 +535,10 @@ namespace Akka.Persistence.Azure.Journal
                 cancellationToken: cancellationToken);
         }
 
-        private async Task AddAllPersistenceIdSubscriber(IActorRef subscriber, CancellationToken cancellationToken)
+        private async Task<(IEnumerable<string> Ids, long LastOrdering)> GetAllPersistenceIds(CancellationToken cancellationToken)
         {
-            lock (_allPersistenceIdSubscribers)
-            {
-                _allPersistenceIdSubscribers.Add(subscriber);
-            }
-            subscriber.Tell(new CurrentPersistenceIds(await GetAllPersistenceIds(cancellationToken)));
-        }
-
-        private void AddPersistenceIdSubscriber(IActorRef subscriber, string persistenceId)
-        {
-            if (!_persistenceIdSubscribers.TryGetValue(persistenceId, out var subscriptions))
-            {
-                subscriptions = new HashSet<IActorRef>();
-                _persistenceIdSubscribers.Add(persistenceId, subscriptions);
-            }
-
-            subscriptions.Add(subscriber);
-        }
-
-        private void AddTagSubscriber(IActorRef subscriber, string tag)
-        {
-            if (!_tagSubscribers.TryGetValue(tag, out var subscriptions))
-            {
-                subscriptions = new HashSet<IActorRef>();
-                _tagSubscribers.Add(tag, subscriptions);
-            }
-
-            subscriptions.Add(subscriber);
-        }
-
-        private async Task<IEnumerable<string>> GetAllPersistenceIds(CancellationToken cancellationToken)
-        {
-            return await GenerateAllPersistenceIdsQuery(null, cancellationToken)
+            var lastOrdering = HighestSequenceNumberQuery()
+            var ids = await GenerateAllPersistenceIdsQuery(null, cancellationToken)
                 .Select(item => item.RowKey).ToListAsync(cancellationToken);
         }
 
@@ -666,43 +596,6 @@ namespace Akka.Persistence.Azure.Journal
             return tables.Count > 0;
         }
 
-        private void NotifyNewPersistenceIdAdded(
-            string persistenceId)
-        {
-            var isNew = TryAddPersistenceId(persistenceId);
-            if (isNew && HasAllPersistenceIdSubscribers)
-            {
-                var added = new PersistenceIdAdded(persistenceId);
-                foreach (var subscriber in _allPersistenceIdSubscribers)
-                    subscriber.Tell(added);
-            }
-        }
-
-        private void NotifyTagChange(
-            string tag)
-        {
-            if (_tagSubscribers.TryGetValue(tag, out var subscribers))
-            {
-                var changed = new TaggedEventAppended(tag);
-                foreach (var subscriber in subscribers)
-                    subscriber.Tell(changed);
-            }
-        }
-
-        private void RemoveSubscriber(
-            IActorRef subscriber)
-        {
-            var pidSubscriptions = _persistenceIdSubscribers.Values.Where(x => x.Contains(subscriber));
-            foreach (var subscription in pidSubscriptions)
-                subscription.Remove(subscriber);
-
-            var tagSubscriptions = _tagSubscribers.Values.Where(x => x.Contains(subscriber));
-            foreach (var subscription in tagSubscriptions)
-                subscription.Remove(subscriber);
-
-            _allPersistenceIdSubscribers.Remove(subscriber);
-        }
-
         /// <summary>
         /// Replays all events with given tag within provided boundaries from current database.
         /// </summary>
@@ -756,14 +649,6 @@ namespace Akka.Persistence.Azure.Journal
             }
 
             return new ReplayTaggedMessageSuccess(true);
-        }
-
-        private bool TryAddPersistenceId(string persistenceId)
-        {
-            lock (_allPersistenceIds)
-            {
-                return _allPersistenceIds.Add(persistenceId);
-            }
         }
     }
 }

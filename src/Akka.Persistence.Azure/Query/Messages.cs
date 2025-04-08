@@ -12,19 +12,21 @@ using System.Collections.Immutable;
 
 namespace Akka.Persistence.Azure.Query
 {
-    /// <summary>
-    /// When message implements this interface, it indicates that such message is EventJournal read subscription command.
-    /// </summary>
-    public interface ISubscriptionCommand { }
+    [Serializable]
+    public sealed class SelectCurrentPersistenceIds : IJournalRequest
+    {
+        public IActorRef ReplyTo { get; }
+        public long Offset { get; }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
+        public SelectCurrentPersistenceIds(long offset, IActorRef replyTo)
+        {
+            Offset = offset;
+            ReplyTo = replyTo;
+        }
+    }
+
     public sealed class CurrentPersistenceIds : IDeadLetterSuppression
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public readonly IEnumerable<string> AllPersistenceIds;
 
         /// <summary>
@@ -181,74 +183,7 @@ namespace Akka.Persistence.Azure.Query
 
         public bool Completed { get; }
     }
-
-    /// <summary>
-    /// Subscribe the `sender` to current and new persistenceIds.
-    /// Used by query-side. The journal will send one <see cref="CurrentPersistenceIds"/> to the
-    /// subscriber followed by <see cref="PersistenceIdAdded"/> messages when new persistenceIds
-    /// are created.
-    /// </summary>
-    public sealed class SubscribeAllPersistenceIds : ISubscriptionCommand
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly SubscribeAllPersistenceIds Instance = new SubscribeAllPersistenceIds();
-
-        private SubscribeAllPersistenceIds()
-        {
-        }
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <summary>
-    /// Subscribe the `sender` to changes (appended events) for a specific `persistenceId`.
-    /// Used by query-side. The journal will send <see cref="EventAppended"/> messages to
-    /// the subscriber when <see cref="AsyncWriteJournal.WriteMessagesAsync"/> has been called.
-    /// </summary>
-    public sealed class SubscribePersistenceId : ISubscriptionCommand
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly string PersistenceId;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        public SubscribePersistenceId(string persistenceId)
-        {
-            PersistenceId = persistenceId;
-        }
-    }
-
-    /// <summary>
-    /// Subscribe the `sender` to changes (appended events) for a specific `tag`.
-    /// Used by query-side. The journal will send <see cref="TaggedEventAppended"/> messages to
-    /// the subscriber when `asyncWriteMessages` has been called.
-    /// Events are tagged by wrapping in <see cref="Tagged"/>
-    /// via an <see cref="IEventAdapter"/>.
-    /// </summary>
-    public sealed class SubscribeTag : ISubscriptionCommand
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly string Tag;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="tag">TBD</param>
-        public SubscribeTag(string tag)
-        {
-            Tag = tag;
-        }
-    }
-
+    
     /// <summary>
     /// TBD
     /// </summary>

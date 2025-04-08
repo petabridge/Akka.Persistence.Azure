@@ -18,14 +18,13 @@ namespace Akka.Persistence.Azure.Query.Publishers
         protected readonly DeliveryBuffer<EventEnvelope> Buffer;
         protected readonly IActorRef JournalRef;
         protected long CurrentOffset;
-        protected AbstractEventsByTagPublisher(string tag, long fromOffset, int maxBufferSize, string writeJournalPluginId)
+        protected AbstractEventsByTagPublisher(string tag, long fromOffset, int maxBufferSize, IActorRef journalRef)
         {
             Tag = tag;
             CurrentOffset = FromOffset = fromOffset;
             MaxBufferSize = maxBufferSize;
-            WriteJournalPluginId = writeJournalPluginId;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
-            JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
+            JournalRef = journalRef;
         }
 
         protected ILoggingAdapter Log => _log ??= Context.GetLogger();
@@ -33,7 +32,6 @@ namespace Akka.Persistence.Azure.Query.Publishers
         protected long FromOffset { get; }
         protected abstract long ToOffset { get; }
         protected int MaxBufferSize { get; }
-        protected string WriteJournalPluginId { get; }
 
         protected bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentOffset <= ToOffset);
 

@@ -15,20 +15,19 @@ namespace Akka.Persistence.Azure.Query.Publishers
     {
         private ILoggingAdapter _log;
 
-        protected DeliveryBuffer<EventEnvelope> Buffer;
+        protected readonly DeliveryBuffer<EventEnvelope> Buffer;
         protected readonly IActorRef JournalRef;
         protected long CurrentSequenceNr;
 
-        protected AbstractEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, string writeJournalPluginId)
+        protected AbstractEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef journalRef)
         {
             PersistenceId = persistenceId;
             CurrentSequenceNr = FromSequenceNr = fromSequenceNr;
             ToSequenceNr = toSequenceNr;
             MaxBufferSize = maxBufferSize;
-            WriteJournalPluginId = writeJournalPluginId;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
 
-            JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
+            JournalRef = journalRef;
         }
 
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
@@ -36,7 +35,6 @@ namespace Akka.Persistence.Azure.Query.Publishers
         protected long FromSequenceNr { get; }
         protected long ToSequenceNr { get; set; }
         protected int MaxBufferSize { get; }
-        protected string WriteJournalPluginId { get; }
 
         protected bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentSequenceNr <= ToSequenceNr);
 

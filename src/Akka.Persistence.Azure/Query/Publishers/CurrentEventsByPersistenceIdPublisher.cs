@@ -10,8 +10,8 @@ namespace Akka.Persistence.Azure.Query.Publishers
 {
     internal sealed class CurrentEventsByPersistenceIdPublisher : AbstractEventsByPersistenceIdPublisher
     {
-        public CurrentEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, string writeJournalPluginId)
-            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournalPluginId)
+        public CurrentEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef journalRef)
+            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, journalRef)
         {
         }
 
