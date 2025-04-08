@@ -73,8 +73,7 @@ Target "Build" (fun _ ->
         (fun p -> 
             { p with
                 Project = solutionFile
-                Configuration = configuration
-                AdditionalArgs = ["-warnaserror"]}) // "Rebuild"  
+                Configuration = configuration}) // "Rebuild"  
 )
 
 

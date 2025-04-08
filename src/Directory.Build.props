@@ -5,6 +5,7 @@
     <Copyright>Copyright © 2017-2023 Petabridge</Copyright>
     <Authors>Petabridge</Authors>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup>
     <NetVersion>net6.0</NetVersion>
