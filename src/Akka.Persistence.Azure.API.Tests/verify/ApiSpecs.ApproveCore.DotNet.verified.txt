@@ -262,6 +262,9 @@ namespace Akka.Persistence.Azure.Snapshot
         public Azure.Storage.Blobs.BlobContainerClient Container { get; }
         protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata) { }
         protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                1,
+                2})]
         protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
         protected override void PostStop() { }
         protected override void PreStart() { }
