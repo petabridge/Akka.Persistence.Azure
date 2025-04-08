@@ -11,7 +11,7 @@ namespace Akka.Persistence.Azure.Tests
     [Collection("AzureSpecs")]
     public class Issue159Spec: SnapshotStoreSpec
     {
-        private static Config Config(string connectionString)
+        private static Config TestConfig(string connectionString)
         {
             return ConfigurationFactory.ParseString(@"
 akka {
@@ -60,7 +60,7 @@ akka {
         }
 
         public Issue159Spec(ITestOutputHelper output)
-            : base(AzureConfig(Config), nameof(Issue159Spec), output)
+            : base(AzureConfig(TestConfig), nameof(Issue159Spec), output)
         {
             var extension = AzurePersistence.Get(Sys);
 

@@ -230,7 +230,6 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
         {
             switch (message)
             {
-                case ShardRegion.StartEntity start: return start.EntityId;
                 case ShardEnvelope e: return e.EntityId;
             }
 
