@@ -174,7 +174,7 @@ namespace Akka.Persistence.Azure.Snapshot
             base.PostStop();
         }
 
-        protected override async Task<SelectedSnapshot> LoadAsync(
+        protected override async Task<SelectedSnapshot?> LoadAsync(
             string persistenceId,
             SnapshotSelectionCriteria criteria)
         {

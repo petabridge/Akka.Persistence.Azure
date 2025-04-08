@@ -29,7 +29,6 @@ public sealed class MessageExtractor : HashCodeMessageExtractor
     public override string? EntityId(object message)
         => message switch
         {
-            ShardRegion.StartEntity start => start.EntityId,
             ShardEnvelope e => e.EntityId,
             _ => null
         };

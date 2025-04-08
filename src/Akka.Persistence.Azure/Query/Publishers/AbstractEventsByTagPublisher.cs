@@ -100,7 +100,8 @@ namespace Akka.Persistence.Azure.Query.Publishers
                         persistenceId: replayed.Persistent.PersistenceId,
                         sequenceNr: replayed.Persistent.SequenceNr,
                         timestamp: replayed.Persistent.Timestamp,
-                        @event: replayed.Persistent.Payload));
+                        @event: replayed.Persistent.Payload,
+                        tags: [ replayed.Tag ]));
 
                     CurrentOffset = replayed.Offset;
                     Buffer.DeliverBuffer(TotalDemand);
