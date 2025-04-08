@@ -111,7 +111,8 @@ namespace Akka.Persistence.Azure.Query.Publishers
                             persistenceId: PersistenceId,
                             sequenceNr: seqNr,
                             @event: replayed.Persistent.Payload,
-                            timestamp: replayed.Persistent.Timestamp));
+                            timestamp: replayed.Persistent.Timestamp,
+                            tags: []));
                         CurrentSequenceNr = seqNr + 1;
                         Buffer.DeliverBuffer(TotalDemand);
                         return true;

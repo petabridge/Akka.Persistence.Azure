@@ -35,8 +35,8 @@ public class Purchaser: UntypedActor, IWithTimers
 
         _shardRegion = shardActor.ActorRef;
     }
-    
-    public ITimerScheduler Timers { get; set; }
+
+    public ITimerScheduler Timers { get; set; } = null!;
 
     protected override void OnReceive(object message)
     {

@@ -117,7 +117,7 @@ namespace Akka.Persistence.Azure.Journal
             _log.Debug("Entering method ReadHighestSequenceNrAsync");
 
             var seqNo = await HighestSequenceNumberQuery(persistenceId, null, _shutdownCts.Token)
-                .Select(entity => entity.GetInt64(HighestSequenceNrEntry.HighestSequenceNrKey).Value)
+                .Select(entity => entity.GetInt64(HighestSequenceNrEntry.HighestSequenceNrKey) ?? 0L )
                 .AggregateAsync(0L, Math.Max, cancellationToken: _shutdownCts.Token);
             
             _log.Debug("Leaving method ReadHighestSequenceNrAsync with SeqNo [{0}] for PersistentId [{1}]", seqNo, persistenceId);
@@ -319,7 +319,7 @@ namespace Akka.Persistence.Azure.Journal
                     {
                         Debug.Assert(currentWrites.Current != null, "atomicWrites.Current != null");
 
-                        var list = (IImmutableList<IPersistentRepresentation>) currentWrites.Current.Payload;
+                        var list = (IImmutableList<IPersistentRepresentation>) currentWrites.Current!.Payload;
                         var batchItems = new List<TableTransactionAction>();
                         foreach (var t in list)
                         {
@@ -328,7 +328,7 @@ namespace Akka.Persistence.Azure.Journal
 
                             string[] tags = {};
                             // If the payload is a tagged payload, reset to a non-tagged payload
-                            if (item.Payload is Tagged tagged)
+                            if (item!.Payload is Tagged tagged)
                             {
                                 item = item.WithPayload(tagged.Payload);
                                 if (tagged.Tags.Count > 0)
