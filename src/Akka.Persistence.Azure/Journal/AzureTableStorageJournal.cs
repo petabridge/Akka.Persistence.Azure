@@ -110,15 +110,17 @@ namespace Akka.Persistence.Azure.Journal
 
         public override async Task<long> ReadHighestSequenceNrAsync(
             string persistenceId,
-            long fromSequenceNr)
+            long fromSequenceNr,
+            CancellationToken cancellationToken)
         {
             NotifyNewPersistenceIdAdded(persistenceId);
 
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token, cancellationToken);
             _log.Debug("Entering method ReadHighestSequenceNrAsync");
 
-            var seqNo = await HighestSequenceNumberQuery(persistenceId, null, _shutdownCts.Token)
+            var seqNo = await HighestSequenceNumberQuery(persistenceId, null, cts.Token)
                 .Select(entity => entity.GetInt64(HighestSequenceNrEntry.HighestSequenceNrKey) ?? 0L )
-                .AggregateAsync(0L, Math.Max, cancellationToken: _shutdownCts.Token);
+                .AggregateAsync(0L, Math.Max, cancellationToken: cts.Token);
             
             _log.Debug("Leaving method ReadHighestSequenceNrAsync with SeqNo [{0}] for PersistentId [{1}]", seqNo, persistenceId);
 
@@ -210,14 +212,16 @@ namespace Akka.Persistence.Azure.Journal
             _log.Debug("Leaving method ReplayMessagesAsync");
         }
 
-        protected override async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        protected override async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {
             NotifyNewPersistenceIdAdded(persistenceId);
 
             _log.Debug("Entering method DeleteMessagesToAsync for persistentId [{0}] and up to seqNo [{1}]", persistenceId, toSequenceNr);
 
-            var pages = PersistentJournalEntryDeleteQuery(persistenceId, toSequenceNr, null, _shutdownCts.Token)
-                .AsPages().GetAsyncEnumerator(_shutdownCts.Token);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token, cancellationToken);
+            
+            var pages = PersistentJournalEntryDeleteQuery(persistenceId, toSequenceNr, null, cts.Token)
+                .AsPages().GetAsyncEnumerator(cts.Token);
 
             ValueTask<bool>? nextTask = pages.MoveNextAsync();
             while (nextTask.HasValue)
@@ -242,7 +246,7 @@ namespace Akka.Persistence.Azure.Journal
                 // ExecuteBatchAsLimitedBatches breaks atomicity on any transaction/batch write operations with more than
                 // 100 entries.
                 var response = await Table.ExecuteBatchAsLimitedBatches(currentPage.Values
-                    .Select(entity => new TableTransactionAction(TableTransactionActionType.Delete, entity)).ToList(), _shutdownCts.Token);
+                    .Select(entity => new TableTransactionAction(TableTransactionActionType.Delete, entity)).ToList(), cts.Token);
                 
                 if (_log.IsDebugEnabled && _settings.VerboseLogging)
                 {
@@ -305,7 +309,7 @@ namespace Akka.Persistence.Azure.Journal
             return true;
         }
 
-        protected override async Task<IImmutableList<Exception?>?> WriteMessagesAsync(IEnumerable<AtomicWrite> atomicWrites)
+        protected override async Task<IImmutableList<Exception?>?> WriteMessagesAsync(IEnumerable<AtomicWrite> atomicWrites, CancellationToken cancellationToken)
         {
             try
             {
@@ -313,6 +317,7 @@ namespace Akka.Persistence.Azure.Journal
                 var exceptions = new List<Exception?>();
                 var highSequenceNumbers = new Dictionary<string, long>();
 
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token, cancellationToken);
                 using (var currentWrites = atomicWrites.GetEnumerator())
                 {
                     while (currentWrites.MoveNext())
@@ -387,7 +392,7 @@ namespace Akka.Persistence.Azure.Journal
                             //
                             // ExecuteBatchAsLimitedBatches breaks atomicity on any transaction/batch write operations with more than
                             // 100 entries.
-                            var response = await Table.ExecuteBatchAsLimitedBatches(batchItems, _shutdownCts.Token);
+                            var response = await Table.ExecuteBatchAsLimitedBatches(batchItems, cts.Token);
                             if (_log.IsDebugEnabled && _settings.VerboseLogging)
                             {
                                 foreach (var r in response)
@@ -423,7 +428,7 @@ namespace Akka.Persistence.Azure.Journal
                     //
                     // ExecuteBatchAsLimitedBatches breaks atomicity on any transaction/batch write operations with more than
                     // 100 entries.
-                    var allPersistenceResponse = await Table.ExecuteBatchAsLimitedBatches(allPersistenceIdsBatch, _shutdownCts.Token);
+                    var allPersistenceResponse = await Table.ExecuteBatchAsLimitedBatches(allPersistenceIdsBatch, cts.Token);
 
                     if (_log.IsDebugEnabled && _settings.VerboseLogging)
                         foreach (var r in allPersistenceResponse)
