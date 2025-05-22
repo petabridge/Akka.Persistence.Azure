@@ -1,3 +1,9 @@
+#### 1.5.42 May 22nd 2025 ####
+
+* [Update Akka.NET v1.5.42](https://github.com/akkadotnet/akka.net/releases/tag/1.5.42)
+* [Update Akka.Hosting v1.5.42](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.42)
+* [Use the new Akka.Persistence cancellation token API](https://github.com/petabridge/Akka.Persistence.Azure/pull/515) 
+
 #### 1.5.40 April 7th 2025 ####
 
 * [Update Akka.NET v1.5.40](https://github.com/akkadotnet/akka.net/releases/tag/1.5.40)
