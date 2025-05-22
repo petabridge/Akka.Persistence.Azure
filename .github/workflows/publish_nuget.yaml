@@ -1,0 +1,110 @@
+name: Publish NuGet
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build_and_sign:
+    permissions:
+      id-token: write # Require write permission to Fetch an OIDC token.
+    environment: otel-signing
+    name: Build and Sign Packages
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest]
+
+    steps:
+    - name: "Checkout"
+      uses: actions/checkout@v4.2.2
+      with:
+        lfs: true
+        fetch-depth: 0
+        
+    - name: "Install .NET SDK"
+      uses: actions/setup-dotnet@v4.3.1
+      with:
+        global-json-file: "./global.json"
+
+    - name: "Restore .NET tools"
+      run: dotnet tool restore
+
+    - name: "Update release notes"
+      shell: pwsh
+      run: |
+        ./build.ps1 # Assumes this generates RELEASE_NOTES.md
+
+    - name: Create Packages
+      run: dotnet pack /p:PackageVersion=${{ github.ref_name }} -c Release -o ./output
+
+    - name: Azure Login
+      uses: azure/login@6b2456866fc08b011acb422a92a4aa20e2c4de32
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Sign Packages
+      shell: pwsh
+      run: |
+        dotnet sign code azure-key-vault `
+          "**/*.nupkg" `
+          --base-directory "$env:GITHUB_WORKSPACE/output" `
+          --publisher-name "Petabridge" `
+          --description "Akka.NET Azure Table / Blob Storage Persistence Support" `
+          --description-url "https://github.com/petabridge/Akka.Persistence.Azure" `
+          --azure-key-vault-certificate "${{ secrets.CODE_SIGN_CERT_NAME }}" `
+          --azure-key-vault-url "${{ secrets.CODE_SIGN_KEY_VAULT }}" `
+          -v Information
+
+    - name: List files before artifact upload
+      shell: pwsh
+      run: ls $env:GITHUB_WORKSPACE
+
+    - name: Copy Release Notes to Output
+      shell: pwsh
+      run: Copy-Item -Path $env:GITHUB_WORKSPACE/RELEASE_NOTES.md -Destination $env:GITHUB_WORKSPACE/output/
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: signed-packages
+        path: ./output # Upload entire output directory
+
+  push_nuget:
+    name: Push NuGet and Create Release
+    needs: build_and_sign
+    runs-on: ubuntu-latest # Can use ubuntu as signing is done
+    steps:
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: signed-packages
+        path: ${{ github.workspace }}/artifacts
+
+    - name: List downloaded artifacts
+      run: ls -R ${{ github.workspace }}/artifacts
+
+    - name: Push Packages to NuGet
+      run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" -k ${{ secrets.AKKA_NUGET_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: 'Akka.Persistence.Azure ${{ github.ref_name }}'
+        body_path: ${{ github.workspace }}/artifacts/RELEASE_NOTES.md # Use note from artifact
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Assets
+      uses: AButler/upload-release-assets@v3.0
+      with:
+        repo-token: ${{ github.token }}
+        release-tag: ${{ github.ref_name }}
+        files: '${{ github.workspace }}/artifacts/*.nupkg' # Adjusted path
