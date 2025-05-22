@@ -6,7 +6,7 @@ trigger:
       - dev
       - master
 
-name: $(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
+name: $(SourceBranchName)_$(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
 
 pr:
   autoCancel: true # indicates whether additional pushes to a PR should cancel in-progress runs for the same PR. Defaults to true
@@ -17,6 +17,7 @@ jobs:
 - template: azure-pipeline.template.yaml
   parameters:
     name: Ubuntu
+    displayName: 'Linux PR Validation'
     vmImage: 'ubuntu-latest'
-    scriptFileName: ./build.sh
-    scriptArgs: all
+    outputDirectory: 'bin/nuget'
+    artifactName: 'nuget_pack-$(Build.BuildId)'
