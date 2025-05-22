@@ -13,8 +13,8 @@ namespace Akka.Persistence.Azure.Query.Publishers
     {
         private readonly ICancelable _tickCancelable;
 
-        public LiveEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, string writeJournalPluginId, TimeSpan refreshInterval)
-            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, writeJournalPluginId)
+        public LiveEventsByPersistenceIdPublisher(string persistenceId, long fromSequenceNr, long toSequenceNr, int maxBufferSize, IActorRef journalRef, TimeSpan refreshInterval)
+            : base(persistenceId, fromSequenceNr, toSequenceNr, maxBufferSize, journalRef)
         {
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsByPersistenceIdPublisher.Continue.Instance, Self);
         }
@@ -27,7 +27,6 @@ namespace Akka.Persistence.Azure.Query.Publishers
 
         protected override void ReceiveInitialRequest()
         {
-            JournalRef.Tell(new SubscribePersistenceId(PersistenceId));
             Replay();
         }
 

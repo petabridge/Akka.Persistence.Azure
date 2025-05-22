@@ -4,27 +4,33 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
+using Akka.Event;
+using Akka.Persistence.Journal;
 using Akka.Streams.Actors;
 
 namespace Akka.Persistence.Azure.Query.Publishers
 {
-    internal sealed class AllPersistenceIdsPublisher : ActorPublisher<string>
+        internal sealed class CurrentPersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash
     {
-        public static Props Props(bool liveQuery, string writeJournalPluginId)
+        public static Props Props(IActorRef writeJournal)
         {
-            return Actor.Props.Create(() => new AllPersistenceIdsPublisher(liveQuery, writeJournalPluginId));
+            return Actor.Props.Create(() => new CurrentPersistenceIdsPublisher(writeJournal));
         }
 
-        private readonly bool _liveQuery;
         private readonly IActorRef _journalRef;
-        private readonly DeliveryBuffer<string> _buffer;
 
-        public AllPersistenceIdsPublisher(bool liveQuery, string writeJournalPluginId)
+        private readonly DeliveryBuffer<string> _buffer;
+        private readonly ILoggingAdapter _log;
+
+        public IStash Stash { get; set; }
+
+        public CurrentPersistenceIdsPublisher(IActorRef journalRef)
         {
-            _liveQuery = liveQuery;
+            _journalRef = journalRef;
             _buffer = new DeliveryBuffer<string>(OnNext);
-            _journalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
+            _log = Context.GetLogger();
         }
 
         protected override bool Receive(object message)
@@ -32,8 +38,10 @@ namespace Akka.Persistence.Azure.Query.Publishers
             switch (message)
             {
                 case Request _:
-                    _journalRef.Tell(SubscribeAllPersistenceIds.Instance);
-                    Become(Active);
+                    Become(Initializing);
+                    _journalRef
+                        .Ask<CurrentPersistenceIds>(new MemoryJournal.SelectCurrentPersistenceIds(0, Self))
+                        .PipeTo(Self);
                     return true;
                 
                 case Cancel _:
@@ -45,7 +53,7 @@ namespace Akka.Persistence.Azure.Query.Publishers
             }
         }
 
-        private bool Active(object message)
+        private bool Initializing(object message)
         {
             switch (message)
             {
@@ -53,26 +61,188 @@ namespace Akka.Persistence.Azure.Query.Publishers
                     _buffer.AddRange(current.AllPersistenceIds);
                     _buffer.DeliverBuffer(TotalDemand);
 
-                    if (!_liveQuery && _buffer.IsEmpty)
+                    if (_buffer.IsEmpty)
+                    {
                         OnCompleteThenStop();
+                        return true;
+                    }
+
+                    Become(Active);
+                    Stash.UnstashAll();
                     return true;
                 
-                case PersistenceIdAdded added:
-                    if (_liveQuery)
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                
+                case Status.Failure msg:
+                    if (msg.Cause is AskTimeoutException e)
                     {
-                        _buffer.Add(added.PersistenceId);
-                        _buffer.DeliverBuffer(TotalDemand);
+                        _log.Info(e, "Current persistence id query timed out, retrying");
                     }
+                    else
+                    {
+                        _log.Info(msg.Cause, "Current persistence id query failed, retrying");
+                    }
+                    return true;
+                    
+                default:
+                    Stash.Stash();
+                    return true;
+            }
+        }
+
+        private bool Active(object message)
+        {
+            switch (message)
+            {
+                case CurrentPersistenceIds _:
+                    // Ignore duplicate CurrentPersistenceIds response
                     return true;
                 
                 case Request _:
                     _buffer.DeliverBuffer(TotalDemand);
-                    if (!_liveQuery && _buffer.IsEmpty)
+                    if (_buffer.IsEmpty)
                         OnCompleteThenStop();
                     return true;
                 
                 case Cancel _:
                     Context.Stop(Self);
+                    return true;
+                
+                default:
+                    return false;
+            }
+        }
+    }
+
+    internal sealed class LivePersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash, IWithTimers
+    {
+        private sealed class Continue
+        {
+            public static readonly Continue Instance = new();
+
+            private Continue() { }
+        }
+
+        public static Props Props(TimeSpan refreshInterval, IActorRef writeJournal)
+        {
+            return Actor.Props.Create(() => new LivePersistenceIdsPublisher(refreshInterval, writeJournal));
+        }
+
+        private long _lastOrderingOffset = 0L;
+        private readonly TimeSpan _refreshInterval;
+        private readonly IActorRef _journalRef;
+        private readonly DeliveryBuffer<string> _buffer;
+        private readonly ILoggingAdapter _log;
+
+        public IStash Stash { get; set; } = null!;
+        public ITimerScheduler Timers { get; set; } = null!;
+
+        public LivePersistenceIdsPublisher(TimeSpan refreshInterval, IActorRef journalRef)
+        {
+            _journalRef = journalRef;
+            _log = Context.GetLogger();
+            _refreshInterval = refreshInterval;
+            _buffer = new DeliveryBuffer<string>(OnNext);
+        }
+
+        protected override void PreStart()
+        {
+            base.PreStart();
+            Timers.StartPeriodicTimer(Continue.Instance, Continue.Instance, _refreshInterval, _refreshInterval, Self);
+        }
+
+        protected override void PostStop()
+        {
+            Timers.CancelAll();
+            base.PostStop();
+        }
+
+        protected override bool Receive(object message)
+        {
+            switch (message)
+            {
+                case Request _:
+                    Become(Waiting);
+                    _journalRef
+                        .Ask<CurrentPersistenceIds>(new SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
+                        .PipeTo(Self);
+                    return true;
+                
+                case Continue _:
+                    return true;
+                
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                
+                default:
+                    return false;
+            }
+        }
+
+        private bool Waiting(object message)
+        {
+            switch (message)
+            {
+                case CurrentPersistenceIds current:
+                    _lastOrderingOffset = current.HighestOrderingNumber;
+                    _buffer.AddRange(current.AllPersistenceIds);
+                    _buffer.DeliverBuffer(TotalDemand);
+
+                    Become(Active);
+                    Stash.UnstashAll();
+                    return true;
+                
+                case Continue _:
+                    return true;
+                
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                
+                case Status.Failure msg:
+                    if (msg.Cause is AskTimeoutException e)
+                    {
+                        _log.Info(e, $"Current persistence id query timed out, retrying. Offset: {_lastOrderingOffset}");
+                    }
+                    else
+                    {
+                        _log.Info(msg.Cause, $"Current persistence id query failed, retrying. Offset: {_lastOrderingOffset}");
+                    }
+                    
+                    Become(Active);
+                    Stash.UnstashAll();
+                    return true;
+                    
+                default:
+                    Stash.Stash();
+                    return true;
+            }
+        }
+
+        private bool Active(object message)
+        {
+            switch (message)
+            {
+                case CurrentPersistenceIds _:
+                    // Ignore duplicate CurrentPersistenceIds response
+                    return true;
+                
+                case Request _:
+                    _buffer.DeliverBuffer(TotalDemand);
+                    return true;
+                
+                case Continue _:
+                    return true;
+                
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                
+                case Status.Failure msg:
+                    _log.Info(msg.Cause, "Unexpected failure received");
                     return true;
                 
                 default:

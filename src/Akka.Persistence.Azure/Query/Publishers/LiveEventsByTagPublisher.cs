@@ -19,8 +19,8 @@ namespace Akka.Persistence.Azure.Query.Publishers
             long toOffset, 
             TimeSpan refreshInterval, 
             int maxBufferSize, 
-            string writeJournalPluginId)
-            : base(tag, fromOffset, maxBufferSize, writeJournalPluginId)
+            IActorRef journalRef)
+            : base(tag, fromOffset, maxBufferSize, journalRef)
         {
             ToOffset = toOffset;
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsByTagPublisher.Continue.Instance, Self);
@@ -36,7 +36,6 @@ namespace Akka.Persistence.Azure.Query.Publishers
 
         protected override void ReceiveInitialRequest()
         {
-            JournalRef.Tell(new SubscribeTag(Tag));
             Replay();
         }
 

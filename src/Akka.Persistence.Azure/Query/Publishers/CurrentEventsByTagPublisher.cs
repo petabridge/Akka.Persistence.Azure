@@ -18,8 +18,8 @@ namespace Akka.Persistence.Azure.Query.Publishers
             long fromOffset, 
             long toOffset, 
             int maxBufferSize, 
-            string writeJournalPluginId)
-            : base(tag, fromOffset, maxBufferSize, writeJournalPluginId)
+            IActorRef journalRef)
+            : base(tag, fromOffset, maxBufferSize, journalRef)
         {
             ToOffset = toOffset;
         }

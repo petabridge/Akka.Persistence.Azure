@@ -10,8 +10,8 @@ using Akka.Configuration;
 using Akka.Persistence.Azure.Query.Publishers;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Query;
-using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
+using Reactive.Streams;
 
 namespace Akka.Persistence.Azure.Query
 {
@@ -27,8 +27,8 @@ namespace Akka.Persistence.Azure.Query
 
         private readonly int _maxBufferSize;
         private readonly TimeSpan _refreshInterval;
-        private readonly string _writeJournalPluginId;
-
+        private readonly IActorRef _journalRef;
+        
         /// <summary>
         /// Returns a default query configuration for akka persistence Azure-based journals and snapshot stores.
         /// </summary>
@@ -41,7 +41,7 @@ namespace Akka.Persistence.Azure.Query
         {
             _maxBufferSize = config.GetInt("max-buffer-size");
             _refreshInterval = config.GetTimeSpan("refresh-interval");
-            _writeJournalPluginId = config.GetString("write-plugin");
+            var writeJournalPluginId = config.GetString("write-plugin");
 
             var setupOption = system.Settings.Setup.Get<AzureTableStorageReadJournalSetup>();
             if (setupOption.HasValue)
@@ -52,8 +52,10 @@ namespace Akka.Persistence.Azure.Query
                 if (setup.RefreshInterval != null)
                     _refreshInterval = setup.RefreshInterval.Value;
                 if (!string.IsNullOrWhiteSpace(setup.WritePluginId))
-                    _writeJournalPluginId = setup.WritePluginId;
+                    writeJournalPluginId = setup.WritePluginId;
             }
+
+            _journalRef = Persistence.Instance.Apply(system).JournalFor(writeJournalPluginId);
         }
 
         /// <summary>
@@ -77,9 +79,9 @@ namespace Akka.Persistence.Azure.Query
         /// </para>
         /// </summary>
         public Source<string, NotUsed> PersistenceIds() =>
-            Source.ActorPublisher<string>(AllPersistenceIdsPublisher.Props(true, _writeJournalPluginId))
+            Source.ActorPublisher<string>(LivePersistenceIdsPublisher.Props(_refreshInterval, _journalRef))
                 .MapMaterializedValue(_ => NotUsed.Instance)
-                .Named("AllPersistenceIds") as Source<string, NotUsed>;
+                .Named("AllPersistenceIds");
 
         /// <summary>
         /// Same type of query as <see cref="PersistenceIds"/> but the stream
@@ -87,9 +89,9 @@ namespace Akka.Persistence.Azure.Query
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
         public Source<string, NotUsed> CurrentPersistenceIds() =>
-            Source.ActorPublisher<string>(AllPersistenceIdsPublisher.Props(false, _writeJournalPluginId))
+            Source.ActorPublisher<string>(CurrentPersistenceIdsPublisher.Props(_journalRef))
                 .MapMaterializedValue(_ => NotUsed.Instance)
-                .Named("CurrentPersistenceIds") as Source<string, NotUsed>;
+                .Named("CurrentPersistenceIds");
 
         /// <summary>
         /// <see cref="EventsByPersistenceId"/> is used for retrieving events for a specific
@@ -118,9 +120,9 @@ namespace Akka.Persistence.Azure.Query
         /// backend journal.
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
-            Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+            Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refreshInterval, _maxBufferSize, _journalRef))
                 .MapMaterializedValue(_ => NotUsed.Instance)
-                .Named("EventsByPersistenceId-" + persistenceId) as Source<EventEnvelope, NotUsed>;
+                .Named("EventsByPersistenceId-" + persistenceId);
 
         /// <summary>
         /// Same type of query as <see cref="EventsByPersistenceId"/> but the event stream
@@ -128,9 +130,9 @@ namespace Akka.Persistence.Azure.Query
         /// stored after the query is completed are not included in the event stream.
         /// </summary>
         public Source<EventEnvelope, NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
-            Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, null, _maxBufferSize, _writeJournalPluginId))
+            Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, null, _maxBufferSize, _journalRef))
                 .MapMaterializedValue(_ => NotUsed.Instance)
-                .Named("CurrentEventsByPersistenceId-" + persistenceId) as Source<EventEnvelope, NotUsed>;
+                .Named("CurrentEventsByPersistenceId-" + persistenceId);
 
         /// <summary>
         /// <see cref="EventsByTag"/> is used for retrieving events that were marked with
@@ -173,11 +175,11 @@ namespace Akka.Persistence.Azure.Query
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset = null)
         {
-            offset = offset ?? new Sequence(0L);
+            offset ??= new Sequence(0L);
             switch (offset)
             {
                 case Sequence seq:
-                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value, long.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value, long.MaxValue, _refreshInterval, _maxBufferSize, _journalRef))
                         .MapMaterializedValue(_ => NotUsed.Instance)
                         .Named($"EventsByTag-{tag}");
                 case NoOffset _:
@@ -204,7 +206,7 @@ namespace Akka.Persistence.Azure.Query
             if(offset is not Sequence seq)
                 throw new ArgumentException($"{GetType().Name} does not support {offset.GetType().Name} offsets");
             
-            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value, DateTime.UtcNow.Ticks, null, _maxBufferSize, _writeJournalPluginId))
+            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value, DateTime.UtcNow.Ticks, null, _maxBufferSize, _journalRef))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named($"CurrentEventsByTag-{tag}");
         }
