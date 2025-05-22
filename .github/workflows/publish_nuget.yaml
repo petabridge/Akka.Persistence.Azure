@@ -88,7 +88,7 @@ jobs:
       run: ls -R ${{ github.workspace }}/artifacts
 
     - name: Push Packages to NuGet
-      run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" -k ${{ secrets.AKKA_NUGET_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+      run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" -k ${{ secrets.NUGET_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
 
     - name: Create GitHub Release
       id: create_release
