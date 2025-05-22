@@ -1,10 +1,6 @@
 # Release task for PbLib projects
 # See https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema for reference
 
-pool:
-  vmImage: windows-latest
-  demands: Cmd
-
 trigger:
   branches:
     include:
@@ -20,19 +16,32 @@ variables:
   - name: githubRepositoryName
     value: petabridge/Akka.Persistence.Azure #replace this
 
-steps:
-- task: BatchScript@1
-  displayName: 'FAKE Build'
-  inputs:
-    filename: build.cmd
-    arguments: 'Nuget SignClientUser=$(signingUsername) SignClientSecret=$(signingPassword) nugetpublishurl=https://api.nuget.org/v3/index.json nugetkey=$(Akka.NET Tools NuGet)'
+jobs:
+  - job: Release
+    pool:
+      vmImage: windows-latest
+      demands: Cmd
+    steps:
+      - task: UseDotNet@2
+        displayName: 'Use .NET SDK from global.json'
+        inputs:
+          useGlobalJson: true
 
-- task: GitHubRelease@0
-  displayName: 'GitHub release (create)'
-  inputs:
-    gitHubConnection: $(githubConnectionName)
-    repositoryName: $(githubRepositoryName)
-    title: '$(projectName) v$(Build.SourceBranchName)'
-    releaseNotesFile: 'RELEASE_NOTES.md'
-    assets: |
-     bin\nuget\*.nupkg
+      - powershell: ./build.ps1
+        displayName: 'Update Release Notes'
+
+      # Pack without version suffix for release
+      - script: dotnet pack -c Release -o $(Build.ArtifactStagingDirectory)/nuget
+        displayName: 'Create packages'
+
+      - script: dotnet nuget push "$(Build.ArtifactStagingDirectory)\nuget\*.nupkg" --api-key $(Akka.NET Tools NuGet) --source https://api.nuget.org/v3/index.json --skip-duplicate
+        displayName: 'Publish to NuGet.org'
+
+      - task: GitHubRelease@0
+        displayName: 'GitHub release (create)'
+        inputs:
+          gitHubConnection: $(githubConnectionName)
+          repositoryName: $(githubRepositoryName)
+          title: '$(projectName) v$(Build.SourceBranchName)'
+          releaseNotesFile: 'RELEASE_NOTES.md'
+          assets: '$(Build.ArtifactStagingDirectory)/nuget/*.nupkg'

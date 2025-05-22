@@ -11,10 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Azure.Test
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{320BFA6C-930A-4B7F-9FA4-76CDD0F0E552}"
 	ProjectSection(SolutionItems) = preProject
-		build.cmd = build.cmd
-		build.fsx = build.fsx
 		build.ps1 = build.ps1
-		build.sh = build.sh
 		src\Directory.Build.props = src\Directory.Build.props
 		src\Directory.Packages.props = src\Directory.Packages.props
 		src\xunitRunner.props = src\xunitRunner.props
