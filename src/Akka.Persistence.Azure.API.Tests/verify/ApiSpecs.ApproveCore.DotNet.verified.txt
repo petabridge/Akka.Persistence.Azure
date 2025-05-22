@@ -36,17 +36,17 @@ namespace Akka.Persistence.Azure.Journal
         protected bool HasPersistenceIdSubscribers { get; }
         protected bool HasTagSubscribers { get; }
         public Azure.Data.Tables.TableClient Table { get; }
-        protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr) { }
+        protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         protected override void PostStop() { }
         protected override void PreStart() { }
-        public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr) { }
+        public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         protected override bool ReceivePluginInternal(object message) { }
         public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
         [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 1,
                 2,
                 2})]
-        protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> atomicWrites) { }
+        protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> atomicWrites, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class AzureTableStorageJournalSettings
@@ -260,15 +260,15 @@ namespace Akka.Persistence.Azure.Snapshot
     {
         public AzureBlobSnapshotStore(Akka.Configuration.Config config = null) { }
         public Azure.Storage.Blobs.BlobContainerClient Container { get; }
-        protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata) { }
-        protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken) { }
         [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 1,
                 2})]
-        protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken) { }
         protected override void PostStop() { }
         protected override void PreStart() { }
-        protected override System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
+        protected override System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class AzureBlobSnapshotStoreSettings
