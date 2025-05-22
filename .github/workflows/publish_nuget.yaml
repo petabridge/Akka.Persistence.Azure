@@ -9,7 +9,7 @@ jobs:
   build_and_sign:
     permissions:
       id-token: write # Require write permission to Fetch an OIDC token.
-    environment: otel-signing
+    environment: signing
     name: Build and Sign Packages
     runs-on: ${{ matrix.os }}
     strategy:
