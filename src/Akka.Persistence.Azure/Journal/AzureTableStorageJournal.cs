@@ -623,7 +623,7 @@ namespace Akka.Persistence.Azure.Journal
             {
                 var tableClient = _tableServiceClient.GetTableClient(_settings.TableName);
                 
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(_settings.ConnectTimeout);
                 using (cts)
                 {
