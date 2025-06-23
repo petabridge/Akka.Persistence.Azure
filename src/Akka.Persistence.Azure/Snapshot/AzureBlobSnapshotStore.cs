@@ -100,7 +100,7 @@ namespace Akka.Persistence.Azure.Snapshot
             {
                 var blobClient = _serviceClient.GetBlobContainerClient(_settings.ContainerName);
 
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(_settings.ConnectTimeout);
                 using (cts)
                 {
@@ -179,7 +179,7 @@ namespace Akka.Persistence.Azure.Snapshot
             SnapshotSelectionCriteria criteria,
             CancellationToken cancellationToken)
         {
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token, cancellationToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token, cancellationToken);
             cts.CancelAfter(_settings.RequestTimeout);
             using(cts)
             {
@@ -231,7 +231,7 @@ namespace Akka.Persistence.Azure.Snapshot
             var blobClient = Container.GetBlockBlobClient(metadata.ToSnapshotBlobId(_settings.Folders));
             var snapshotData = _serialization.SnapshotToBytes(new Serialization.Snapshot(snapshot));
 
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token, cancellationToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token, cancellationToken);
             cts.CancelAfter(_settings.RequestTimeout);
             using (cts)
             {
@@ -259,7 +259,7 @@ namespace Akka.Persistence.Azure.Snapshot
         {
             var blobClient = Container.GetBlobClient(metadata.ToSnapshotBlobId(_settings.Folders));
 
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token, cancellationToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token, cancellationToken);
             cts.CancelAfter(_settings.RequestTimeout);
             using (cts)
             {
@@ -283,7 +283,7 @@ namespace Akka.Persistence.Azure.Snapshot
 
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token, cancellationToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownCts.Token, cancellationToken);
             cts.CancelAfter(_settings.RequestTimeout);
             using (cts)
             {
