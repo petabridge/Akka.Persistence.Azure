@@ -1,3 +1,9 @@
+#### 1.5.45 July 11th 2025 ####
+
+* [Update Akka.NET v1.5.45](https://github.com/akkadotnet/akka.net/releases/tag/1.5.45)
+* [Update Akka.Hosting v1.5.45](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.45)
+* [Fix Microsoft.Identity.Client security vulnerability bug](https://github.com/petabridge/Akka.Persistence.Azure/pull/522)
+
 #### 1.5.44 June 26th 2025 ####
 
 * [Update Akka.NET v1.5.44](https://github.com/akkadotnet/akka.net/releases/tag/1.5.44)
