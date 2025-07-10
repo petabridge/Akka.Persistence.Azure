@@ -16,6 +16,8 @@
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="System.Linq.Async" />
+    <!-- Needed to fix Microsoft.Identity.Client typosquatting phishing link bug (https://github.com/AzureAD/microsoft-authentication-library-for-dotnet/pull/5278) -->
+    <PackageReference Include="Microsoft.Identity.Client" />
   </ItemGroup>
 
 </Project>
