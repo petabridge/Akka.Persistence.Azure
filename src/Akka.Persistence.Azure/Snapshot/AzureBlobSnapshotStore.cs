@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Snapshot;
 using Akka.Util;
@@ -93,6 +94,17 @@ namespace Akka.Persistence.Azure.Snapshot
         }
 
         public BlobContainerClient Container => _serviceClient.GetBlobContainerClient(_settings.ContainerName);
+
+        protected override bool ReceivePluginInternal(object message)
+        {
+            if (message is GetSettings)
+            {
+                Sender.Tell(_settings, Self);
+                return true;
+            }
+
+            return false;
+        }
 
         private async Task<BlobContainerClient> InitCloudStorage(int remainingTries, CancellationToken cancellationToken)
         {

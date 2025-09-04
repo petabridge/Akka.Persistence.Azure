@@ -5,12 +5,16 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Hosting;
 using Akka.Persistence.Azure.Hosting;
+using Akka.Persistence.Azure.Journal;
+using Akka.Persistence.Azure.Snapshot;
 using Akka.Persistence.Azure.Tests.Helper;
+using Akka.Persistence.Hosting;
 using Akka.TestKit.Xunit2.Internals;
 using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
@@ -168,6 +172,85 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var config = actorSystem.Settings.Config;
             config.GetString("akka.persistence.journal.plugin").Should().Be("akka.persistence.journal.azure-table");
             config.GetString("akka.persistence.snapshot-store.plugin").Should().Be("akka.persistence.snapshot-store.azure-blob-store");
+        }
+
+        [Fact(DisplayName = "Multiple journal and snapshot options should work")]
+        public async Task ShouldHandleMultiOptions()
+        {
+            var snapshotOptions1 = new AzureBlobSnapshotOptions(true)
+            {
+                ConnectionString = "UseDevelopmentStorage=true",
+                Identifier = "azure-blob-store",
+                ContainerName = "akka-persistence-default-container",
+                AutoInitialize = true
+            };
+            var snapshotOptions2 = new AzureBlobSnapshotOptions(false)
+            {
+                ConnectionString = "UseDevelopmentStorage=true",
+                Identifier = "azure-sharding-blob-store",
+                ContainerName = "akka-persistence-sharding-container",
+                AutoInitialize = true
+            };
+            var journalOptions1 = new AzureTableStorageJournalOptions(true)
+            {
+                ConnectionString = "UseDevelopmentStorage=true",
+                Identifier = "azure-table",
+                TableName = "AkkaPersistenceDefaultTable",
+                AutoInitialize = true
+            };
+            var journalOptions2 = new AzureTableStorageJournalOptions(false)
+            {
+                ConnectionString = "UseDevelopmentStorage=true",
+                Identifier = "azure-sharding-table",
+                TableName = "AkkaPersistenceShardingTable",
+                AutoInitialize = true
+            };
+
+            var host = Host.CreateDefaultBuilder()
+                .ConfigureServices((context, services) =>
+                {
+                    services.AddAkka(nameof(AzurePersistenceHostingSanityCheck), (builder, provider) =>
+                    {
+                        builder
+                            .WithJournal(journalOptions1)
+                            .WithJournal(journalOptions2)
+                            .WithSnapshot(snapshotOptions1)
+                            .WithSnapshot(snapshotOptions2);
+                    });
+                })
+                .Build();
+            
+            try
+            {
+                await host.StartAsync();
+                var sys = host.Services.GetRequiredService<ActorSystem>();
+
+                var config = sys.Settings.Config;
+
+                config.GetString("akka.persistence.journal.plugin").Should().Be("akka.persistence.journal.azure-table");
+                config.GetString("akka.persistence.snapshot-store.plugin").Should().Be("akka.persistence.snapshot-store.azure-blob-store");
+                
+                config.GetConfig("akka.persistence.journal.azure-table").Should().NotBeNull();
+                config.GetConfig("akka.persistence.journal.azure-sharding-table").Should().NotBeNull();
+                config.GetConfig("akka.persistence.snapshot-store.azure-blob-store").Should().NotBeNull();
+                config.GetConfig("akka.persistence.snapshot-store.azure-sharding-blob-store").Should().NotBeNull();
+
+                var persistence = Persistence.Instance.Apply(sys);
+                
+                var journal = persistence.JournalFor(null);
+                ((RepointableActorRef)journal).Underlying.Props.Type.Should().Be(typeof(AzureTableStorageJournal));
+                var journalSettings = await journal.Ask<AzureTableStorageJournalSettings>(GetSettings.Instance, 3.Seconds());
+                journalSettings.TableName.Should().Be("AkkaPersistenceDefaultTable");
+
+                var snapshot = persistence.SnapshotStoreFor(null);
+                ((RepointableActorRef)snapshot).Underlying.Props.Type.Should().Be(typeof(AzureBlobSnapshotStore));
+                var snapshotSettings = await snapshot.Ask<AzureBlobSnapshotStoreSettings>(GetSettings.Instance);
+                snapshotSettings.ContainerName.Should().Be("akka-persistence-default-container");
+            }
+            finally
+            {
+                host.Dispose();
+            }
         }
     }
 }
