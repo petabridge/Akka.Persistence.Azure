@@ -19,11 +19,11 @@ namespace Akka.Persistence.Azure.Snapshot
         private readonly Dictionary<string, AzureBlobSnapshotSetup> _setups =
             new Dictionary<string, AzureBlobSnapshotSetup>();
 
-        public AzureBlobSnapshotSetup? Get(string journalId = "azure-table")
-            => _setups.TryGetValue(journalId, out var setup) ? setup : null;
+        public AzureBlobSnapshotSetup? Get(string snapshotId = "azure-blob-store")
+            => _setups.TryGetValue(snapshotId, out var setup) ? setup : null;
 
-        public void Set(AzureBlobSnapshotSetup setup, string journalId = "azure-table")
-            => _setups[journalId] = setup;
+        public void Set(AzureBlobSnapshotSetup setup, string snapshotId = "azure-blob-store")
+            => _setups[snapshotId] = setup;
     }
     
     /// <summary>

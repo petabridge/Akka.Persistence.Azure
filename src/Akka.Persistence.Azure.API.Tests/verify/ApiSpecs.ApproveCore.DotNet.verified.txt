@@ -226,8 +226,8 @@ namespace Akka.Persistence.Azure.Snapshot
     {
         public AzureBlobMultiSnapshotSetup() { }
         [return: System.Runtime.CompilerServices.NullableAttribute(2)]
-        public Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotSetup Get(string journalId = "azure-table") { }
-        public void Set(Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotSetup setup, string journalId = "azure-table") { }
+        public Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotSetup Get(string snapshotId = "azure-blob-store") { }
+        public void Set(Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotSetup setup, string snapshotId = "azure-blob-store") { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class AzureBlobSnapshotSetup : Akka.Actor.Setup.Setup
