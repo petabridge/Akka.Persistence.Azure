@@ -18,6 +18,7 @@
   </ItemGroup>
   <!-- Test dependencies -->
   <ItemGroup>
+    <PackageVersion Include="Akka.Hosting.TestKit" Version="$(AkkaHostingVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     <PackageVersion Include="Akka.Cluster.Sharding" Version="$(AkkaVersion)" />
     <PackageVersion Include="NBench" Version="2.0.1" />

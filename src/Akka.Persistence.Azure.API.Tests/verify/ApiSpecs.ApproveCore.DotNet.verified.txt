@@ -268,7 +268,6 @@ namespace Akka.Persistence.Azure.Snapshot
         protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken) { }
         protected override void PostStop() { }
         protected override void PreStart() { }
-        protected override bool ReceivePluginInternal(object message) { }
         protected override System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]

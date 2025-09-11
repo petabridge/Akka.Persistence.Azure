@@ -26,15 +26,6 @@ using Debug = System.Diagnostics.Debug;
 #nullable enable
 namespace Akka.Persistence.Azure.Journal
 {
-    internal class GetSettings
-    {
-        public static GetSettings Instance = new();
-
-        private GetSettings()
-        {
-        }
-    }
-    
     /// <inheritdoc />
     /// <summary>
     ///     Akka.Persistence Journal implementation that uses Azure Table Storage
@@ -310,9 +301,6 @@ namespace Akka.Persistence.Azure.Journal
                     break;
                 case Terminated terminated:
                     RemoveSubscriber(terminated.ActorRef);
-                    break;
-                case GetSettings:
-                    Sender.Tell(_settings);
                     break;
                 default:
                     return false;
