@@ -13,7 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Util;
 using Akka.Persistence.Snapshot;
 using Akka.Util;
