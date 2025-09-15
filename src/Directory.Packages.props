@@ -29,7 +29,7 @@
     <PackageVersion Include="PublicApiGenerator" Version="9.3.0" />
     <PackageVersion Include="Verify.Xunit" Version="25.0.2" />
     <PackageVersion Include="Verify.DiffPlex" Version="3.0.0" />
-    <PackageVersion Include="xunit" Version="2.8.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />
   </ItemGroup>
   <!-- SourceLink support for all Akka.NET projects -->
