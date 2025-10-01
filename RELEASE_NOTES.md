@@ -1,3 +1,9 @@
+#### 1.5.51 October 1st 2025 ####
+
+* [Update Akka.NET v1.5.51](https://github.com/akkadotnet/akka.net/releases/tag/1.5.51)
+* [Update Akka.Hosting v1.5.51](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.51)
+* [Fix obsolete WithJournal API usage in Akka.Hosting extension](https://github.com/petabridge/Akka.Persistence.Azure/pull/529)
+
 #### 1.5.49 September 15th 2025 ####
 
 * [Update Akka.NET v1.5.49](https://github.com/akkadotnet/akka.net/releases/tag/1.5.45)
