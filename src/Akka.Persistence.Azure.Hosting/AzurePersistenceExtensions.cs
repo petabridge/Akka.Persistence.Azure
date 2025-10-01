@@ -283,13 +283,15 @@ namespace Akka.Persistence.Azure.Hosting
             
             builder.AddHocon("akka.persistence.journal.plugin = \"akka.persistence.journal.azure-table\"", HoconAddMode.Prepend);
             builder.AddSetup(setup);
-            
+
             // PUSH DEFAULT CONFIG TO END
             builder.AddHocon(AzurePersistence.DefaultConfig, HoconAddMode.Append);
-            
+
             if (eventAdapterConfigurator != null) // configure event adapters
             {
-                builder.WithJournal("azure-table", eventAdapterConfigurator);
+                var journalOptions = new AzureTableStorageJournalOptions(true, "azure-table");
+                eventAdapterConfigurator(journalOptions.Adapters);
+                builder.AddHocon(journalOptions.ToConfig(), HoconAddMode.Prepend);
             }
 
             return builder;
