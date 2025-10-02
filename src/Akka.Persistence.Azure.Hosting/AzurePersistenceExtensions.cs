@@ -308,6 +308,26 @@ namespace Akka.Persistence.Azure.Hosting
         ///     An <see cref="AzureTableStorageJournalOptions"/> instance that will be used to set up
         ///     the AzureTableStorage journal.
         /// </param>
+        /// <returns>
+        ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
+        /// </returns>
+        public static AkkaConfigurationBuilder WithAzureTableJournal(
+            this AkkaConfigurationBuilder builder,
+            AzureTableStorageJournalOptions options)
+        {
+            return WithAzureTableJournal(builder, options, null);
+        }
+
+        /// <summary>
+        ///     Add an AzureTableStorage journal Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="builder">
+        ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
+        /// </param>
+        /// <param name="options">
+        ///     An <see cref="AzureTableStorageJournalOptions"/> instance that will be used to set up
+        ///     the AzureTableStorage journal.
+        /// </param>
         /// <param name="journalBuilder">
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
         ///     to set up event adapters and health checks.
@@ -318,7 +338,7 @@ namespace Akka.Persistence.Azure.Hosting
         public static AkkaConfigurationBuilder WithAzureTableJournal(
             this AkkaConfigurationBuilder builder,
             AzureTableStorageJournalOptions options,
-            Action<AkkaPersistenceJournalBuilder>? journalBuilder = null)
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder)
         {
             if (options is null)
                 throw new ArgumentNullException(nameof(options));
@@ -326,7 +346,7 @@ namespace Akka.Persistence.Azure.Hosting
             // Apply factory methods/credentials to Setup before using unified API
             options.Apply(builder);
 
-            return WithAzureTableJournal(builder, options, journalBuilder);
+            return builder.WithJournal(options, journalBuilder);
         }
         
         /// <summary>
@@ -576,6 +596,26 @@ namespace Akka.Persistence.Azure.Hosting
         ///     An <see cref="AzureBlobSnapshotOptions"/> instance that will be used to set up
         ///     the AzureBlobStorage snapshot-store.
         /// </param>
+        /// <returns>
+        ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
+        /// </returns>
+        public static AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(
+            this AkkaConfigurationBuilder builder,
+            AzureBlobSnapshotOptions options)
+        {
+            return WithAzureBlobsSnapshotStore(builder, options, null);
+        }
+
+        /// <summary>
+        ///     Add an AzureBlobStorage snapshot-store Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="builder">
+        ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
+        /// </param>
+        /// <param name="options">
+        ///     An <see cref="AzureBlobSnapshotOptions"/> instance that will be used to set up
+        ///     the AzureBlobStorage snapshot-store.
+        /// </param>
         /// <param name="snapshotBuilder">
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceSnapshotBuilder"/> instance
         ///     to set up snapshot store health checks.
@@ -586,7 +626,7 @@ namespace Akka.Persistence.Azure.Hosting
         public static AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(
             this AkkaConfigurationBuilder builder,
             AzureBlobSnapshotOptions options,
-            Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null)
+            Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder)
         {
             if (options is null)
                 throw new ArgumentNullException(nameof(options));

@@ -41,9 +41,10 @@ namespace Akka.Persistence.Azure.Hosting
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotSetup> configure) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Persistence.Azure.Hosting.AzureBlobSnapshotOptions> configure, bool isDefault = True) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotSetup setup) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Hosting.AzureBlobSnapshotOptions options) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Hosting.AzureBlobSnapshotOptions options, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder> snapshotBuilder = null) { }
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder> snapshotBuilder) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzurePersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, string connectionString, bool autoInitialize = True, string containerName = "akka-persistence-default-container", string tableName = "AkkaPersistenceDefaultTable", [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
                 1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
@@ -75,9 +76,10 @@ namespace Akka.Persistence.Azure.Hosting
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Journal.AzureTableStorageJournalSetup setup, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
                 1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Hosting.AzureTableStorageJournalOptions options) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Hosting.AzureTableStorageJournalOptions options, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null) { }
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class AzureTableStorageJournalOptions : Akka.Persistence.Hosting.JournalOptions
