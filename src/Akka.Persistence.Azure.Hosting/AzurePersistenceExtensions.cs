@@ -80,7 +80,7 @@ namespace Akka.Persistence.Azure.Hosting
                 TableName = tableName
             };
 
-            return builder.WithJournal(options, journalBuilder);
+            return WithAzureTableJournal(builder, options, journalBuilder);
         }
 
         /// <summary>
@@ -144,7 +144,7 @@ namespace Akka.Persistence.Azure.Hosting
                 TableName = tableName
             };
 
-            return builder.WithJournal(options, journalBuilder);
+            return WithAzureTableJournal(builder, options, journalBuilder);
         }
 
         /// <summary>
@@ -193,7 +193,7 @@ namespace Akka.Persistence.Azure.Hosting
                 TableName = tableName
             };
 
-            return builder.WithJournal(options, journalBuilder);
+            return WithAzureTableJournal(builder, options, journalBuilder);
         }
 
         /// <summary>
@@ -390,8 +390,8 @@ namespace Akka.Persistence.Azure.Hosting
                 AutoInitialize = autoInitialize,
                 ContainerName = containerName
             };
-
-            return builder.WithSnapshot(options);
+            
+            return WithAzureBlobsSnapshotStore(builder, options);
         }
 
         /// <summary>
@@ -450,8 +450,8 @@ namespace Akka.Persistence.Azure.Hosting
                 AutoInitialize = autoInitialize,
                 ContainerName = containerName
             };
-
-            return builder.WithSnapshot(options);
+            
+            return WithAzureBlobsSnapshotStore(builder, options);
         }
 
         /// <summary>
@@ -496,7 +496,7 @@ namespace Akka.Persistence.Azure.Hosting
                 ContainerName = containerName
             };
 
-            return builder.WithSnapshot(options);
+            return WithAzureBlobsSnapshotStore(builder, options);
         }
 
         /// <summary>
