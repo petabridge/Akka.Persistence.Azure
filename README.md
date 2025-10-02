@@ -144,99 +144,16 @@ return host;
 
 ### Health Checks (Akka.Persistence.Azure.Hosting v1.5.51.1+)
 
-Starting with `Akka.Persistence.Azure.Hosting` v1.5.51.1, you can integrate Akka.Persistence.Azure with [Microsoft.Extensions.Diagnostics.HealthChecks](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks) to monitor the health of your persistence layer.
-
-**Setup:**
-
-First, register the health check service in your host configuration:
-
-```csharp
-var host = new HostBuilder()
-    .ConfigureServices(collection =>
-    {
-        // Register health checks service
-        collection.AddHealthChecks();
-
-        collection.AddAkka("MyActorSys", builder =>
-        {
-            var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR");
-
-            // Enable health checks for both journal and snapshot store
-            builder.WithAzurePersistence(
-                connectionString: conn,
-                journalBuilder: journal => journal.WithHealthCheck(),
-                snapshotBuilder: snapshot => snapshot.WithHealthCheck());
-
-            builder.StartActors((system, registry) =>
-            {
-                var myActor = system.ActorOf(Props.Create(() => new MyPersistenceActor("ac1")), "actor1");
-                registry.Register<MyPersistenceActor>(myActor);
-            });
-        });
-    }).Build();
-```
-
-**Enabling Health Checks Individually:**
-
-You can enable health checks for journal and snapshot store separately:
-
-```csharp
-// Journal health check only
-builder.WithAzureTableJournal(
-    connectionString: conn,
-    journalBuilder: journal => journal.WithHealthCheck());
-
-// Snapshot store health check only
-builder.WithAzureBlobsSnapshotStore(
-    connectionString: conn,
-    snapshotBuilder: snapshot => snapshot.WithHealthCheck());
-```
-
-**Custom Failure Status:**
-
-By default, health check failures report as `HealthStatus.Unhealthy`. You can customize this:
+Starting with v1.5.51.1, you can enable health checks for Azure Table Storage journal and Blob Storage snapshots:
 
 ```csharp
 builder.WithAzurePersistence(
     connectionString: conn,
-    journalBuilder: journal => journal.WithHealthCheck(HealthStatus.Degraded),
-    snapshotBuilder: snapshot => snapshot.WithHealthCheck(HealthStatus.Degraded));
+    journalBuilder: journal => journal.WithHealthCheck(),
+    snapshotBuilder: snapshot => snapshot.WithHealthCheck());
 ```
 
-**Health Check Keys:**
-
-The health checks are registered with the following keys:
-- **Journal**: `Akka.Persistence.Journal.azure-table`
-- **Snapshot Store**: `Akka.Persistence.SnapshotStore.azure-blob-store`
-
-**Consuming Health Checks:**
-
-You can query health checks using the `HealthCheckService`:
-
-```csharp
-var healthCheckService = host.Services.GetRequiredService<HealthCheckService>();
-var result = await healthCheckService.CheckHealthAsync();
-
-if (result.Status == HealthStatus.Healthy)
-{
-    Console.WriteLine("All persistence health checks passed!");
-
-    // Check individual health check status
-    var journalStatus = result.Entries["Akka.Persistence.Journal.azure-table"].Status;
-    var snapshotStatus = result.Entries["Akka.Persistence.SnapshotStore.azure-blob-store"].Status;
-}
-```
-
-Or expose them via an HTTP endpoint in ASP.NET Core:
-
-```csharp
-var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddHealthChecks();
-
-var app = builder.Build();
-app.MapHealthChecks("/health");
-app.Run();
-```
+For more information on Akka.NET health checks, see the [Akka.Hosting health check documentation](https://github.com/akkadotnet/Akka.Hosting#health-checks).
 
 ### Custom Mode: HOCON
 
