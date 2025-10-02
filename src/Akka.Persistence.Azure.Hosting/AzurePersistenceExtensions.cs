@@ -23,7 +23,17 @@ namespace Akka.Persistence.Azure.Hosting
     {
         public const string DefaultTableName = "AkkaPersistenceDefaultTable";
         public const string DefaultBlobContainerName = "akka-persistence-default-container";
-        
+
+        /// <summary>
+        /// Default identifier for Azure Table Storage journal plugin
+        /// </summary>
+        public const string DefaultJournalIdentifier = "azure-table";
+
+        /// <summary>
+        /// Default identifier for Azure Blob Storage snapshot store plugin
+        /// </summary>
+        public const string DefaultSnapshotIdentifier = "azure-blob-store";
+
         /// <summary>
         ///     Add an AzureTableStorage journal Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
         /// </summary>
@@ -39,7 +49,7 @@ namespace Akka.Persistence.Azure.Hosting
         /// <param name="tableName">
         ///     The Azure table we'll be connecting to.
         /// </param>
-        /// <param name="eventAdapterConfigurator">
+        /// <param name="journalBuilder">
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
         ///     to set up event adapters.
         /// </param>
@@ -47,7 +57,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
         /// </param>
         /// <param name="identifier">
-        ///     The journal identifier, defaults to "azure-table"
+        ///     The journal identifier, defaults to DefaultJournalIdentifier
         /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
@@ -56,9 +66,9 @@ namespace Akka.Persistence.Azure.Hosting
             Func<TableServiceClient> tableServiceClientFactory,
             bool autoInitialize = true,
             string tableName = DefaultTableName,
-            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null,
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder = null,
             bool isDefault = true,
-            string identifier = "azure-table")
+            string identifier = DefaultJournalIdentifier)
         {
             if (tableServiceClientFactory is null)
                 throw new ArgumentNullException(nameof(tableServiceClientFactory));
@@ -69,11 +79,8 @@ namespace Akka.Persistence.Azure.Hosting
                 AutoInitialize = autoInitialize,
                 TableName = tableName
             };
-            
-            if (eventAdapterConfigurator != null)
-                eventAdapterConfigurator(options.Adapters);
-            
-            return WithAzureTableJournal(builder, options);
+
+            return WithAzureTableJournal(builder, options, journalBuilder);
         }
 
         /// <summary>
@@ -99,7 +106,7 @@ namespace Akka.Persistence.Azure.Hosting
         /// <param name="tableName">
         ///     The Azure table we'll be connecting to.
         /// </param>
-        /// <param name="eventAdapterConfigurator">
+        /// <param name="journalBuilder">
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
         ///     to set up event adapters.
         /// </param>
@@ -107,7 +114,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
         /// </param>
         /// <param name="identifier">
-        ///     The journal identifier, defaults to "azure-table"
+        ///     The journal identifier, defaults to DefaultJournalIdentifier
         /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
@@ -118,9 +125,9 @@ namespace Akka.Persistence.Azure.Hosting
             TableClientOptions? tableClientOptions = null,
             bool autoInitialize = true,
             string tableName = DefaultTableName,
-            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null,
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder = null,
             bool isDefault = true,
-            string identifier = "azure-table")
+            string identifier = DefaultJournalIdentifier)
         {
             if (serviceUri is null)
                 throw new ArgumentNullException(nameof(serviceUri));
@@ -136,11 +143,8 @@ namespace Akka.Persistence.Azure.Hosting
                 AutoInitialize = autoInitialize,
                 TableName = tableName
             };
-            
-            if (eventAdapterConfigurator is { })
-                eventAdapterConfigurator(options.Adapters);
-            
-            return WithAzureTableJournal(builder, options);
+
+            return WithAzureTableJournal(builder, options, journalBuilder);
         }
 
         /// <summary>
@@ -158,7 +162,7 @@ namespace Akka.Persistence.Azure.Hosting
         /// <param name="tableName">
         ///     The Azure table we'll be connecting to.
         /// </param>
-        /// <param name="eventAdapterConfigurator">
+        /// <param name="journalBuilder">
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
         ///     to set up event adapters.
         /// </param>
@@ -166,7 +170,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
         /// </param>
         /// <param name="identifier">
-        ///     The journal identifier, defaults to "azure-table"
+        ///     The journal identifier, defaults to DefaultJournalIdentifier
         /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
@@ -175,9 +179,9 @@ namespace Akka.Persistence.Azure.Hosting
             string connectionString, 
             bool autoInitialize = true,
             string tableName = DefaultTableName,
-            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null,
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder = null,
             bool isDefault = true,
-            string identifier = "azure-table")
+            string identifier = DefaultJournalIdentifier)
         {
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ArgumentNullException(nameof(connectionString));
@@ -188,11 +192,8 @@ namespace Akka.Persistence.Azure.Hosting
                 AutoInitialize = autoInitialize,
                 TableName = tableName
             };
-            
-            if (eventAdapterConfigurator is { })
-                eventAdapterConfigurator(options.Adapters);
-            
-            return WithAzureTableJournal(builder, options);
+
+            return WithAzureTableJournal(builder, options, journalBuilder);
         }
 
         /// <summary>
@@ -206,7 +207,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     A delegate that can be used to configure an <see cref="AzureTableStorageJournalSetup"/> instance
         ///     to set up the AzureTableStorage journal.
         /// </param>
-        /// <param name="eventAdapterConfigurator">
+        /// <param name="journalBuilder">
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
         ///     to set up event adapters.
         /// </param>
@@ -216,14 +217,14 @@ namespace Akka.Persistence.Azure.Hosting
         public static AkkaConfigurationBuilder WithAzureTableJournal(
             this AkkaConfigurationBuilder builder,
             Action<AzureTableStorageJournalSetup> configure,
-            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null)
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder = null)
         {
             if (configure is null)
                 throw new ArgumentNullException(nameof(configure));
             
             var setup = new AzureTableStorageJournalSetup();
             configure(setup);
-            return WithAzureTableJournal(builder, setup, eventAdapterConfigurator);
+            return WithAzureTableJournal(builder, setup, journalBuilder);
         }
 
         /// <summary>
@@ -266,7 +267,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     An <see cref="AzureTableStorageJournalSetup"/> instance that will be used to set up
         ///     the AzureTableStorage journal.
         /// </param>
-        /// <param name="eventAdapterConfigurator">
+        /// <param name="journalBuilder">
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
         ///     to set up event adapters.
         /// </param>
@@ -276,7 +277,7 @@ namespace Akka.Persistence.Azure.Hosting
         public static AkkaConfigurationBuilder WithAzureTableJournal(
             this AkkaConfigurationBuilder builder,
             AzureTableStorageJournalSetup setup,
-            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null)
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder = null)
         {
             if (setup is null)
                 throw new ArgumentNullException(nameof(setup));
@@ -287,11 +288,11 @@ namespace Akka.Persistence.Azure.Hosting
             // PUSH DEFAULT CONFIG TO END
             builder.AddHocon(AzurePersistence.DefaultConfig, HoconAddMode.Append);
 
-            if (eventAdapterConfigurator != null) // configure event adapters
+            // Event adapters should be configured through options-based methods instead
+            if (journalBuilder != null)
             {
-                var journalOptions = new AzureTableStorageJournalOptions(true, "azure-table");
-                eventAdapterConfigurator(journalOptions.Adapters);
-                builder.AddHocon(journalOptions.ToConfig(), HoconAddMode.Prepend);
+                var journalOptions = new AzureTableStorageJournalOptions(true, DefaultJournalIdentifier);
+                return builder.WithJournal(journalOptions, journalBuilder);
             }
 
             return builder;
@@ -314,17 +315,38 @@ namespace Akka.Persistence.Azure.Hosting
             this AkkaConfigurationBuilder builder,
             AzureTableStorageJournalOptions options)
         {
+            return WithAzureTableJournal(builder, options, null);
+        }
+
+        /// <summary>
+        ///     Add an AzureTableStorage journal Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="builder">
+        ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
+        /// </param>
+        /// <param name="options">
+        ///     An <see cref="AzureTableStorageJournalOptions"/> instance that will be used to set up
+        ///     the AzureTableStorage journal.
+        /// </param>
+        /// <param name="journalBuilder">
+        ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
+        ///     to set up event adapters and health checks.
+        /// </param>
+        /// <returns>
+        ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
+        /// </returns>
+        public static AkkaConfigurationBuilder WithAzureTableJournal(
+            this AkkaConfigurationBuilder builder,
+            AzureTableStorageJournalOptions options,
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder)
+        {
             if (options is null)
                 throw new ArgumentNullException(nameof(options));
 
-            builder.AddHocon(options.ToConfig(), HoconAddMode.Prepend);
+            // Apply factory methods/credentials to Setup before using unified API
             options.Apply(builder);
-            builder.AddHocon(options.DefaultConfig, HoconAddMode.Append);
-            
-            // Need to add persistence default settings to make sure that persistence message serializer is loaded properly
-            builder.AddHocon(Persistence.DefaultConfig(), HoconAddMode.Append);
-            
-            return builder;
+
+            return builder.WithJournal(options, journalBuilder);
         }
         
         /// <summary>
@@ -346,7 +368,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
         /// </param>
         /// <param name="identifier">
-        ///     The journal identifier, defaults to "azure-blob-store"
+        ///     The journal identifier, defaults to DefaultSnapshotIdentifier
         /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
@@ -357,7 +379,7 @@ namespace Akka.Persistence.Azure.Hosting
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName,
             bool isDefault = true,
-            string identifier = "azure-blob-store")
+            string identifier = DefaultSnapshotIdentifier)
         {
             if (blobServiceClientFactory is null)
                 throw new ArgumentNullException(nameof(blobServiceClientFactory));
@@ -399,7 +421,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
         /// </param>
         /// <param name="identifier">
-        ///     The journal identifier, defaults to "azure-blob-store"
+        ///     The journal identifier, defaults to DefaultSnapshotIdentifier
         /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
@@ -412,7 +434,7 @@ namespace Akka.Persistence.Azure.Hosting
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName,
             bool isDefault = true,
-            string identifier = "azure-blob-store")
+            string identifier = DefaultSnapshotIdentifier)
         {
             if (serviceUri is null)
                 throw new ArgumentNullException(nameof(serviceUri));
@@ -451,7 +473,7 @@ namespace Akka.Persistence.Azure.Hosting
         ///     Indicates if this journal instance is the default persistence journal for the <see cref="ActorSystem"/>
         /// </param>
         /// <param name="identifier">
-        ///     The journal identifier, defaults to "azure-blob-store"
+        ///     The journal identifier, defaults to DefaultSnapshotIdentifier
         /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
@@ -462,7 +484,7 @@ namespace Akka.Persistence.Azure.Hosting
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName,
             bool isDefault = true,
-            string identifier = "azure-blob-store")
+            string identifier = DefaultSnapshotIdentifier)
         {
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ArgumentNullException(nameof(connectionString));
@@ -581,17 +603,38 @@ namespace Akka.Persistence.Azure.Hosting
             this AkkaConfigurationBuilder builder,
             AzureBlobSnapshotOptions options)
         {
+            return WithAzureBlobsSnapshotStore(builder, options, null);
+        }
+
+        /// <summary>
+        ///     Add an AzureBlobStorage snapshot-store Akka.Persistence implementations for a given <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="builder">
+        ///     The <see cref="AkkaConfigurationBuilder"/> builder instance being configured.
+        /// </param>
+        /// <param name="options">
+        ///     An <see cref="AzureBlobSnapshotOptions"/> instance that will be used to set up
+        ///     the AzureBlobStorage snapshot-store.
+        /// </param>
+        /// <param name="snapshotBuilder">
+        ///     A delegate that can be used to configure an <see cref="AkkaPersistenceSnapshotBuilder"/> instance
+        ///     to set up snapshot store health checks.
+        /// </param>
+        /// <returns>
+        ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
+        /// </returns>
+        public static AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(
+            this AkkaConfigurationBuilder builder,
+            AzureBlobSnapshotOptions options,
+            Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder)
+        {
             if (options is null)
                 throw new ArgumentNullException(nameof(options));
 
-            builder.AddHocon(options.ToConfig(), HoconAddMode.Prepend);
+            // Apply factory methods/credentials to Setup before using unified API
             options.Apply(builder);
-            builder.AddHocon(options.DefaultConfig, HoconAddMode.Append);
-            
-            // Need to add persistence default settings to make sure that persistence snapshot message serializer is loaded properly
-            builder.AddHocon(Persistence.DefaultConfig(), HoconAddMode.Append);
 
-            return builder;
+            return builder.WithSnapshot(options, snapshotBuilder);
         }
 
         /// <summary>
@@ -613,9 +656,13 @@ namespace Akka.Persistence.Azure.Hosting
         /// <param name="tableName">
         ///     The Azure table we'll be connecting to.
         /// </param>
-        /// <param name="eventAdapterConfigurator">
+        /// <param name="journalBuilder">
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
         ///     to set up event adapters.
+        /// </param>
+        /// <param name="snapshotBuilder">
+        ///     A delegate that can be used to configure an <see cref="AkkaPersistenceSnapshotBuilder"/> instance
+        ///     to set up snapshot store health checks.
         /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
@@ -626,10 +673,26 @@ namespace Akka.Persistence.Azure.Hosting
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName,
             string tableName = DefaultTableName,
-            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null)
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder = null,
+            Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null)
         {
-            builder.WithAzureTableJournal(connectionString, autoInitialize, tableName, eventAdapterConfigurator);
-            builder.WithAzureBlobsSnapshotStore(connectionString, autoInitialize, containerName);
+            builder.WithAzureTableJournal(connectionString, autoInitialize, tableName, journalBuilder);
+
+            // Use simpler overload for snapshot store, or options-based if builder provided
+            if (snapshotBuilder != null)
+            {
+                var snapshotOptions = new AzureBlobSnapshotOptions(isDefault: true, identifier: DefaultSnapshotIdentifier)
+                {
+                    ConnectionString = connectionString,
+                    AutoInitialize = autoInitialize,
+                    ContainerName = containerName
+                };
+                builder.WithAzureBlobsSnapshotStore(snapshotOptions, snapshotBuilder);
+            }
+            else
+            {
+                builder.WithAzureBlobsSnapshotStore(connectionString, autoInitialize, containerName);
+            }
 
             return builder;
         }
@@ -669,9 +732,13 @@ namespace Akka.Persistence.Azure.Hosting
         /// <param name="tableName">
         ///     The Azure table we'll be connecting to.
         /// </param>
-        /// <param name="eventAdapterConfigurator">
+        /// <param name="journalBuilder">
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
         ///     to set up event adapters.
+        /// </param>
+        /// <param name="snapshotBuilder">
+        ///     A delegate that can be used to configure an <see cref="AkkaPersistenceSnapshotBuilder"/> instance
+        ///     to set up snapshot store health checks.
         /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
@@ -686,10 +753,28 @@ namespace Akka.Persistence.Azure.Hosting
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName,
             string tableName = DefaultTableName,
-            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null)
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder = null,
+            Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null)
         {
-            builder.WithAzureTableJournal(tableStorageServiceUri, defaultAzureCredential, tableClientOptions, autoInitialize, tableName, eventAdapterConfigurator);
-            builder.WithAzureBlobsSnapshotStore(blobStorageServiceUri, defaultAzureCredential, blobClientOptions, autoInitialize, containerName);
+            builder.WithAzureTableJournal(tableStorageServiceUri, defaultAzureCredential, tableClientOptions, autoInitialize, tableName, journalBuilder);
+
+            // Use simpler overload for snapshot store, or options-based if builder provided
+            if (snapshotBuilder != null)
+            {
+                var snapshotOptions = new AzureBlobSnapshotOptions(isDefault: true, identifier: DefaultSnapshotIdentifier)
+                {
+                    ServiceUri = blobStorageServiceUri,
+                    AzureCredential = defaultAzureCredential,
+                    BlobClientOptions = blobClientOptions,
+                    AutoInitialize = autoInitialize,
+                    ContainerName = containerName
+                };
+                builder.WithAzureBlobsSnapshotStore(snapshotOptions, snapshotBuilder);
+            }
+            else
+            {
+                builder.WithAzureBlobsSnapshotStore(blobStorageServiceUri, defaultAzureCredential, blobClientOptions, autoInitialize, containerName);
+            }
 
             return builder;
         }
@@ -716,9 +801,13 @@ namespace Akka.Persistence.Azure.Hosting
         /// <param name="tableName">
         ///     The Azure table we'll be connecting to.
         /// </param>
-        /// <param name="eventAdapterConfigurator">
+        /// <param name="journalBuilder">
         ///     A delegate that can be used to configure an <see cref="AkkaPersistenceJournalBuilder"/> instance
         ///     to set up event adapters.
+        /// </param>
+        /// <param name="snapshotBuilder">
+        ///     A delegate that can be used to configure an <see cref="AkkaPersistenceSnapshotBuilder"/> instance
+        ///     to set up snapshot store health checks.
         /// </param>
         /// <returns>
         ///     The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.
@@ -730,10 +819,26 @@ namespace Akka.Persistence.Azure.Hosting
             bool autoInitialize = true,
             string containerName = DefaultBlobContainerName,
             string tableName = DefaultTableName,
-            Action<AkkaPersistenceJournalBuilder>? eventAdapterConfigurator = null)
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder = null,
+            Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null)
         {
-            builder.WithAzureTableJournal(tableServiceClientFactory, autoInitialize, tableName, eventAdapterConfigurator);
-            builder.WithAzureBlobsSnapshotStore(blobServiceClientFactory, autoInitialize, containerName);
+            builder.WithAzureTableJournal(tableServiceClientFactory, autoInitialize, tableName, journalBuilder);
+
+            // Use simpler overload for snapshot store, or options-based if builder provided
+            if (snapshotBuilder != null)
+            {
+                var snapshotOptions = new AzureBlobSnapshotOptions(isDefault: true, identifier: DefaultSnapshotIdentifier)
+                {
+                    BlobServiceClientFactory = blobServiceClientFactory,
+                    AutoInitialize = autoInitialize,
+                    ContainerName = containerName
+                };
+                builder.WithAzureBlobsSnapshotStore(snapshotOptions, snapshotBuilder);
+            }
+            else
+            {
+                builder.WithAzureBlobsSnapshotStore(blobServiceClientFactory, autoInitialize, containerName);
+            }
 
             return builder;
         }

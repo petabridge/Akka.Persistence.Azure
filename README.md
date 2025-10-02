@@ -142,6 +142,19 @@ await host.StartAsync();
 return host;
 ```
 
+### Health Checks (Akka.Persistence.Azure.Hosting v1.5.51.1+)
+
+Starting with v1.5.51.1, you can enable health checks for Azure Table Storage journal and Blob Storage snapshots:
+
+```csharp
+builder.WithAzurePersistence(
+    connectionString: conn,
+    journalBuilder: journal => journal.WithHealthCheck(),
+    snapshotBuilder: snapshot => snapshot.WithHealthCheck());
+```
+
+For more information on Akka.NET health checks, see the [Akka.Hosting health check documentation](https://github.com/akkadotnet/Akka.Hosting#health-checks).
+
 ### Custom Mode: HOCON
 
 Here is a default configuration used by this plugin: https://github.com/petabridge/Akka.Persistence.Azure/blob/dev/src/Akka.Persistence.Azure/reference.conf

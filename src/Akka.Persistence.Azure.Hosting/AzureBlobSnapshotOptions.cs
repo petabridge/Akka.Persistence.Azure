@@ -30,7 +30,7 @@ namespace Akka.Persistence.Azure.Hosting
         {
         }
         
-        public AzureBlobSnapshotOptions(bool isDefault, string identifier = "azure-blob-store") : base(isDefault)
+        public AzureBlobSnapshotOptions(bool isDefault, string identifier = AzurePersistenceExtensions.DefaultSnapshotIdentifier) : base(isDefault)
         {
             Identifier = identifier;
         }
