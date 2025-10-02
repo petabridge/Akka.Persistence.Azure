@@ -32,6 +32,8 @@ namespace Akka.Persistence.Azure.Hosting
     public class static AzurePersistenceExtensions
     {
         public const string DefaultBlobContainerName = "akka-persistence-default-container";
+        public const string DefaultJournalIdentifier = "azure-table";
+        public const string DefaultSnapshotIdentifier = "azure-blob-store";
         public const string DefaultTableName = "AkkaPersistenceDefaultTable";
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Func<Azure.Storage.Blobs.BlobServiceClient> blobServiceClientFactory, bool autoInitialize = True, string containerName = "akka-persistence-default-container", bool isDefault = True, string identifier = "azure-blob-store") { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Uri serviceUri, Azure.Core.TokenCredential defaultAzureCredential, [System.Runtime.CompilerServices.NullableAttribute(2)] Azure.Storage.Blobs.BlobClientOptions blobClientOptions = null, bool autoInitialize = True, string containerName = "akka-persistence-default-container", bool isDefault = True, string identifier = "azure-blob-store") { }
@@ -39,33 +41,43 @@ namespace Akka.Persistence.Azure.Hosting
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotSetup> configure) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Persistence.Azure.Hosting.AzureBlobSnapshotOptions> configure, bool isDefault = True) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotSetup setup) { }
-        public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Hosting.AzureBlobSnapshotOptions options) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithAzureBlobsSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Hosting.AzureBlobSnapshotOptions options, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder> snapshotBuilder = null) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzurePersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, string connectionString, bool autoInitialize = True, string containerName = "akka-persistence-default-container", string tableName = "AkkaPersistenceDefaultTable", [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null) { }
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder> snapshotBuilder = null) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzurePersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Uri blobStorageServiceUri, System.Uri tableStorageServiceUri, Azure.Core.TokenCredential defaultAzureCredential, [System.Runtime.CompilerServices.NullableAttribute(2)] Azure.Storage.Blobs.BlobClientOptions blobClientOptions = null, [System.Runtime.CompilerServices.NullableAttribute(2)] Azure.Data.Tables.TableClientOptions tableClientOptions = null, bool autoInitialize = True, string containerName = "akka-persistence-default-container", string tableName = "AkkaPersistenceDefaultTable", [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null) { }
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder> snapshotBuilder = null) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzurePersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Func<Azure.Data.Tables.TableServiceClient> tableServiceClientFactory, System.Func<Azure.Storage.Blobs.BlobServiceClient> blobServiceClientFactory, bool autoInitialize = True, string containerName = "akka-persistence-default-container", string tableName = "AkkaPersistenceDefaultTable", [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null) { }
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder> snapshotBuilder = null) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Func<Azure.Data.Tables.TableServiceClient> tableServiceClientFactory, bool autoInitialize = True, string tableName = "AkkaPersistenceDefaultTable", [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null, bool isDefault = True, string identifier = "azure-table") { }
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null, bool isDefault = True, string identifier = "azure-table") { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Uri serviceUri, Azure.Core.TokenCredential defaultAzureCredential, [System.Runtime.CompilerServices.NullableAttribute(2)] Azure.Data.Tables.TableClientOptions tableClientOptions = null, bool autoInitialize = True, string tableName = "AkkaPersistenceDefaultTable", [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null, bool isDefault = True, string identifier = "azure-table") { }
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null, bool isDefault = True, string identifier = "azure-table") { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, string connectionString, bool autoInitialize = True, string tableName = "AkkaPersistenceDefaultTable", [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null, bool isDefault = True, string identifier = "azure-table") { }
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null, bool isDefault = True, string identifier = "azure-table") { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Persistence.Azure.Journal.AzureTableStorageJournalSetup> configure, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null) { }
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Persistence.Azure.Hosting.AzureTableStorageJournalOptions> configure, bool isDefault = True) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Journal.AzureTableStorageJournalSetup setup, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> eventAdapterConfigurator = null) { }
-        public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Hosting.AzureTableStorageJournalOptions options) { }
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Hosting.AzureTableStorageJournalOptions options, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder = null) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class AzureTableStorageJournalOptions : Akka.Persistence.Hosting.JournalOptions
