@@ -34,6 +34,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var host = new HostBuilder()
                 .ConfigureServices(collection =>
                 {
+                    collection.AddHealthChecks();
                     collection.AddAkka("MyActorSys", builder =>
                     {
                         builder.WithAzureTableJournal(
@@ -72,6 +73,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var host = new HostBuilder()
                 .ConfigureServices(collection =>
                 {
+                    collection.AddHealthChecks();
                     collection.AddAkka("MyActorSys", builder =>
                     {
                         builder.WithAzurePersistence(
@@ -110,6 +112,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var host = new HostBuilder()
                 .ConfigureServices(collection =>
                 {
+                    collection.AddHealthChecks();
                     collection.AddAkka("MyActorSys", builder =>
                     {
                         builder.WithAzurePersistence(
@@ -150,6 +153,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var host = new HostBuilder()
                 .ConfigureServices(collection =>
                 {
+                    collection.AddHealthChecks();
                     collection.AddAkka("MyActorSys", builder =>
                     {
                         builder.WithAzurePersistence(
@@ -191,6 +195,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var host = new HostBuilder()
                 .ConfigureServices(collection =>
                 {
+                    collection.AddHealthChecks();
                     collection.AddAkka("MyActorSys", builder =>
                     {
                         builder.WithAzurePersistence(

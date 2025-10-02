@@ -308,6 +308,9 @@ namespace Akka.Persistence.Azure.Hosting
             if (options is null)
                 throw new ArgumentNullException(nameof(options));
 
+            // Apply factory methods/credentials to Setup before using unified API
+            options.Apply(builder);
+
             return builder.WithJournal(options, null);
         }
         
@@ -568,6 +571,9 @@ namespace Akka.Persistence.Azure.Hosting
             if (options is null)
                 throw new ArgumentNullException(nameof(options));
 
+            // Apply factory methods/credentials to Setup before using unified API
+            options.Apply(builder);
+
             return builder.WithSnapshot(options, null);
         }
 
@@ -611,9 +617,8 @@ namespace Akka.Persistence.Azure.Hosting
             Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null)
         {
             builder.WithAzureTableJournal(connectionString, autoInitialize, tableName, eventAdapterConfigurator);
-            builder.WithAzureBlobsSnapshotStore(connectionString, autoInitialize, containerName);
 
-            // Apply snapshot builder if provided
+            // Apply snapshot builder if provided, otherwise use standard method
             if (snapshotBuilder != null)
             {
                 var snapshotOptions = new AzureBlobSnapshotOptions(true, "azure-blob-store")
@@ -623,6 +628,10 @@ namespace Akka.Persistence.Azure.Hosting
                     ContainerName = containerName
                 };
                 builder.WithSnapshot(snapshotOptions, snapshotBuilder);
+            }
+            else
+            {
+                builder.WithAzureBlobsSnapshotStore(connectionString, autoInitialize, containerName);
             }
 
             return builder;
@@ -688,9 +697,8 @@ namespace Akka.Persistence.Azure.Hosting
             Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null)
         {
             builder.WithAzureTableJournal(tableStorageServiceUri, defaultAzureCredential, tableClientOptions, autoInitialize, tableName, eventAdapterConfigurator);
-            builder.WithAzureBlobsSnapshotStore(blobStorageServiceUri, defaultAzureCredential, blobClientOptions, autoInitialize, containerName);
 
-            // Apply snapshot builder if provided
+            // Apply snapshot builder if provided, otherwise use standard method
             if (snapshotBuilder != null)
             {
                 var snapshotOptions = new AzureBlobSnapshotOptions(true, "azure-blob-store")
@@ -702,6 +710,10 @@ namespace Akka.Persistence.Azure.Hosting
                     ContainerName = containerName
                 };
                 builder.WithSnapshot(snapshotOptions, snapshotBuilder);
+            }
+            else
+            {
+                builder.WithAzureBlobsSnapshotStore(blobStorageServiceUri, defaultAzureCredential, blobClientOptions, autoInitialize, containerName);
             }
 
             return builder;
@@ -751,9 +763,8 @@ namespace Akka.Persistence.Azure.Hosting
             Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null)
         {
             builder.WithAzureTableJournal(tableServiceClientFactory, autoInitialize, tableName, eventAdapterConfigurator);
-            builder.WithAzureBlobsSnapshotStore(blobServiceClientFactory, autoInitialize, containerName);
 
-            // Apply snapshot builder if provided
+            // Apply snapshot builder if provided, otherwise use standard method
             if (snapshotBuilder != null)
             {
                 var snapshotOptions = new AzureBlobSnapshotOptions(true, "azure-blob-store")
@@ -763,6 +774,10 @@ namespace Akka.Persistence.Azure.Hosting
                     ContainerName = containerName
                 };
                 builder.WithSnapshot(snapshotOptions, snapshotBuilder);
+            }
+            else
+            {
+                builder.WithAzureBlobsSnapshotStore(blobServiceClientFactory, autoInitialize, containerName);
             }
 
             return builder;
