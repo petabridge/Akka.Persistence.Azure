@@ -1,3 +1,15 @@
+#### 1.5.51.1 October 2nd 2025 ####
+
+* [Update Akka.Hosting v1.5.51.1](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.51.1)
+* [Fix Akka.Persistence.Azure.Hosting health checks and adopt unified API](https://github.com/petabridge/Akka.Persistence.Azure/pull/531)
+
+This patch release fixes critical issues in the Akka.Persistence.Azure.Hosting extension methods:
+
+- Health checks are now properly registered for both journal and snapshot store
+- Snapshot store health check support added via `Action<AkkaPersistenceSnapshotBuilder>` parameters
+- Migrated from manual HOCON manipulation to the unified Akka.Hosting API (`.WithJournal()` and `.WithSnapshot()`)
+- All changes are backward compatible with no breaking changes
+
 #### 1.5.51 October 1st 2025 ####
 
 * [Update Akka.NET v1.5.51](https://github.com/akkadotnet/akka.net/releases/tag/1.5.51)
