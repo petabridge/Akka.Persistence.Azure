@@ -25,7 +25,7 @@ namespace Akka.Persistence.Azure.Hosting
         {
         }
         
-        public AzureTableStorageJournalOptions(bool isDefault, string identifier = "azure-table") : base(isDefault)
+        public AzureTableStorageJournalOptions(bool isDefault, string identifier = AzurePersistenceExtensions.DefaultJournalIdentifier) : base(isDefault)
         {
             Identifier = identifier;
         }
