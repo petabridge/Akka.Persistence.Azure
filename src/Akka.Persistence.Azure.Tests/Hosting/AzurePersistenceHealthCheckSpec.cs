@@ -39,7 +39,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
                     {
                         builder.WithAzureTableJournal(
                             connectionString: conn,
-                            eventAdapterConfigurator: journal => journal.WithHealthCheck());
+                            journalBuilder: journal => journal.WithHealthCheck());
                     });
                 })
                 .Build();
@@ -117,7 +117,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
                     {
                         builder.WithAzurePersistence(
                             connectionString: conn,
-                            eventAdapterConfigurator: journal => journal.WithHealthCheck(),
+                            journalBuilder: journal => journal.WithHealthCheck(),
                             snapshotBuilder: snapshot => snapshot.WithHealthCheck());
                     });
                 })
@@ -158,7 +158,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
                     {
                         builder.WithAzurePersistence(
                             connectionString: conn,
-                            eventAdapterConfigurator: journal => journal.WithHealthCheck(HealthStatus.Degraded),
+                            journalBuilder: journal => journal.WithHealthCheck(HealthStatus.Degraded),
                             snapshotBuilder: snapshot => snapshot.WithHealthCheck(HealthStatus.Degraded));
                     });
                 })
@@ -200,7 +200,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
                     {
                         builder.WithAzurePersistence(
                             connectionString: conn,
-                            eventAdapterConfigurator: journal => journal.WithHealthCheck(),
+                            journalBuilder: journal => journal.WithHealthCheck(),
                             snapshotBuilder: snapshot => snapshot.WithHealthCheck());
 
                         builder.StartActors((system, registry) =>
