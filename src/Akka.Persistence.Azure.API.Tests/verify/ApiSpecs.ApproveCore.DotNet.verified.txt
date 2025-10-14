@@ -36,6 +36,7 @@ namespace Akka.Persistence.Azure.Journal
         protected bool HasPersistenceIdSubscribers { get; }
         protected bool HasTagSubscribers { get; }
         public Azure.Data.Tables.TableClient Table { get; }
+        public override System.Threading.Tasks.Task<Akka.Persistence.PersistenceHealthCheckResult> CheckHealthAsync(System.Threading.CancellationToken cancellationToken = null) { }
         protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         protected override void PostStop() { }
         protected override void PreStart() { }
@@ -260,6 +261,7 @@ namespace Akka.Persistence.Azure.Snapshot
     {
         public AzureBlobSnapshotStore(Akka.Configuration.Config config = null) { }
         public Azure.Storage.Blobs.BlobContainerClient Container { get; }
+        public override System.Threading.Tasks.Task<Akka.Persistence.PersistenceHealthCheckResult> CheckHealthAsync(System.Threading.CancellationToken cancellationToken = null) { }
         protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken) { }
         [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
