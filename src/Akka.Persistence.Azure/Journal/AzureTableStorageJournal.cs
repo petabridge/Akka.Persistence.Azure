@@ -57,6 +57,8 @@ namespace Akka.Persistence.Azure.Journal
         private readonly Dictionary<string, ISet<IActorRef>> _tagSubscribers = new Dictionary<string, ISet<IActorRef>>();
         private readonly CancellationTokenSource _shutdownCts;
 
+        private readonly IReadOnlyDictionary<string, object> _defaultHealthCheckTags;
+
         public AzureTableStorageJournal(Config? config = null)
         {
             _settings = config is null ? 
@@ -98,6 +100,10 @@ namespace Akka.Persistence.Azure.Journal
             }
 
             _shutdownCts = new CancellationTokenSource();
+            _defaultHealthCheckTags = new Dictionary<string, object>
+            {
+                { "journal", Self.Path.Name }
+            };
         }
 
         public TableClient Table => _tableServiceClient.GetTableClient(_settings.TableName);
@@ -770,5 +776,26 @@ namespace Akka.Persistence.Azure.Journal
                 return _allPersistenceIds.Add(persistenceId);
             }
         }
+        
+        public override async Task<PersistenceHealthCheckResult> CheckHealthAsync(CancellationToken cancellationToken = default)
+        {
+            var result = await base.CheckHealthAsync(cancellationToken);
+            if(result.Status is not PersistenceHealthStatus.Healthy)
+                return result;
+            
+            try
+            {
+                var response = await _tableServiceClient.GetPropertiesAsync(cancellationToken);
+                if (response.GetRawResponse().IsError)
+                    throw new Exception(response.GetRawResponse().ToString());
+            }
+            catch (Exception e)
+            {
+                return new PersistenceHealthCheckResult(PersistenceHealthStatus.Degraded, "Azure Table storage service connection failed", e, _defaultHealthCheckTags);
+            }
+            
+            return result;
+        }
+
     }
 }

@@ -50,6 +50,7 @@ namespace Akka.Persistence.Azure.Snapshot
         private readonly BlobServiceClient _serviceClient;
 
         private readonly CancellationTokenSource _shutdownCts;
+        private readonly IReadOnlyDictionary<string, object> _defaultHealthCheckTags;
 
         public AzureBlobSnapshotStore(Config? config = null)
         {
@@ -90,6 +91,10 @@ namespace Akka.Persistence.Azure.Snapshot
             }
 
             _shutdownCts = new CancellationTokenSource();
+            _defaultHealthCheckTags = new Dictionary<string, object>
+            {
+                { "snapshot-store", Self.Path.Name }
+            };
         }
 
         public BlobContainerClient Container => _serviceClient.GetBlobContainerClient(_settings.ContainerName);
@@ -328,6 +333,26 @@ namespace Akka.Persistence.Azure.Snapshot
         private static long FetchBlobTimestamp(BlobItem x)
         {
             return long.Parse(x.Metadata[TimeStampMetaDataKey]);
+        }
+
+        public override async Task<PersistenceHealthCheckResult> CheckHealthAsync(CancellationToken cancellationToken = default)
+        {
+            var result = await base.CheckHealthAsync(cancellationToken);
+            if(result.Status is not PersistenceHealthStatus.Healthy)
+                return result;
+
+            try
+            {
+                var response = await _serviceClient.GetAccountInfoAsync(cancellationToken);
+                if (response.GetRawResponse().IsError)
+                    throw new Exception(response.GetRawResponse().ToString());
+            }
+            catch (Exception e)
+            {
+                return new PersistenceHealthCheckResult(PersistenceHealthStatus.Degraded, "Azure Blob Storage service connection failed", e, _defaultHealthCheckTags);
+            }
+
+            return result;
         }
     }
 }
