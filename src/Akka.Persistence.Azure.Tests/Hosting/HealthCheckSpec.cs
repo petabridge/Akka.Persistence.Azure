@@ -22,7 +22,6 @@ namespace Akka.Persistence.Azure.Tests.Hosting;
 /// <summary>
 /// Validates that health checks are properly registered after the refactoring.
 /// </summary>
-[Collection("MongoDbSpec")]
 public class HealthCheckSpec : Akka.Hosting.TestKit.TestKit
 {
     private readonly string _connectionString;
