@@ -12,6 +12,13 @@
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
   </PropertyGroup>
 
+  <!-- Code Coverage Support -->
+  <PropertyGroup>
+    <!-- Generate portable PDB files for code coverage in Release builds -->
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
   <!-- NuGet package properties -->
   <PropertyGroup>
     <!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
