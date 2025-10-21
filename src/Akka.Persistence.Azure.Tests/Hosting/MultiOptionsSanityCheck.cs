@@ -5,6 +5,7 @@ using Akka.Hosting;
 using Akka.Persistence.Azure.Hosting;
 using Akka.Persistence.Azure.Journal;
 using Akka.Persistence.Azure.Snapshot;
+using Akka.Persistence.Azure.Tests.Helper;
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
 using FluentAssertions;
@@ -13,6 +14,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests.Hosting;
 
+[Collection("AzureSpecs")]
 public class MultiOptionsSanityCheck: Akka.Hosting.TestKit.TestKit
 {
     private bool _snapshotFactory1Called;
@@ -24,9 +26,11 @@ public class MultiOptionsSanityCheck: Akka.Hosting.TestKit.TestKit
     private readonly AzureBlobSnapshotOptions _snapshotOptions2;
     private readonly AzureTableStorageJournalOptions _journalOptions1;
     private readonly AzureTableStorageJournalOptions _journalOptions2;
+    private readonly string _connectionString;
 
-    public MultiOptionsSanityCheck(ITestOutputHelper output) : base(output: output)
+    public MultiOptionsSanityCheck(AzuriteFixture fixture, ITestOutputHelper output) : base(output: output)
     {
+        _connectionString = fixture.ConnectionString;
         _snapshotOptions1 = new AzureBlobSnapshotOptions(true)
         {
             ConnectionString = "Nonsense snapshot connection string 1, should not be used",
@@ -127,24 +131,24 @@ public class MultiOptionsSanityCheck: Akka.Hosting.TestKit.TestKit
     private BlobServiceClient SnapshotClientFactory1()
     {
         _snapshotFactory1Called = true;
-        return new BlobServiceClient(connectionString: "UseDevelopmentStorage=true");
+        return new BlobServiceClient(connectionString: _connectionString);
     }
-    
+
     private BlobServiceClient SnapshotClientFactory2()
     {
         _snapshotFactory2Called = true;
-        return new BlobServiceClient(connectionString: "UseDevelopmentStorage=true");
+        return new BlobServiceClient(connectionString: _connectionString);
     }
 
     private TableServiceClient JournalClientFactory1()
     {
         _journalFactory1Called = true;
-        return new TableServiceClient(connectionString: "UseDevelopmentStorage=true");
+        return new TableServiceClient(connectionString: _connectionString);
     }
-    
+
     private TableServiceClient JournalClientFactory2()
     {
         _journalFactory2Called = true;
-        return new TableServiceClient(connectionString: "UseDevelopmentStorage=true");
+        return new TableServiceClient(connectionString: _connectionString);
     }
 }

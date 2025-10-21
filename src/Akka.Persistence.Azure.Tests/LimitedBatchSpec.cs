@@ -5,6 +5,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -25,7 +26,9 @@ namespace Akka.Persistence.Azure.Tests
 
         public LimitedBatchSpec(AzuriteFixture fixture, ITestOutputHelper output)
         {
-            _tableClient = new TableClient(fixture.ConnectionString, "testtable");
+            // Generate unique table name to avoid conflicts when running in collection
+            var tableName = $"testtable{Guid.NewGuid().ToString("N")[^8..]}";
+            _tableClient = new TableClient(fixture.ConnectionString, tableName);
         }
 
         public async Task InitializeAsync()
