@@ -36,12 +36,6 @@ namespace Akka.Persistence.Azure.Tests.Hosting
                 connectionString: _connectionString,
                 journalBuilder: journal => journal.WithHealthCheck(HealthStatus.Degraded),
                 snapshotBuilder: snapshot => snapshot.WithHealthCheck(HealthStatus.Degraded));
-
-            builder.StartActors((system, registry) =>
-            {
-                var myActor = system.ActorOf(Props.Create(() => new MyPersistenceActor("health-check-test")), "test-actor");
-                registry.Register<MyPersistenceActor>(myActor);
-            });
         }
 
         [Fact]
@@ -113,8 +107,8 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             // Arrange
             await DbUtils.CleanupCloudTable(_connectionString);
 
-            var actorRegistry = Host.Services.GetRequiredService<ActorRegistry>();
-            var myPersistentActor = actorRegistry.Get<MyPersistenceActor>();
+            // Create the persistent actor after cleanup
+            var myPersistentActor = Sys.ActorOf(Props.Create(() => new MyPersistenceActor("health-check-test")), "test-actor");
 
             // Act - perform persistence operations
             var resp1 = await myPersistentActor.Ask<string>(1, TimeSpan.FromSeconds(5));
