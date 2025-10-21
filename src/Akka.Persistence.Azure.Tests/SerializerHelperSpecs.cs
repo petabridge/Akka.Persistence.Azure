@@ -12,7 +12,7 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSpecs")]
-    public class SerializerHelperSpecs : Akka.TestKit.Xunit2.TestKit, IClassFixture<AzuriteFixture>
+    public class SerializerHelperSpecs : Akka.TestKit.Xunit2.TestKit
     {
         private readonly SerializationHelper _helper;
 

@@ -16,7 +16,7 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests.Query
 {
     [Collection("AzureSpecs")]
-    public sealed class AzureTableCurrentPersistenceIdsSpec : CurrentPersistenceIdsSpec, IClassFixture<AzuriteFixture>
+    public sealed class AzureTableCurrentPersistenceIdsSpec : CurrentPersistenceIdsSpec
     {
         private readonly ITestOutputHelper _output;
 

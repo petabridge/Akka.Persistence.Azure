@@ -11,7 +11,7 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests.Query
 {
     [Collection("AzureSpecs")]
-    public sealed class AzureTableEventsByPersistenceIdSpec : EventsByPersistenceIdSpec, IClassFixture<AzuriteFixture>
+    public sealed class AzureTableEventsByPersistenceIdSpec : EventsByPersistenceIdSpec
     {
         public AzureTableEventsByPersistenceIdSpec(AzuriteFixture fixture, ITestOutputHelper output)
             : base(AzureConfig(fixture.ConnectionString), nameof(AzureTableEventsByPersistenceIdSpec), output)

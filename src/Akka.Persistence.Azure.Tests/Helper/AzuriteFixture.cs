@@ -11,8 +11,8 @@ using Xunit;
 namespace Akka.Persistence.Azure.Tests.Helper
 {
     /// <summary>
-    /// Provides an isolated Azurite container for Azure persistence tests.
-    /// Each test class gets a fresh container with automatic lifecycle management.
+    /// Provides a shared Azurite container for Azure persistence tests.
+    /// The container is shared across all tests in the collection and automatically cleaned up.
     /// </summary>
     public class AzuriteFixture : IAsyncLifetime
     {
@@ -41,5 +41,15 @@ namespace Akka.Persistence.Azure.Tests.Helper
                 await _container.DisposeAsync();
             }
         }
+    }
+
+    /// <summary>
+    /// Collection definition for Azure specs.
+    /// All tests in this collection share a single Azurite container and run sequentially.
+    /// </summary>
+    [CollectionDefinition("AzureSpecs")]
+    public class AzureSpecsCollection : ICollectionFixture<AzuriteFixture>
+    {
+        // This class is never instantiated. It exists only to define the collection.
     }
 }

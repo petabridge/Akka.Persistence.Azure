@@ -9,7 +9,7 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSpecs")]
-    public class Issue159Spec: SnapshotStoreSpec, IClassFixture<AzuriteFixture>
+    public class Issue159Spec: SnapshotStoreSpec
     {
         private static Config TestConfig(string connectionString)
         {

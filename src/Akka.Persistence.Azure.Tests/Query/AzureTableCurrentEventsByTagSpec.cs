@@ -19,7 +19,7 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests.Query
 {
     [Collection("AzureSpecs")]
-    public sealed class AzureTableCurrentEventsByTagSpec : CurrentEventsByTagSpec, IClassFixture<AzuriteFixture>
+    public sealed class AzureTableCurrentEventsByTagSpec : CurrentEventsByTagSpec
     {
         public AzureTableCurrentEventsByTagSpec(AzuriteFixture fixture, ITestOutputHelper output)
             : base(AzureConfig(fixture.ConnectionString), nameof(AzureTableCurrentEventsByTagSpec), output)

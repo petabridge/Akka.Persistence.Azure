@@ -18,7 +18,8 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests
 {
-    public class LimitedBatchSpec: IClassFixture<AzuriteFixture>, IAsyncLifetime
+    [Collection("AzureSpecs")]
+    public class LimitedBatchSpec: IAsyncLifetime
     {
         private readonly TableClient _tableClient;
 

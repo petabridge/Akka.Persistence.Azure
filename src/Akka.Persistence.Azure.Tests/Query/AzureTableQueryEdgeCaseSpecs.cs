@@ -20,7 +20,7 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests.Query
 {
     [Collection("AzureSpecs")]
-    public class AzureTableQueryEdgeCaseSpecs : Akka.TestKit.Xunit2.TestKit, IClassFixture<AzuriteFixture>
+    public class AzureTableQueryEdgeCaseSpecs : Akka.TestKit.Xunit2.TestKit
     {
         public static readonly AtomicCounter Counter = new AtomicCounter(0);
         private readonly ITestOutputHelper _output;

@@ -15,7 +15,7 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSpecs")]
-    public class AzureBlobSnapshotStoreSpec : SnapshotStoreSpec, IClassFixture<AzuriteFixture>
+    public class AzureBlobSnapshotStoreSpec : SnapshotStoreSpec
     {
         public AzureBlobSnapshotStoreSpec(AzuriteFixture fixture, ITestOutputHelper output)
             : base(AzureConfig(fixture.ConnectionString), nameof(AzureBlobSnapshotStoreSpec), output)

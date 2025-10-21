@@ -8,7 +8,7 @@ namespace Akka.Persistence.Azure.Tests;
 
 
 [Collection("AzureSpecs")]
-public class AzureSnapshotStoreSaveSnapshotSpec: SnapshotStoreSaveSnapshotSpec, IClassFixture<AzuriteFixture>
+public class AzureSnapshotStoreSaveSnapshotSpec: SnapshotStoreSaveSnapshotSpec
 {
     public AzureSnapshotStoreSaveSnapshotSpec(AzuriteFixture fixture, ITestOutputHelper output)
         : base(AzureConfig(fixture.ConnectionString), nameof(AzureBlobSnapshotStoreSpec), output)

@@ -17,7 +17,7 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSpecs")]
-    public class AzureBlobSnapshotStoreCustomFolderSpec : SnapshotStoreSpec, IClassFixture<AzuriteFixture>
+    public class AzureBlobSnapshotStoreCustomFolderSpec : SnapshotStoreSpec
     {
         private static Config CreateCustomConfig(string connectionString)
         {

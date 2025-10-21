@@ -15,7 +15,7 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Azure.Tests.Hosting
 {
     [Collection("AzureSpecs")]
-    public class AzurePersistenceHealthCheckSpec : Akka.Hosting.TestKit.TestKit, IClassFixture<AzuriteFixture>
+    public class AzurePersistenceHealthCheckSpec : Akka.Hosting.TestKit.TestKit
     {
         private readonly string _connectionString;
 

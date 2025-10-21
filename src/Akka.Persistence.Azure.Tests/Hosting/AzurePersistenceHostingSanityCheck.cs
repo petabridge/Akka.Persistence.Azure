@@ -19,12 +19,14 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Azure.Tests.Hosting
 {
     [Collection("AzureSpecs")]
-    public class AzurePersistenceHostingSanityCheck : IClassFixture<AzuriteFixture>
+    public class AzurePersistenceHostingSanityCheck
     {
         private readonly AzuriteFixture _fixture;
+        private readonly ITestOutputHelper _output;
 
-        public AzurePersistenceHostingSanityCheck(AzuriteFixture fixture)
+        public AzurePersistenceHostingSanityCheck(AzuriteFixture fixture, ITestOutputHelper output)
         {
+            _output = output;
             _fixture = fixture;
         }
 
@@ -120,13 +122,6 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             }
 
             public override string PersistenceId { get; }
-        }
-
-        private readonly ITestOutputHelper _output;
-
-        public AzurePersistenceHostingSanityCheck(ITestOutputHelper output)
-        {
-            _output = output;
         }
 
         [Theory]
