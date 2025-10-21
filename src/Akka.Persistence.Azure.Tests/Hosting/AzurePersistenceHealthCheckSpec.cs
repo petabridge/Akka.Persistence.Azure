@@ -92,8 +92,9 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         [Fact]
         public async Task Health_checks_should_pass_after_persistence_operations()
         {
-            // Create a persistent actor
-            var myPersistentActor = Sys.ActorOf(Props.Create(() => new MyPersistenceActor("health-check-test")), "test-actor");
+            // Create a persistent actor with unique persistence ID to avoid state pollution
+            var persistenceId = $"health-check-test-{Guid.NewGuid():N}";
+            var myPersistentActor = Sys.ActorOf(Props.Create(() => new MyPersistenceActor(persistenceId)), "test-actor");
 
             // Act - perform persistence operations
             var resp1 = await myPersistentActor.Ask<string>(1, TimeSpan.FromSeconds(5));
