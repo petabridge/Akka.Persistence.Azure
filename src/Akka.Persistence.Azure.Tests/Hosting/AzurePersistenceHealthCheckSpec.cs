@@ -15,238 +15,123 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Azure.Tests.Hosting
 {
     [Collection("AzureSpecs")]
-    public class AzurePersistenceHealthCheckSpec
+    public class AzurePersistenceHealthCheckSpec : Akka.Hosting.TestKit.TestKit
     {
-        private readonly ITestOutputHelper _output;
+        private readonly string _connectionString;
 
-        public AzurePersistenceHealthCheckSpec(ITestOutputHelper output)
+        public AzurePersistenceHealthCheckSpec(ITestOutputHelper output) : base(output: output)
         {
-            _output = output;
+            _connectionString = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
+        }
+
+        protected override void ConfigureServices(HostBuilderContext context, IServiceCollection services)
+        {
+            base.ConfigureServices(context, services);
+            services.AddHealthChecks();
+        }
+
+        protected override void ConfigureAkka(AkkaConfigurationBuilder builder, IServiceProvider provider)
+        {
+            builder.WithAzurePersistence(
+                connectionString: _connectionString,
+                journalBuilder: journal => journal.WithHealthCheck(HealthStatus.Degraded),
+                snapshotBuilder: snapshot => snapshot.WithHealthCheck(HealthStatus.Degraded));
         }
 
         [Fact]
         public async Task Journal_health_check_should_be_registered()
         {
             // Arrange
-            var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
-            await DbUtils.CleanupCloudTable(conn);
+            await DbUtils.CleanupCloudTable(_connectionString);
 
-            var host = new HostBuilder()
-                .ConfigureServices(collection =>
-                {
-                    collection.AddHealthChecks();
-                    collection.AddAkka("MyActorSys", builder =>
-                    {
-                        builder.WithAzureTableJournal(
-                            connectionString: conn,
-                            journalBuilder: journal => journal.WithHealthCheck());
-                    });
-                })
-                .Build();
+            // Act
+            var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
+            var result = await healthCheckService.CheckHealthAsync();
 
-            await host.StartAsync();
-
-            try
-            {
-                // Act
-                var healthCheckService = host.Services.GetRequiredService<HealthCheckService>();
-                var result = await healthCheckService.CheckHealthAsync();
-
-                // Assert
-                result.Status.Should().Be(HealthStatus.Healthy);
-                result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
-            }
-            finally
-            {
-                await host.StopAsync();
-                host.Dispose();
-            }
+            // Assert
+            result.Status.Should().Be(HealthStatus.Healthy);
+            result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
         }
 
         [Fact]
         public async Task Snapshot_health_check_should_be_registered()
         {
             // Arrange
-            var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
-            await DbUtils.CleanupCloudTable(conn);
+            await DbUtils.CleanupCloudTable(_connectionString);
 
-            var host = new HostBuilder()
-                .ConfigureServices(collection =>
-                {
-                    collection.AddHealthChecks();
-                    collection.AddAkka("MyActorSys", builder =>
-                    {
-                        builder.WithAzurePersistence(
-                            connectionString: conn,
-                            snapshotBuilder: snapshot => snapshot.WithHealthCheck());
-                    });
-                })
-                .Build();
+            // Act
+            var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
+            var result = await healthCheckService.CheckHealthAsync();
 
-            await host.StartAsync();
-
-            try
-            {
-                // Act
-                var healthCheckService = host.Services.GetRequiredService<HealthCheckService>();
-                var result = await healthCheckService.CheckHealthAsync();
-
-                // Assert
-                result.Status.Should().Be(HealthStatus.Healthy);
-                result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
-            }
-            finally
-            {
-                await host.StopAsync();
-                host.Dispose();
-            }
+            // Assert
+            result.Status.Should().Be(HealthStatus.Healthy);
+            result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
         }
 
         [Fact]
         public async Task Both_journal_and_snapshot_health_checks_should_be_registered()
         {
             // Arrange
-            var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
-            await DbUtils.CleanupCloudTable(conn);
+            await DbUtils.CleanupCloudTable(_connectionString);
 
-            var host = new HostBuilder()
-                .ConfigureServices(collection =>
-                {
-                    collection.AddHealthChecks();
-                    collection.AddAkka("MyActorSys", builder =>
-                    {
-                        builder.WithAzurePersistence(
-                            connectionString: conn,
-                            journalBuilder: journal => journal.WithHealthCheck(),
-                            snapshotBuilder: snapshot => snapshot.WithHealthCheck());
-                    });
-                })
-                .Build();
+            // Act
+            var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
+            var result = await healthCheckService.CheckHealthAsync();
 
-            await host.StartAsync();
-
-            try
-            {
-                // Act
-                var healthCheckService = host.Services.GetRequiredService<HealthCheckService>();
-                var result = await healthCheckService.CheckHealthAsync();
-
-                // Assert
-                result.Status.Should().Be(HealthStatus.Healthy);
-                result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
-                result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
-            }
-            finally
-            {
-                await host.StopAsync();
-                host.Dispose();
-            }
+            // Assert
+            result.Status.Should().Be(HealthStatus.Healthy);
+            result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
+            result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
         }
 
         [Fact]
         public async Task Health_check_with_custom_degraded_status_should_work()
         {
             // Arrange
-            var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
-            await DbUtils.CleanupCloudTable(conn);
+            await DbUtils.CleanupCloudTable(_connectionString);
 
-            var host = new HostBuilder()
-                .ConfigureServices(collection =>
-                {
-                    collection.AddHealthChecks();
-                    collection.AddAkka("MyActorSys", builder =>
-                    {
-                        builder.WithAzurePersistence(
-                            connectionString: conn,
-                            journalBuilder: journal => journal.WithHealthCheck(HealthStatus.Degraded),
-                            snapshotBuilder: snapshot => snapshot.WithHealthCheck(HealthStatus.Degraded));
-                    });
-                })
-                .Build();
+            // Act
+            var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
+            var result = await healthCheckService.CheckHealthAsync();
 
-            await host.StartAsync();
-
-            try
-            {
-                // Act
-                var healthCheckService = host.Services.GetRequiredService<HealthCheckService>();
-                var result = await healthCheckService.CheckHealthAsync();
-
-                // Assert
-                // Health checks should be registered and report as healthy (degraded status is for failures)
-                result.Status.Should().Be(HealthStatus.Healthy);
-                result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
-                result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
-            }
-            finally
-            {
-                await host.StopAsync();
-                host.Dispose();
-            }
+            // Assert
+            // Health checks should be registered and report as healthy (degraded status is for failures)
+            result.Status.Should().Be(HealthStatus.Healthy);
+            result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
+            result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
         }
 
         [Fact]
         public async Task Health_checks_should_pass_after_persistence_operations()
         {
             // Arrange
-            var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
-            await DbUtils.CleanupCloudTable(conn);
+            await DbUtils.CleanupCloudTable(_connectionString);
 
-            var host = new HostBuilder()
-                .ConfigureServices(collection =>
-                {
-                    collection.AddHealthChecks();
-                    collection.AddAkka("MyActorSys", builder =>
-                    {
-                        builder.WithAzurePersistence(
-                            connectionString: conn,
-                            journalBuilder: journal => journal.WithHealthCheck(),
-                            snapshotBuilder: snapshot => snapshot.WithHealthCheck());
+            // Create the persistent actor after cleanup
+            var myPersistentActor = Sys.ActorOf(Props.Create(() => new MyPersistenceActor("health-check-test")), "test-actor");
 
-                        builder.StartActors((system, registry) =>
-                        {
-                            var myActor = system.ActorOf(Props.Create(() => new MyPersistenceActor("health-check-test")), "test-actor");
-                            registry.Register<MyPersistenceActor>(myActor);
-                        });
-                    });
-                })
-                .Build();
+            // Act - perform persistence operations
+            var resp1 = await myPersistentActor.Ask<string>(1, TimeSpan.FromSeconds(5));
+            var resp2 = await myPersistentActor.Ask<string>(2, TimeSpan.FromSeconds(5));
+            resp1.Should().Be("ACK");
+            resp2.Should().Be("ACK");
 
-            await host.StartAsync();
+            // Now check health
+            var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
+            var result = await healthCheckService.CheckHealthAsync();
 
-            try
-            {
-                var actorRegistry = host.Services.GetRequiredService<ActorRegistry>();
-                var myPersistentActor = actorRegistry.Get<MyPersistenceActor>();
+            // Assert
+            result.Status.Should().Be(HealthStatus.Healthy);
+            result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
+            result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
 
-                // Act - perform persistence operations
-                var resp1 = await myPersistentActor.Ask<string>(1, TimeSpan.FromSeconds(5));
-                var resp2 = await myPersistentActor.Ask<string>(2, TimeSpan.FromSeconds(5));
-                resp1.Should().Be("ACK");
-                resp2.Should().Be("ACK");
+            // Verify individual entries are healthy
+            result.Entries["Akka.Persistence.Journal.azure-table"].Status.Should().Be(HealthStatus.Healthy);
+            result.Entries["Akka.Persistence.SnapshotStore.azure-blob-store"].Status.Should().Be(HealthStatus.Healthy);
 
-                // Now check health
-                var healthCheckService = host.Services.GetRequiredService<HealthCheckService>();
-                var result = await healthCheckService.CheckHealthAsync();
-
-                // Assert
-                result.Status.Should().Be(HealthStatus.Healthy);
-                result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
-                result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
-
-                // Verify individual entries are healthy
-                result.Entries["Akka.Persistence.Journal.azure-table"].Status.Should().Be(HealthStatus.Healthy);
-                result.Entries["Akka.Persistence.SnapshotStore.azure-blob-store"].Status.Should().Be(HealthStatus.Healthy);
-
-                // Verify data and descriptions exist
-                result.Entries["Akka.Persistence.Journal.azure-table"].Data.Should().NotBeNull();
-                result.Entries["Akka.Persistence.SnapshotStore.azure-blob-store"].Data.Should().NotBeNull();
-            }
-            finally
-            {
-                await host.StopAsync();
-                host.Dispose();
-            }
+            // Verify data and descriptions exist
+            result.Entries["Akka.Persistence.Journal.azure-table"].Data.Should().NotBeNull();
+            result.Entries["Akka.Persistence.SnapshotStore.azure-blob-store"].Data.Should().NotBeNull();
         }
 
         public sealed class MyPersistenceActor : ReceivePersistentActor
