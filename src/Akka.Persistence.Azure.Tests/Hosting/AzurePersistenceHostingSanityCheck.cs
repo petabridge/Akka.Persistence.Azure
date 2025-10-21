@@ -19,19 +19,25 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Azure.Tests.Hosting
 {
     [Collection("AzureSpecs")]
-    public class AzurePersistenceHostingSanityCheck
+    public class AzurePersistenceHostingSanityCheck : IClassFixture<AzuriteFixture>
     {
+        private readonly AzuriteFixture _fixture;
+
+        public AzurePersistenceHostingSanityCheck(AzuriteFixture fixture)
+        {
+            _fixture = fixture;
+        }
+
         public enum StartMethod
         {
             ConnectionString,
             TokenCredential,
             ServiceClient
         }
-        
-        private static async Task<IHost> StartHost(Action<AkkaConfigurationBuilder> testSetup, StartMethod startMethod)
+
+        private async Task<IHost> StartHost(Action<AkkaConfigurationBuilder> testSetup, StartMethod startMethod)
         {
-            var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
-            await DbUtils.CleanupCloudTable(conn);
+            var conn = _fixture.ConnectionString;
             
             var host = new HostBuilder()
                 .ConfigureServices(collection =>

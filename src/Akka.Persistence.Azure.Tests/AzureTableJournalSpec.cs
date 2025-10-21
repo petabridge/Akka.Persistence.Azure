@@ -15,10 +15,10 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSpecs")]
-    public class AzureTableJournalSpec : JournalSpec
+    public class AzureTableJournalSpec : JournalSpec, IClassFixture<AzuriteFixture>
     {
-        public AzureTableJournalSpec(ITestOutputHelper output)
-            : base(AzureConfig(), nameof(AzureTableJournalSpec), output)
+        public AzureTableJournalSpec(AzuriteFixture fixture, ITestOutputHelper output)
+            : base(AzureConfig(fixture.ConnectionString), nameof(AzureTableJournalSpec), output)
         {
             AzurePersistence.Get(Sys);
             Initialize();

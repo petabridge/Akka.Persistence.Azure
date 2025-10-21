@@ -20,7 +20,7 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests.Query
 {
     [Collection("AzureSpecs")]
-    public class AzureTableQueryEdgeCaseSpecs : Akka.TestKit.Xunit2.TestKit
+    public class AzureTableQueryEdgeCaseSpecs : Akka.TestKit.Xunit2.TestKit, IClassFixture<AzuriteFixture>
     {
         public static readonly AtomicCounter Counter = new AtomicCounter(0);
         private readonly ITestOutputHelper _output;
@@ -40,8 +40,8 @@ namespace Akka.Persistence.Azure.Tests.Query
 
         public const int MessageCount = 20;
 
-        public AzureTableQueryEdgeCaseSpecs(ITestOutputHelper output)
-            : base(AzureConfig(), nameof(AzureTableQueryEdgeCaseSpecs), output)
+        public AzureTableQueryEdgeCaseSpecs(AzuriteFixture fixture, ITestOutputHelper output)
+            : base(AzureConfig(fixture.ConnectionString), nameof(AzureTableQueryEdgeCaseSpecs), output)
         {
             _output = output;
             Materializer = Sys.Materializer();

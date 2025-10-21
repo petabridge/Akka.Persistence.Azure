@@ -18,18 +18,17 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests
 {
-    public class LimitedBatchSpec: IAsyncLifetime
+    public class LimitedBatchSpec: IClassFixture<AzuriteFixture>, IAsyncLifetime
     {
         private readonly TableClient _tableClient;
-        
-        public LimitedBatchSpec(ITestOutputHelper output)
+
+        public LimitedBatchSpec(AzuriteFixture fixture, ITestOutputHelper output)
         {
-            _tableClient = new TableClient("UseDevelopmentStorage=true", "testtable");
+            _tableClient = new TableClient(fixture.ConnectionString, "testtable");
         }
-        
+
         public async Task InitializeAsync()
         {
-            await DbUtils.CleanupCloudTable("UseDevelopmentStorage=true");
             await _tableClient.CreateAsync();
         }
 

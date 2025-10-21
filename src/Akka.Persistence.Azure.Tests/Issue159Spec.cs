@@ -9,7 +9,7 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSpecs")]
-    public class Issue159Spec: SnapshotStoreSpec
+    public class Issue159Spec: SnapshotStoreSpec, IClassFixture<AzuriteFixture>
     {
         private static Config TestConfig(string connectionString)
         {
@@ -59,8 +59,8 @@ akka {
 }");
         }
 
-        public Issue159Spec(ITestOutputHelper output)
-            : base(AzureConfig(TestConfig), nameof(Issue159Spec), output)
+        public Issue159Spec(AzuriteFixture fixture, ITestOutputHelper output)
+            : base(TestConfig(fixture.ConnectionString), nameof(Issue159Spec), output)
         {
             var extension = AzurePersistence.Get(Sys);
 

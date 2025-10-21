@@ -12,12 +12,12 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSpecs")]
-    public class SerializerHelperSpecs : Akka.TestKit.Xunit2.TestKit
+    public class SerializerHelperSpecs : Akka.TestKit.Xunit2.TestKit, IClassFixture<AzuriteFixture>
     {
         private readonly SerializationHelper _helper;
 
-        public SerializerHelperSpecs(ITestOutputHelper helper) 
-            : base(AzureConfig(), nameof(SerializerHelperSpecs), output: helper)
+        public SerializerHelperSpecs(AzuriteFixture fixture, ITestOutputHelper helper)
+            : base(AzureConfig(fixture.ConnectionString), nameof(SerializerHelperSpecs), output: helper)
         {
             // force Akka.Persistence serializers to be loaded
             AzurePersistence.Get(Sys);

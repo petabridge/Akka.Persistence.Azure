@@ -23,20 +23,15 @@ namespace Akka.Persistence.Azure.Tests.Hosting;
 /// Verifies that event adapters configured via the NEW callback API are actually invoked at runtime
 /// by checking that events are tagged and appear in EventsByTag queries.
 /// </summary>
-public class EventAdapterRuntimeInvocationSpecs : Akka.Hosting.TestKit.TestKit
+public class EventAdapterRuntimeInvocationSpecs : Akka.Hosting.TestKit.TestKit, IClassFixture<AzuriteFixture>
 {
     private readonly string _connectionString;
     private readonly ITestOutputHelper _output;
 
-    public EventAdapterRuntimeInvocationSpecs(ITestOutputHelper output)
+    public EventAdapterRuntimeInvocationSpecs(AzuriteFixture fixture, ITestOutputHelper output)
     {
         _output = output;
-        _connectionString = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
-    }
-
-    protected override async Task BeforeTestStart()
-    {
-        await DbUtils.CleanupCloudTable(_connectionString);
+        _connectionString = fixture.ConnectionString;
     }
 
     #region Test Events and Actors
