@@ -5,6 +5,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,18 +19,20 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests
 {
+    [Collection("AzureSpecs")]
     public class LimitedBatchSpec: IAsyncLifetime
     {
         private readonly TableClient _tableClient;
-        
-        public LimitedBatchSpec(ITestOutputHelper output)
+
+        public LimitedBatchSpec(AzuriteFixture fixture, ITestOutputHelper output)
         {
-            _tableClient = new TableClient("UseDevelopmentStorage=true", "testtable");
+            // Generate unique table name to avoid conflicts when running in collection
+            var tableName = $"testtable{Guid.NewGuid().ToString("N")[^8..]}";
+            _tableClient = new TableClient(fixture.ConnectionString, tableName);
         }
-        
+
         public async Task InitializeAsync()
         {
-            await DbUtils.CleanupCloudTable("UseDevelopmentStorage=true");
             await _tableClient.CreateAsync();
         }
 

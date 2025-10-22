@@ -9,11 +9,16 @@
     <PackageReference Include="Akka.Cluster.Sharding" />
     <PackageReference Include="Akka.Persistence.TCK" />
     <PackageReference Include="Akka.Hosting.TestKit" />
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Docker.DotNet" />
+    <PackageReference Include="Testcontainers.Azurite" />
     <PackageReference Include="xunit" />
-    <PackageReference Include="xunit.runner.visualstudio" >
+    <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

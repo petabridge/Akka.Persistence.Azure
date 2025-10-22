@@ -40,8 +40,8 @@ namespace Akka.Persistence.Azure.Tests.Query
 
         public const int MessageCount = 20;
 
-        public AzureTableQueryEdgeCaseSpecs(ITestOutputHelper output)
-            : base(AzureConfig(), nameof(AzureTableQueryEdgeCaseSpecs), output)
+        public AzureTableQueryEdgeCaseSpecs(AzuriteFixture fixture, ITestOutputHelper output)
+            : base(AzureConfig(fixture.ConnectionString), nameof(AzureTableQueryEdgeCaseSpecs), output)
         {
             _output = output;
             Materializer = Sys.Materializer();

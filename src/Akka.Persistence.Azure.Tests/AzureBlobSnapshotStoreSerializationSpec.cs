@@ -15,10 +15,10 @@ using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSpecs")]
-    public class AzureBlobSnapshotStoreSerializationSpec : SnapshotStoreSerializationSpec    
+    public class AzureBlobSnapshotStoreSerializationSpec : SnapshotStoreSerializationSpec
     {
-        public AzureBlobSnapshotStoreSerializationSpec(ITestOutputHelper output) 
-            : base(AzureConfig(), nameof(AzureBlobSnapshotStoreSerializationSpec), output)
+        public AzureBlobSnapshotStoreSerializationSpec(AzuriteFixture fixture, ITestOutputHelper output)
+            : base(AzureConfig(fixture.ConnectionString), nameof(AzureBlobSnapshotStoreSerializationSpec), output)
         {
             AzurePersistence.Get(Sys);
         }

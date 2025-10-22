@@ -17,8 +17,8 @@ namespace Akka.Persistence.Azure.Tests
     [Collection("AzureSpecs")]
     public class AzureBlobSnapshotStoreSpec : SnapshotStoreSpec
     {
-        public AzureBlobSnapshotStoreSpec(ITestOutputHelper output) 
-            : base(AzureConfig(), nameof(AzureBlobSnapshotStoreSpec), output)
+        public AzureBlobSnapshotStoreSpec(AzuriteFixture fixture, ITestOutputHelper output)
+            : base(AzureConfig(fixture.ConnectionString), nameof(AzureBlobSnapshotStoreSpec), output)
         {
             AzurePersistence.Get(Sys);
             Initialize();

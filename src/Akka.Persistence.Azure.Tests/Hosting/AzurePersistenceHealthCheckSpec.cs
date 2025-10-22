@@ -19,9 +19,9 @@ namespace Akka.Persistence.Azure.Tests.Hosting
     {
         private readonly string _connectionString;
 
-        public AzurePersistenceHealthCheckSpec(ITestOutputHelper output) : base(output: output)
+        public AzurePersistenceHealthCheckSpec(AzuriteFixture fixture, ITestOutputHelper output) : base(output: output)
         {
-            _connectionString = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
+            _connectionString = fixture.ConnectionString;
         }
 
         protected override void ConfigureServices(HostBuilderContext context, IServiceCollection services)
@@ -41,9 +41,6 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         [Fact]
         public async Task Journal_health_check_should_be_registered()
         {
-            // Arrange
-            await DbUtils.CleanupCloudTable(_connectionString);
-
             // Act
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
             var result = await healthCheckService.CheckHealthAsync();
@@ -56,9 +53,6 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         [Fact]
         public async Task Snapshot_health_check_should_be_registered()
         {
-            // Arrange
-            await DbUtils.CleanupCloudTable(_connectionString);
-
             // Act
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
             var result = await healthCheckService.CheckHealthAsync();
@@ -71,9 +65,6 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         [Fact]
         public async Task Both_journal_and_snapshot_health_checks_should_be_registered()
         {
-            // Arrange
-            await DbUtils.CleanupCloudTable(_connectionString);
-
             // Act
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
             var result = await healthCheckService.CheckHealthAsync();
@@ -87,9 +78,6 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         [Fact]
         public async Task Health_check_with_custom_degraded_status_should_work()
         {
-            // Arrange
-            await DbUtils.CleanupCloudTable(_connectionString);
-
             // Act
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
             var result = await healthCheckService.CheckHealthAsync();
@@ -104,11 +92,9 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         [Fact]
         public async Task Health_checks_should_pass_after_persistence_operations()
         {
-            // Arrange
-            await DbUtils.CleanupCloudTable(_connectionString);
-
-            // Create the persistent actor after cleanup
-            var myPersistentActor = Sys.ActorOf(Props.Create(() => new MyPersistenceActor("health-check-test")), "test-actor");
+            // Create a persistent actor with unique persistence ID to avoid state pollution
+            var persistenceId = $"health-check-test-{Guid.NewGuid():N}";
+            var myPersistentActor = Sys.ActorOf(Props.Create(() => new MyPersistenceActor(persistenceId)), "test-actor");
 
             // Act - perform persistence operations
             var resp1 = await myPersistentActor.Ask<string>(1, TimeSpan.FromSeconds(5));

@@ -59,8 +59,8 @@ akka {
 }");
         }
 
-        public Issue159Spec(ITestOutputHelper output)
-            : base(AzureConfig(TestConfig), nameof(Issue159Spec), output)
+        public Issue159Spec(AzuriteFixture fixture, ITestOutputHelper output)
+            : base(TestConfig(fixture.ConnectionString), nameof(Issue159Spec), output)
         {
             var extension = AzurePersistence.Get(Sys);
 

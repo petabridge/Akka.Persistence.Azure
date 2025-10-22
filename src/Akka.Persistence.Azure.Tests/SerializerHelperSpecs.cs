@@ -16,8 +16,8 @@ namespace Akka.Persistence.Azure.Tests
     {
         private readonly SerializationHelper _helper;
 
-        public SerializerHelperSpecs(ITestOutputHelper helper) 
-            : base(AzureConfig(), nameof(SerializerHelperSpecs), output: helper)
+        public SerializerHelperSpecs(AzuriteFixture fixture, ITestOutputHelper helper)
+            : base(AzureConfig(fixture.ConnectionString), nameof(SerializerHelperSpecs), output: helper)
         {
             // force Akka.Persistence serializers to be loaded
             AzurePersistence.Get(Sys);

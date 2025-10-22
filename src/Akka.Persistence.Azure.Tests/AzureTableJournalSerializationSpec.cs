@@ -17,8 +17,8 @@ namespace Akka.Persistence.Azure.Tests
     [Collection("AzureSpecs")]
     public class AzureTableJournalSerializationSpec : JournalSerializationSpec
     {
-        public AzureTableJournalSerializationSpec(ITestOutputHelper output)
-            : base(AzureConfig(), nameof(AzureTableJournalSerializationSpec), output)
+        public AzureTableJournalSerializationSpec(AzuriteFixture fixture, ITestOutputHelper output)
+            : base(AzureConfig(fixture.ConnectionString), nameof(AzureTableJournalSerializationSpec), output)
         {
             AzurePersistence.Get(Sys);
         }

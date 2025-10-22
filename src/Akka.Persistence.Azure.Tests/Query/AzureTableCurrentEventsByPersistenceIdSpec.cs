@@ -13,8 +13,8 @@ namespace Akka.Persistence.Azure.Tests.Query
     [Collection("AzureSpecs")]
     public sealed class AzureTableCurrentEventsByPersistenceIdSpec : CurrentEventsByPersistenceIdSpec
     {
-        public AzureTableCurrentEventsByPersistenceIdSpec(ITestOutputHelper output)
-            : base(AzureConfig(), nameof(AzureTableCurrentEventsByPersistenceIdSpec), output)
+        public AzureTableCurrentEventsByPersistenceIdSpec(AzuriteFixture fixture, ITestOutputHelper output)
+            : base(AzureConfig(fixture.ConnectionString), nameof(AzureTableCurrentEventsByPersistenceIdSpec), output)
         {
             AzurePersistence.Get(Sys);
 

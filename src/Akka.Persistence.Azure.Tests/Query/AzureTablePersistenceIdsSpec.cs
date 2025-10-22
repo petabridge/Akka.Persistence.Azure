@@ -13,8 +13,8 @@ namespace Akka.Persistence.Azure.Tests.Query
     [Collection("AzureSpecs")]
     public sealed class AzureTablePersistenceIdsSpec : PersistenceIdsSpec
     {
-        public AzureTablePersistenceIdsSpec(ITestOutputHelper output)
-            : base(AzureConfig(), nameof(AzureTablePersistenceIdsSpec), output)
+        public AzureTablePersistenceIdsSpec(AzuriteFixture fixture, ITestOutputHelper output)
+            : base(AzureConfig(fixture.ConnectionString), nameof(AzureTablePersistenceIdsSpec), output)
         {
             AzurePersistence.Get(Sys);
 

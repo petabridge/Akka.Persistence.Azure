@@ -21,17 +21,25 @@ namespace Akka.Persistence.Azure.Tests.Hosting
     [Collection("AzureSpecs")]
     public class AzurePersistenceHostingSanityCheck
     {
+        private readonly AzuriteFixture _fixture;
+        private readonly ITestOutputHelper _output;
+
+        public AzurePersistenceHostingSanityCheck(AzuriteFixture fixture, ITestOutputHelper output)
+        {
+            _output = output;
+            _fixture = fixture;
+        }
+
         public enum StartMethod
         {
             ConnectionString,
             TokenCredential,
             ServiceClient
         }
-        
-        private static async Task<IHost> StartHost(Action<AkkaConfigurationBuilder> testSetup, StartMethod startMethod)
+
+        private async Task<IHost> StartHost(Action<AkkaConfigurationBuilder> testSetup, StartMethod startMethod)
         {
-            var conn = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
-            await DbUtils.CleanupCloudTable(conn);
+            var conn = _fixture.ConnectionString;
             
             var host = new HostBuilder()
                 .ConfigureServices(collection =>
@@ -116,13 +124,6 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             public override string PersistenceId { get; }
         }
 
-        private readonly ITestOutputHelper _output;
-
-        public AzurePersistenceHostingSanityCheck(ITestOutputHelper output)
-        {
-            _output = output;
-        }
-
         [Theory]
         [InlineData(StartMethod.ConnectionString)]
         // [InlineData(StartMethod.TokenCredential)] // Doesn't work with Azurite
@@ -130,11 +131,12 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         public async Task ShouldLaunchAzurePersistence(StartMethod startMethod)
         {
            // arrange
+            var persistenceId = $"ac1-{Guid.NewGuid():N}"; // Unique per test run to avoid state pollution
             using var host = await StartHost(builder => {
-            
+
                     builder.StartActors((system, registry) =>
                     {
-                        var myActor = system.ActorOf(Props.Create(() => new MyPersistenceActor("ac1")), "actor1");
+                        var myActor = system.ActorOf(Props.Create(() => new MyPersistenceActor(persistenceId)), "actor1");
                         registry.Register<MyPersistenceActor>(myActor);
                     })
                     .WithActors((system, registry) =>
@@ -159,7 +161,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
 
             // kill + recreate actor with same PersistentId
             await myPersistentActor.GracefulStop(TimeSpan.FromSeconds(3));
-            var myPersistentActor2 = actorSystem.ActorOf(Props.Create(() => new MyPersistenceActor("ac1")), "actor1a");
+            var myPersistentActor2 = actorSystem.ActorOf(Props.Create(() => new MyPersistenceActor(persistenceId)), "actor1a");
             
             var snapshot2 = await myPersistentActor2.Ask<int[]>("getall", TimeSpan.FromSeconds(3));
             snapshot2.Should().BeEquivalentTo(new[] {1, 2});

@@ -1,29 +1,16 @@
-﻿using System;
+using System;
 using Akka.Configuration;
 
 namespace Akka.Persistence.Azure.Tests.Helper
 {
     public static class AzureStorageConfigHelper
     {
-        private const string ConnectionString = "UseDevelopmentStorage=true";
-        
-        public static Config AzureConfig()
-        {
-            return AzureConfig(AzureConfig);
-        }
-
-        public static Config AzureConfig(Func<string, Config> configTemplate)
-        {
-            var connString = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR");
-            if (!string.IsNullOrEmpty(connString))
-            {
-                return AzureConfig(connString);
-            }
-
-            DbUtils.CleanupCloudTable(ConnectionString).Wait();
-            return configTemplate(ConnectionString);
-        }
-    
+        /// <summary>
+        /// Creates Azure persistence configuration with the provided connection string.
+        /// Generates unique table and container names for test isolation.
+        /// </summary>
+        /// <param name="connectionString">The Azure Storage connection string (from Azurite fixture)</param>
+        /// <returns>Akka configuration for Azure persistence</returns>
         public static Config AzureConfig(string connectionString)
         {
             var tableName = "t" + Guid.NewGuid().ToString().Replace("-", "");
@@ -69,7 +56,7 @@ akka {
 
         snapshot-store {
             plugin = ""akka.persistence.snapshot-store.azure-blob-store""
-            
+
             azure-blob-store {
                 connection-string=""" + connectionString + @"""
                 request-timeout = 3s
@@ -81,6 +68,5 @@ akka {
                 .WithFallback("akka.persistence.snapshot-store.azure-blob-store.container-name=" + containerName)
                 .WithFallback(AzurePersistence.DefaultConfig);
         }
-
     }
 }

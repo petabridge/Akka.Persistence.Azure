@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Configuration;
+using Akka.Persistence.Azure.Tests.Helper;
 using Xunit.Abstractions;
 using Akka.Actor;
 using Akka.Cluster.Sharding;
@@ -19,16 +20,9 @@ using Xunit;
 
 namespace Akka.Persistence.Azure.Tests;
 
+[Collection("AzureSpecs")]
 public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
 {
-    private static Config JournalConfig()
-    {
-        var connString = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR");
-        if (string.IsNullOrWhiteSpace(connString))
-            connString = DefaultConnectionString;
-
-        return JournalConfig(connString);
-    }
 
     private static Config JournalConfig(string connectionString)
     {
@@ -75,13 +69,12 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
             .WithFallback(AzurePersistence.DefaultConfig);
     }
 
-    private const string DefaultConnectionString = "UseDevelopmentStorage=true";
     private static readonly string PId = $"pId-{Guid.NewGuid().ToString("N")[^8..]}";
 
     private TestProbe _probe;
     private IActorRef _shardRegion;
 
-    public ClusterShardingSpec(ITestOutputHelper output) : base(JournalConfig(), nameof(ClusterShardingSpec), output)
+    public ClusterShardingSpec(AzuriteFixture fixture, ITestOutputHelper output) : base(JournalConfig(fixture.ConnectionString), nameof(ClusterShardingSpec), output)
     {
     }
 

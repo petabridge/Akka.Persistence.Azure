@@ -15,8 +15,8 @@ namespace Akka.Persistence.Azure.Tests
     [Collection("AzureSpecs")]
     public class AzureTableJournalEscapePersistentIdSpec : JournalSpec
     {
-        public AzureTableJournalEscapePersistentIdSpec(ITestOutputHelper output) 
-            : base(AzureConfig(), nameof(AzureTableJournalEscapePersistentIdSpec), output)
+        public AzureTableJournalEscapePersistentIdSpec(AzuriteFixture fixture, ITestOutputHelper output)
+            : base(AzureConfig(fixture.ConnectionString), nameof(AzureTableJournalEscapePersistentIdSpec), output)
         {
             AzurePersistence.Get(Sys);
             

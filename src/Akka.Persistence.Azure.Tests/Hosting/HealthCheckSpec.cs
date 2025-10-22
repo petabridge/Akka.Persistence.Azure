@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Hosting;
 using Akka.Persistence.Azure.Hosting;
+using Akka.Persistence.Azure.Tests.Helper;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -22,14 +23,15 @@ namespace Akka.Persistence.Azure.Tests.Hosting;
 /// <summary>
 /// Validates that health checks are properly registered after the refactoring.
 /// </summary>
+[Collection("AzureSpecs")]
 public class HealthCheckSpec : Akka.Hosting.TestKit.TestKit
 {
     private readonly string _connectionString;
 
-    public HealthCheckSpec(ITestOutputHelper output)
+    public HealthCheckSpec(AzuriteFixture fixture, ITestOutputHelper output)
         : base(nameof(HealthCheckSpec), output)
     {
-        _connectionString = Environment.GetEnvironmentVariable("AZURE_CONNECTION_STR") ?? "UseDevelopmentStorage=true";
+        _connectionString = fixture.ConnectionString;
     }
 
     protected override void ConfigureServices(HostBuilderContext context, IServiceCollection services)
