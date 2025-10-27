@@ -29,6 +29,30 @@ namespace Akka.Persistence.Azure.Hosting
         protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class AzureBlobSnapshotStoreConnectivityCheck : Akka.Hosting.IAkkaHealthCheck
+    {
+        public AzureBlobSnapshotStoreConnectivityCheck(string connectionString, System.Uri serviceUri, Azure.Core.TokenCredential azureCredential, Azure.Storage.Blobs.BlobClientOptions blobClientOptions, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Func<Azure.Storage.Blobs.BlobServiceClient> blobServiceClientFactory, [System.Runtime.CompilerServices.NullableAttribute(1)] string snapshotStoreId) { }
+        public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Akka.Hosting.AkkaHealthCheckContext context, System.Threading.CancellationToken cancellationToken = null) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class static AzureConnectivityCheckExtensions
+    {
+        public static Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder WithConnectivityCheck(this Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder builder, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus unHealthyStatus = 0, [System.Runtime.CompilerServices.NullableAttribute(2)] string name = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] string[] tags = null) { }
+        public static Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder WithConnectivityCheck(this Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder builder, Akka.Persistence.Azure.Hosting.AzureTableStorageJournalOptions journalOptions, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus unHealthyStatus = 0, [System.Runtime.CompilerServices.NullableAttribute(2)] string name = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] string[] tags = null) { }
+        public static Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder WithConnectivityCheck(this Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder builder, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus unHealthyStatus = 0, [System.Runtime.CompilerServices.NullableAttribute(2)] string name = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] string[] tags = null) { }
+        public static Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder WithConnectivityCheck(this Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder builder, Akka.Persistence.Azure.Hosting.AzureBlobSnapshotOptions snapshotOptions, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus unHealthyStatus = 0, [System.Runtime.CompilerServices.NullableAttribute(2)] string name = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] string[] tags = null) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class static AzurePersistenceExtensions
     {
         public const string DefaultBlobContainerName = "akka-persistence-default-container";
@@ -80,6 +104,14 @@ namespace Akka.Persistence.Azure.Hosting
         public static Akka.Hosting.AkkaConfigurationBuilder WithAzureTableJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Azure.Hosting.AzureTableStorageJournalOptions options, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
                 1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class AzureTableJournalConnectivityCheck : Akka.Hosting.IAkkaHealthCheck
+    {
+        public AzureTableJournalConnectivityCheck(string connectionString, System.Uri serviceUri, Azure.Core.TokenCredential azureCredential, Azure.Data.Tables.TableClientOptions tableClientOptions, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Func<Azure.Data.Tables.TableServiceClient> tableServiceClientFactory, [System.Runtime.CompilerServices.NullableAttribute(1)] string journalId) { }
+        public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Akka.Hosting.AkkaHealthCheckContext context, System.Threading.CancellationToken cancellationToken = null) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class AzureTableStorageJournalOptions : Akka.Persistence.Hosting.JournalOptions
