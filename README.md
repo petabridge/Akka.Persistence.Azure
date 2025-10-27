@@ -144,7 +144,11 @@ return host;
 
 ### Health Checks (Akka.Persistence.Azure.Hosting v1.5.51.1+)
 
-Starting with v1.5.51.1, you can enable health checks for Azure Table Storage journal and Blob Storage snapshots:
+Starting with v1.5.51.1, you can enable health checks for Azure Table Storage journal and Blob Storage snapshots.
+
+#### Standard Health Checks
+
+The standard health checks monitor the persistence plugins themselves and report their status:
 
 ```csharp
 builder.WithAzurePersistence(
@@ -152,6 +156,61 @@ builder.WithAzurePersistence(
     journalBuilder: journal => journal.WithHealthCheck(),
     snapshotBuilder: snapshot => snapshot.WithHealthCheck());
 ```
+
+#### Connectivity Health Checks (v1.5.55+)
+
+Starting with v1.5.55, you can enable proactive connectivity health checks that verify Azure backend connectivity regardless of recent operation activity. This helps detect database outages during idle periods.
+
+**Using Akka.Hosting 1.5.55.1 or later:**
+
+```csharp
+var journalOptions = new AzureTableStorageJournalOptions(isDefault: true)
+{
+    ConnectionString = connectionString,
+    TableName = "akkajournal",
+    AutoInitialize = true
+};
+
+var snapshotOptions = new AzureBlobSnapshotOptions(isDefault: true)
+{
+    ConnectionString = connectionString,
+    ContainerName = "akka-snapshots",
+    AutoInitialize = true
+};
+
+builder
+    .WithAzureTableJournal(journalOptions, journal =>
+    {
+        journal.WithConnectivityCheck(); // Proactively verify Azure Table Storage connectivity
+    })
+    .WithAzureBlobsSnapshotStore(snapshotOptions, snapshot =>
+    {
+        snapshot.WithConnectivityCheck(); // Proactively verify Azure Blob Storage connectivity
+    });
+```
+
+**Combining Standard and Connectivity Health Checks:**
+
+You can enable both types of health checks for comprehensive monitoring:
+
+```csharp
+builder
+    .WithAzureTableJournal(journalOptions, journal =>
+    {
+        journal.WithHealthCheck();           // Monitor plugin status
+        journal.WithConnectivityCheck();     // Verify backend connectivity
+    })
+    .WithAzureBlobsSnapshotStore(snapshotOptions, snapshot =>
+    {
+        snapshot.WithHealthCheck();          // Monitor plugin status
+        snapshot.WithConnectivityCheck();    // Verify backend connectivity
+    });
+```
+
+The connectivity checks support all Azure SDK connection methods:
+- Connection strings
+- ServiceUri + TokenCredential (e.g., DefaultAzureCredential)
+- Factory methods for TableServiceClient and BlobServiceClient
 
 For more information on Akka.NET health checks, see the [Akka.Hosting health check documentation](https://github.com/akkadotnet/Akka.Hosting#health-checks).
 

@@ -47,7 +47,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
 
             // Assert
             result.Status.Should().Be(HealthStatus.Healthy);
-            result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
+            result.Entries.Keys.Should().Contain("akka.persistence.journal.azure-table");
         }
 
         [Fact]
@@ -59,7 +59,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
 
             // Assert
             result.Status.Should().Be(HealthStatus.Healthy);
-            result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
+            result.Entries.Keys.Should().Contain("akka.persistence.snapshot-store.azure-blob-store");
         }
 
         [Fact]
@@ -71,8 +71,8 @@ namespace Akka.Persistence.Azure.Tests.Hosting
 
             // Assert
             result.Status.Should().Be(HealthStatus.Healthy);
-            result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
-            result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
+            result.Entries.Keys.Should().Contain("akka.persistence.journal.azure-table");
+            result.Entries.Keys.Should().Contain("akka.persistence.snapshot-store.azure-blob-store");
         }
 
         [Fact]
@@ -85,8 +85,8 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             // Assert
             // Health checks should be registered and report as healthy (degraded status is for failures)
             result.Status.Should().Be(HealthStatus.Healthy);
-            result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
-            result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
+            result.Entries.Keys.Should().Contain("akka.persistence.journal.azure-table");
+            result.Entries.Keys.Should().Contain("akka.persistence.snapshot-store.azure-blob-store");
         }
 
         [Fact]
@@ -108,16 +108,16 @@ namespace Akka.Persistence.Azure.Tests.Hosting
 
             // Assert
             result.Status.Should().Be(HealthStatus.Healthy);
-            result.Entries.Keys.Should().Contain("Akka.Persistence.Journal.azure-table");
-            result.Entries.Keys.Should().Contain("Akka.Persistence.SnapshotStore.azure-blob-store");
+            result.Entries.Keys.Should().Contain("akka.persistence.journal.azure-table");
+            result.Entries.Keys.Should().Contain("akka.persistence.snapshot-store.azure-blob-store");
 
             // Verify individual entries are healthy
-            result.Entries["Akka.Persistence.Journal.azure-table"].Status.Should().Be(HealthStatus.Healthy);
-            result.Entries["Akka.Persistence.SnapshotStore.azure-blob-store"].Status.Should().Be(HealthStatus.Healthy);
+            result.Entries["akka.persistence.journal.azure-table"].Status.Should().Be(HealthStatus.Healthy);
+            result.Entries["akka.persistence.snapshot-store.azure-blob-store"].Status.Should().Be(HealthStatus.Healthy);
 
             // Verify data and descriptions exist
-            result.Entries["Akka.Persistence.Journal.azure-table"].Data.Should().NotBeNull();
-            result.Entries["Akka.Persistence.SnapshotStore.azure-blob-store"].Data.Should().NotBeNull();
+            result.Entries["akka.persistence.journal.azure-table"].Data.Should().NotBeNull();
+            result.Entries["akka.persistence.snapshot-store.azure-blob-store"].Data.Should().NotBeNull();
         }
 
         public sealed class MyPersistenceActor : ReceivePersistentActor

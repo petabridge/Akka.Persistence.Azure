@@ -85,6 +85,7 @@ namespace Akka.Persistence.Azure.Journal
         public bool VerboseLogging { get; }
         public static Akka.Persistence.Azure.Journal.AzureTableStorageJournalSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Persistence.Azure.Journal.AzureTableStorageJournalSettings Create(Akka.Configuration.Config config) { }
+        public Azure.Data.Tables.TableServiceClient CreateTableServiceClient() { }
         public Akka.Persistence.Azure.Journal.AzureTableStorageJournalSettings WithAutoInitialize(bool autoInitialize) { }
         public Akka.Persistence.Azure.Journal.AzureTableStorageJournalSettings WithAzureCredential(System.Uri serviceUri, Azure.Core.TokenCredential defaultAzureCredential, [System.Runtime.CompilerServices.NullableAttribute(2)] Azure.Data.Tables.TableClientOptions tableClientOptions = null) { }
         public Akka.Persistence.Azure.Journal.AzureTableStorageJournalSettings WithConnectTimeout(System.TimeSpan connectTimeout) { }
@@ -316,6 +317,7 @@ namespace Akka.Persistence.Azure.Snapshot
         public bool VerboseLogging { get; }
         public static Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStoreSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStoreSettings Create(Akka.Configuration.Config config) { }
+        public Azure.Storage.Blobs.BlobServiceClient CreateBlobServiceClient() { }
         public static string SanitizeFolder([System.Runtime.CompilerServices.NullableAttribute(2)] string folder) { }
         public Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStoreSettings WithAutoInitialize(bool autoInitialize) { }
         public Akka.Persistence.Azure.Snapshot.AzureBlobSnapshotStoreSettings WithAzureCredential(System.Uri serviceUri, Azure.Core.TokenCredential defaultAzureCredential, [System.Runtime.CompilerServices.NullableAttribute(2)] Azure.Storage.Blobs.BlobClientOptions blobClientOption = null) { }

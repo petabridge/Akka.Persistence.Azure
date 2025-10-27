@@ -248,6 +248,37 @@ namespace Akka.Persistence.Azure.Snapshot
         /// </summary>
         public Func<BlobServiceClient>? BlobServiceClientFactory { get; }
 
+        /// <summary>
+        ///     Creates a BlobServiceClient using the configured connection settings.
+        ///     Priority order: BlobServiceClientFactory > ServiceUri + AzureCredential > ConnectionString
+        /// </summary>
+        /// <returns>A configured BlobServiceClient instance</returns>
+        /// <exception cref="ConfigurationException">Thrown when no valid connection method is configured</exception>
+        public BlobServiceClient CreateBlobServiceClient()
+        {
+            if (BlobServiceClientFactory != null)
+            {
+                return BlobServiceClientFactory.Invoke();
+            }
+
+            if (ServiceUri != null && AzureCredential != null)
+            {
+                return new BlobServiceClient(
+                    serviceUri: ServiceUri,
+                    credential: AzureCredential,
+                    options: BlobClientOptions);
+            }
+
+            if (!string.IsNullOrWhiteSpace(ConnectionString))
+            {
+                return new BlobServiceClient(connectionString: ConnectionString);
+            }
+
+            throw new ConfigurationException(
+                "No connection method configured. ConnectionString, AzureCredential, or BlobServiceClient " +
+                "must be specified.");
+        }
+
         public AzureBlobSnapshotStoreSettings WithConnectionString(string connectionString)
             => Copy(connectionString: connectionString);
         public AzureBlobSnapshotStoreSettings WithContainerName(string containerName)
