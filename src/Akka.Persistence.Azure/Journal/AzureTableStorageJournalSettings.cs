@@ -177,6 +177,38 @@ namespace Akka.Persistence.Azure.Journal
         /// </summary>
         public Func<TableServiceClient>? TableServiceClientFactory { get; }
 
+        /// <summary>
+        ///     Creates a TableServiceClient using the configured connection settings.
+        ///     Priority order: TableServiceClientFactory > ServiceUri + AzureCredential > ConnectionString
+        /// </summary>
+        /// <returns>A configured TableServiceClient instance</returns>
+        /// <exception cref="ConfigurationException">Thrown when no valid connection method is configured</exception>
+        public TableServiceClient CreateTableServiceClient()
+        {
+            if (TableServiceClientFactory != null)
+            {
+                return TableServiceClientFactory.Invoke();
+            }
+
+            // Use TokenCredential if both ServiceUri and TokenCredential are populated
+            if (ServiceUri != null && AzureCredential != null)
+            {
+                return new TableServiceClient(
+                    endpoint: ServiceUri,
+                    tokenCredential: AzureCredential,
+                    options: TableClientOptions);
+            }
+
+            if (!string.IsNullOrWhiteSpace(ConnectionString))
+            {
+                return new TableServiceClient(connectionString: ConnectionString);
+            }
+
+            throw new ConfigurationException(
+                "No connection method configured. ConnectionString, AzureCredential, or " +
+                "TableServiceClientFactory must be specified.");
+        }
+
         public AzureTableStorageJournalSettings WithConnectionString(string connectionString)
             => Copy(connectionString: connectionString);
         public AzureTableStorageJournalSettings WithTableName(string tableName)

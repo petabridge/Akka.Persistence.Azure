@@ -52,18 +52,22 @@ namespace Akka.Persistence.Azure.Hosting
             {
                 TableServiceClient client;
 
-                // Priority: Factory > ConnectionString > ServiceUri + Credential
+                // Priority: Factory > ServiceUri + Credential > ConnectionString
+                // This matches the priority order in AzureTableStorageJournal
                 if (_tableServiceClientFactory != null)
                 {
                     client = _tableServiceClientFactory();
                 }
-                else if (!string.IsNullOrWhiteSpace(_connectionString))
-                {
-                    client = new TableServiceClient(_connectionString, _tableClientOptions);
-                }
                 else if (_serviceUri != null && _azureCredential != null)
                 {
-                    client = new TableServiceClient(_serviceUri, _azureCredential, _tableClientOptions);
+                    client = new TableServiceClient(
+                        endpoint: _serviceUri,
+                        tokenCredential: _azureCredential,
+                        options: _tableClientOptions);
+                }
+                else if (!string.IsNullOrWhiteSpace(_connectionString))
+                {
+                    client = new TableServiceClient(_connectionString);
                 }
                 else
                 {

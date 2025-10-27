@@ -52,18 +52,22 @@ namespace Akka.Persistence.Azure.Hosting
             {
                 BlobServiceClient client;
 
-                // Priority: Factory > ConnectionString > ServiceUri + Credential
+                // Priority: Factory > ServiceUri + Credential > ConnectionString
+                // This matches the priority order in AzureBlobSnapshotStore
                 if (_blobServiceClientFactory != null)
                 {
                     client = _blobServiceClientFactory();
                 }
-                else if (!string.IsNullOrWhiteSpace(_connectionString))
-                {
-                    client = new BlobServiceClient(_connectionString, _blobClientOptions);
-                }
                 else if (_serviceUri != null && _azureCredential != null)
                 {
-                    client = new BlobServiceClient(_serviceUri, _azureCredential, _blobClientOptions);
+                    client = new BlobServiceClient(
+                        serviceUri: _serviceUri,
+                        credential: _azureCredential,
+                        options: _blobClientOptions);
+                }
+                else if (!string.IsNullOrWhiteSpace(_connectionString))
+                {
+                    client = new BlobServiceClient(_connectionString);
                 }
                 else
                 {
