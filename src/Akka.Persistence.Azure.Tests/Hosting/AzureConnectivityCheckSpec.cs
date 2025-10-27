@@ -59,11 +59,13 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             builder
                 .WithAzureTableJournal(journalOptions, journal =>
                 {
-                    journal.WithConnectivityCheck(journalOptions);
+                    // Using the new simplified API from Akka.Hosting 1.5.55.1
+                    journal.WithConnectivityCheck();
                 })
                 .WithAzureBlobsSnapshotStore(snapshotOptions, snapshot =>
                 {
-                    snapshot.WithConnectivityCheck(snapshotOptions);
+                    // Using the new simplified API from Akka.Hosting 1.5.55.1
+                    snapshot.WithConnectivityCheck();
                 });
         }
 
@@ -219,11 +221,13 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             builder
                 .WithAzureTableJournal(journalOptions, journal =>
                 {
-                    journal.WithConnectivityCheck(journalOptions, HealthStatus.Degraded);
+                    // Using the new simplified API from Akka.Hosting 1.5.55.1
+                    journal.WithConnectivityCheck(HealthStatus.Degraded);
                 })
                 .WithAzureBlobsSnapshotStore(snapshotOptions, snapshot =>
                 {
-                    snapshot.WithConnectivityCheck(snapshotOptions, HealthStatus.Degraded);
+                    // Using the new simplified API from Akka.Hosting 1.5.55.1
+                    snapshot.WithConnectivityCheck(HealthStatus.Degraded);
                 });
         }
 
