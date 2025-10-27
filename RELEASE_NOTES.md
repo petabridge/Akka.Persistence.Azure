@@ -1,7 +1,7 @@
 #### 1.5.55 October 27 2025 ####
 
 * [Update Akka.NET v1.5.55](https://github.com/akkadotnet/akka.net/releases/tag/1.5.55)
-* [Update Akka.Hosting v1.5.55](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.55)
+* [Update Akka.Hosting v1.5.55.1](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.55.1)
 * [Add connectivity health checks for Azure persistence backends](https://github.com/petabridge/Akka.Persistence.Azure/pull/TBD)
 
 This release adds proactive connectivity health checks for Azure persistence backends, implementing the feature requested in [Akka.Hosting#678](https://github.com/akkadotnet/Akka.Hosting/issues/678).
@@ -9,6 +9,10 @@ This release adds proactive connectivity health checks for Azure persistence bac
 **New Features:**
 
 Connectivity checks are now available for both Azure Table Storage journal and Azure Blob Storage snapshot store. These are opt-in health checks that proactively verify backend connectivity regardless of recent operation activity, helping detect database outages during idle periods.
+
+**Improved API:**
+
+With Akka.Hosting 1.5.55.1, the connectivity check API has been simplified. Options are now automatically accessed from the builder, eliminating redundant parameter passing.
 
 **Usage Example:**
 
@@ -30,15 +34,19 @@ var snapshotOptions = new AzureBlobSnapshotOptions(isDefault: true)
 builder
     .WithAzureTableJournal(journalOptions, journal =>
     {
-        journal.WithConnectivityCheck(journalOptions);
+        journal.WithConnectivityCheck(); // Simplified API!
     })
     .WithAzureBlobsSnapshotStore(snapshotOptions, snapshot =>
     {
-        snapshot.WithConnectivityCheck(snapshotOptions);
+        snapshot.WithConnectivityCheck(); // Simplified API!
     });
 ```
 
 The connectivity checks support all Azure SDK connection methods (connection string, ServiceUri + TokenCredential, and factory methods) and include proper tagging for filtering in health check endpoints.
+
+**Backward Compatibility:**
+
+The old API signature (passing options explicitly) is still supported for backward compatibility with older versions of Akka.Hosting.
 
 #### 1.5.51.1 October 2nd 2025 ####
 
