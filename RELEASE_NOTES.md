@@ -1,3 +1,45 @@
+#### 1.5.55 October 27 2025 ####
+
+* [Update Akka.NET v1.5.55](https://github.com/akkadotnet/akka.net/releases/tag/1.5.55)
+* [Update Akka.Hosting v1.5.55](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.55)
+* [Add connectivity health checks for Azure persistence backends](https://github.com/petabridge/Akka.Persistence.Azure/pull/TBD)
+
+This release adds proactive connectivity health checks for Azure persistence backends, implementing the feature requested in [Akka.Hosting#678](https://github.com/akkadotnet/Akka.Hosting/issues/678).
+
+**New Features:**
+
+Connectivity checks are now available for both Azure Table Storage journal and Azure Blob Storage snapshot store. These are opt-in health checks that proactively verify backend connectivity regardless of recent operation activity, helping detect database outages during idle periods.
+
+**Usage Example:**
+
+```csharp
+var journalOptions = new AzureTableStorageJournalOptions(isDefault: true)
+{
+    ConnectionString = connectionString,
+    TableName = "akkajournal",
+    AutoInitialize = true
+};
+
+var snapshotOptions = new AzureBlobSnapshotOptions(isDefault: true)
+{
+    ConnectionString = connectionString,
+    ContainerName = "akka-snapshots",
+    AutoInitialize = true
+};
+
+builder
+    .WithAzureTableJournal(journalOptions, journal =>
+    {
+        journal.WithConnectivityCheck(journalOptions);
+    })
+    .WithAzureBlobsSnapshotStore(snapshotOptions, snapshot =>
+    {
+        snapshot.WithConnectivityCheck(snapshotOptions);
+    });
+```
+
+The connectivity checks support all Azure SDK connection methods (connection string, ServiceUri + TokenCredential, and factory methods) and include proper tagging for filtering in health check endpoints.
+
 #### 1.5.51.1 October 2nd 2025 ####
 
 * [Update Akka.Hosting v1.5.51.1](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.51.1)
