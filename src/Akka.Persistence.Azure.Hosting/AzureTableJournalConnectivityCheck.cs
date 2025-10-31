@@ -21,11 +21,7 @@ namespace Akka.Persistence.Azure.Hosting
     /// </summary>
     public sealed class AzureTableJournalConnectivityCheck : IAkkaHealthCheck
     {
-        private readonly string? _connectionString;
-        private readonly Uri? _serviceUri;
-        private readonly TokenCredential? _azureCredential;
-        private readonly TableClientOptions? _tableClientOptions;
-        private readonly Func<TableServiceClient>? _tableServiceClientFactory;
+        private readonly TableServiceClient _tableServiceClient;
         private readonly string _journalId;
 
         public AzureTableJournalConnectivityCheck(
@@ -36,12 +32,31 @@ namespace Akka.Persistence.Azure.Hosting
             Func<TableServiceClient>? tableServiceClientFactory,
             string journalId)
         {
-            _connectionString = connectionString;
-            _serviceUri = serviceUri;
-            _azureCredential = azureCredential;
-            _tableClientOptions = tableClientOptions;
-            _tableServiceClientFactory = tableServiceClientFactory;
             _journalId = journalId ?? throw new ArgumentNullException(nameof(journalId));
+
+            // Create client once and cache it - matches the pattern used in AzureTableStorageJournal
+            // Priority: Factory > ServiceUri + Credential > ConnectionString
+            if (tableServiceClientFactory != null)
+            {
+                _tableServiceClient = tableServiceClientFactory();
+            }
+            else if (serviceUri != null && azureCredential != null)
+            {
+                _tableServiceClient = new TableServiceClient(
+                    endpoint: serviceUri,
+                    tokenCredential: azureCredential,
+                    options: tableClientOptions);
+            }
+            else if (!string.IsNullOrWhiteSpace(connectionString))
+            {
+                _tableServiceClient = new TableServiceClient(connectionString);
+            }
+            else
+            {
+                throw new ArgumentException(
+                    "At least one of ConnectionString, ServiceUri + AzureCredential, or TableServiceClientFactory must be provided",
+                    nameof(connectionString));
+            }
         }
 
         public async Task<HealthCheckResult> CheckHealthAsync(
@@ -50,33 +65,9 @@ namespace Akka.Persistence.Azure.Hosting
         {
             try
             {
-                TableServiceClient client;
-
-                // Priority: Factory > ServiceUri + Credential > ConnectionString
-                // This matches the priority order in AzureTableStorageJournal
-                if (_tableServiceClientFactory != null)
-                {
-                    client = _tableServiceClientFactory();
-                }
-                else if (_serviceUri != null && _azureCredential != null)
-                {
-                    client = new TableServiceClient(
-                        endpoint: _serviceUri,
-                        tokenCredential: _azureCredential,
-                        options: _tableClientOptions);
-                }
-                else if (!string.IsNullOrWhiteSpace(_connectionString))
-                {
-                    client = new TableServiceClient(_connectionString);
-                }
-                else
-                {
-                    return HealthCheckResult.Unhealthy(
-                        $"Azure Table journal '{_journalId}' connectivity check failed: no valid connection configuration provided");
-                }
-
-                // Perform a lightweight connectivity check
-                await client.GetPropertiesAsync(cancellationToken);
+                // Use the cached client instead of creating a new one on each check
+                // This prevents authentication storms and rate limiting issues
+                await _tableServiceClient.GetPropertiesAsync(cancellationToken);
 
                 return HealthCheckResult.Healthy($"Azure Table journal '{_journalId}' connection successful");
             }
