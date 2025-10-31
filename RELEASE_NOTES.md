@@ -1,6 +1,6 @@
 #### 1.5.55.1-beta1 October 31 2025 ####
 
-* [Fix authentication storm issue in connectivity health checks](https://github.com/petabridge/Akka.Persistence.Azure/pull/TBD)
+* [Fix authentication storm issue in connectivity health checks](https://github.com/petabridge/Akka.Persistence.Azure/pull/542)
 
 This is a critical bug fix release that addresses authentication issues in the connectivity health checks introduced in v1.5.55.
 
