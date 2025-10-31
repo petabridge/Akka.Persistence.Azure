@@ -21,11 +21,7 @@ namespace Akka.Persistence.Azure.Hosting
     /// </summary>
     public sealed class AzureBlobSnapshotStoreConnectivityCheck : IAkkaHealthCheck
     {
-        private readonly string? _connectionString;
-        private readonly Uri? _serviceUri;
-        private readonly TokenCredential? _azureCredential;
-        private readonly BlobClientOptions? _blobClientOptions;
-        private readonly Func<BlobServiceClient>? _blobServiceClientFactory;
+        private readonly BlobServiceClient _blobServiceClient;
         private readonly string _snapshotStoreId;
 
         public AzureBlobSnapshotStoreConnectivityCheck(
@@ -36,12 +32,31 @@ namespace Akka.Persistence.Azure.Hosting
             Func<BlobServiceClient>? blobServiceClientFactory,
             string snapshotStoreId)
         {
-            _connectionString = connectionString;
-            _serviceUri = serviceUri;
-            _azureCredential = azureCredential;
-            _blobClientOptions = blobClientOptions;
-            _blobServiceClientFactory = blobServiceClientFactory;
             _snapshotStoreId = snapshotStoreId ?? throw new ArgumentNullException(nameof(snapshotStoreId));
+
+            // Create client once and cache it - matches the pattern used in AzureBlobSnapshotStore
+            // Priority: Factory > ServiceUri + Credential > ConnectionString
+            if (blobServiceClientFactory != null)
+            {
+                _blobServiceClient = blobServiceClientFactory();
+            }
+            else if (serviceUri != null && azureCredential != null)
+            {
+                _blobServiceClient = new BlobServiceClient(
+                    serviceUri: serviceUri,
+                    credential: azureCredential,
+                    options: blobClientOptions);
+            }
+            else if (!string.IsNullOrWhiteSpace(connectionString))
+            {
+                _blobServiceClient = new BlobServiceClient(connectionString);
+            }
+            else
+            {
+                throw new ArgumentException(
+                    "At least one of ConnectionString, ServiceUri + AzureCredential, or BlobServiceClientFactory must be provided",
+                    nameof(connectionString));
+            }
         }
 
         public async Task<HealthCheckResult> CheckHealthAsync(
@@ -50,33 +65,9 @@ namespace Akka.Persistence.Azure.Hosting
         {
             try
             {
-                BlobServiceClient client;
-
-                // Priority: Factory > ServiceUri + Credential > ConnectionString
-                // This matches the priority order in AzureBlobSnapshotStore
-                if (_blobServiceClientFactory != null)
-                {
-                    client = _blobServiceClientFactory();
-                }
-                else if (_serviceUri != null && _azureCredential != null)
-                {
-                    client = new BlobServiceClient(
-                        serviceUri: _serviceUri,
-                        credential: _azureCredential,
-                        options: _blobClientOptions);
-                }
-                else if (!string.IsNullOrWhiteSpace(_connectionString))
-                {
-                    client = new BlobServiceClient(_connectionString);
-                }
-                else
-                {
-                    return HealthCheckResult.Unhealthy(
-                        $"Azure Blob snapshot store '{_snapshotStoreId}' connectivity check failed: no valid connection configuration provided");
-                }
-
-                // Perform a lightweight connectivity check
-                await client.GetPropertiesAsync(cancellationToken);
+                // Use the cached client instead of creating a new one on each check
+                // This prevents authentication storms and rate limiting issues
+                await _blobServiceClient.GetPropertiesAsync(cancellationToken);
 
                 return HealthCheckResult.Healthy($"Azure Blob snapshot store '{_snapshotStoreId}' connection successful");
             }
