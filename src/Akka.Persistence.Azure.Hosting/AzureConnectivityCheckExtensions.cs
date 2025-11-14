@@ -84,6 +84,7 @@ namespace Akka.Persistence.Azure.Hosting
                     journalOptions.AzureCredential,
                     journalOptions.TableClientOptions,
                     journalOptions.TableServiceClientFactory,
+                    journalOptions.TableName ?? "AkkaPersistenceDefaultTable",
                     journalOptions.Identifier),
                 unHealthyStatus,
                 tags ?? new[] { "akka", "persistence", "azure", "journal", "connectivity" });
@@ -159,6 +160,7 @@ namespace Akka.Persistence.Azure.Hosting
                     snapshotOptions.AzureCredential,
                     snapshotOptions.BlobClientOptions,
                     snapshotOptions.BlobServiceClientFactory,
+                    snapshotOptions.ContainerName ?? "akka-persistence-default-container",
                     snapshotOptions.Identifier),
                 unHealthyStatus,
                 tags ?? new[] { "akka", "persistence", "azure", "snapshot-store", "connectivity" });

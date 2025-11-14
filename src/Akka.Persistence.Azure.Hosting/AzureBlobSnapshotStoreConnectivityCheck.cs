@@ -21,7 +21,7 @@ namespace Akka.Persistence.Azure.Hosting
     /// </summary>
     public sealed class AzureBlobSnapshotStoreConnectivityCheck : IAkkaHealthCheck
     {
-        private readonly BlobServiceClient _blobServiceClient;
+        private readonly BlobContainerClient _blobContainerClient;
         private readonly string _snapshotStoreId;
 
         public AzureBlobSnapshotStoreConnectivityCheck(
@@ -30,26 +30,31 @@ namespace Akka.Persistence.Azure.Hosting
             TokenCredential? azureCredential,
             BlobClientOptions? blobClientOptions,
             Func<BlobServiceClient>? blobServiceClientFactory,
+            string containerName,
             string snapshotStoreId)
         {
             _snapshotStoreId = snapshotStoreId ?? throw new ArgumentNullException(nameof(snapshotStoreId));
 
+            if (string.IsNullOrWhiteSpace(containerName))
+                throw new ArgumentNullException(nameof(containerName));
+
             // Create client once and cache it - matches the pattern used in AzureBlobSnapshotStore
             // Priority: Factory > ServiceUri + Credential > ConnectionString
+            BlobServiceClient blobServiceClient;
             if (blobServiceClientFactory != null)
             {
-                _blobServiceClient = blobServiceClientFactory();
+                blobServiceClient = blobServiceClientFactory();
             }
             else if (serviceUri != null && azureCredential != null)
             {
-                _blobServiceClient = new BlobServiceClient(
+                blobServiceClient = new BlobServiceClient(
                     serviceUri: serviceUri,
                     credential: azureCredential,
                     options: blobClientOptions);
             }
             else if (!string.IsNullOrWhiteSpace(connectionString))
             {
-                _blobServiceClient = new BlobServiceClient(connectionString);
+                blobServiceClient = new BlobServiceClient(connectionString);
             }
             else
             {
@@ -57,6 +62,9 @@ namespace Akka.Persistence.Azure.Hosting
                     "At least one of ConnectionString, ServiceUri + AzureCredential, or BlobServiceClientFactory must be provided",
                     nameof(connectionString));
             }
+
+            // Get the specific container client - this is what the snapshot store uses for all operations
+            _blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
         }
 
         public async Task<HealthCheckResult> CheckHealthAsync(
@@ -65,9 +73,12 @@ namespace Akka.Persistence.Azure.Hosting
         {
             try
             {
-                // Use the cached client instead of creating a new one on each check
-                // This prevents authentication storms and rate limiting issues
-                await _blobServiceClient.GetPropertiesAsync(cancellationToken);
+                // Use the same check as the snapshot store's InitCloudStorage() method
+                // Check if the container exists - this verifies connectivity to Azure Blob Storage
+                // This uses container-level permissions (same as snapshot store initialization) rather than
+                // service-level properties permissions
+                // Successfully executing this check proves connectivity, regardless of whether the container exists
+                await _blobContainerClient.ExistsAsync(cancellationToken);
 
                 return HealthCheckResult.Healthy($"Azure Blob snapshot store '{_snapshotStoreId}' connection successful");
             }
