@@ -1,52 +1,25 @@
 <Project>
   <PropertyGroup>
-    <VersionPrefix>1.5.55</VersionPrefix>
-    <PackageReleaseNotes>* [Update Akka.NET v1.5.55](https://github.com/akkadotnet/akka.net/releases/tag/1.5.55)
-* [Update Akka.Hosting v1.5.55.1](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.55.1)
-* [Add connectivity health checks for Azure persistence backends](https://github.com/petabridge/Akka.Persistence.Azure/pull/TBD)
+    <VersionPrefix>1.5.55.1</VersionPrefix>
+    <PackageReleaseNotes>* [Fix Health Check Permission Requirements](https://github.com/petabridge/Akka.Persistence.Azure/pull/543)
 
-This release adds proactive connectivity health checks for Azure persistence backends, implementing the feature requested in [Akka.Hosting#678](https://github.com/akkadotnet/Akka.Hosting/issues/678).
+This release addresses permission issues in the connectivity health checks introduced in v1.5.55.
 
-**New Features:**
+**Bug Fix:**
 
-Connectivity checks are now available for both Azure Table Storage journal and Azure Blob Storage snapshot store. These are opt-in health checks that proactively verify backend connectivity regardless of recent operation activity, helping detect database outages during idle periods.
+The connectivity health checks were using `GetPropertiesAsync()` operations that require service-level Azure permissions, causing authentication failures for users whose credentials didn't have these elevated permissions. This was separate from the permissions needed by the journal and snapshot store themselves.
 
-**Improved API:**
+**Solution:**
 
-With Akka.Hosting 1.5.55.1, the connectivity check API has been simplified. Options are now automatically accessed from the builder, eliminating redundant parameter passing.
+Changed health checks to use the same operations as the actual persistence plugins:
 
-**Usage Example:**
+- **Table Journal**: Now uses `TableServiceClient.QueryAsync()` - matching the journal's `IsTableExist()` method
+- **Blob Snapshot Store**: Now uses `BlobContainerClient.ExistsAsync()` - matching the snapshot store's `InitCloudStorage()` method
 
-```csharp
-var journalOptions = new AzureTableStorageJournalOptions(isDefault: true)
-{
-    ConnectionString = connectionString,
-    TableName = "akkajournal",
-    AutoInitialize = true
-};
+**Impact:**
 
-var snapshotOptions = new AzureBlobSnapshotOptions(isDefault: true)
-{
-    ConnectionString = connectionString,
-    ContainerName = "akka-snapshots",
-    AutoInitialize = true
-};
+Health checks now require only the same permissions as normal journal/snapshot store operations. No additional Azure role assignments are needed, and the checks work whether the table/container exists or not (supporting auto-initialize scenarios).
 
-builder
-    .WithAzureTableJournal(journalOptions, journal =&gt;
-    {
-        journal.WithConnectivityCheck(); // Simplified API!
-    })
-    .WithAzureBlobsSnapshotStore(snapshotOptions, snapshot =&gt;
-    {
-        snapshot.WithConnectivityCheck(); // Simplified API!
-    });
-```
-
-The connectivity checks support all Azure SDK connection methods (connection string, ServiceUri + TokenCredential, and factory methods) and include proper tagging for filtering in health check endpoints.
-
-**Backward Compatibility:**
-
-The old API signature (passing options explicitly) is still supported for backward compatibility with older versions of Akka.Hosting.</PackageReleaseNotes>
+This change is **fully backward compatible** and requires no code changes from users.</PackageReleaseNotes>
   </PropertyGroup>
 </Project>

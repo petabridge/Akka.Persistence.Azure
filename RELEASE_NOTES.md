@@ -1,3 +1,26 @@
+#### 1.5.55.1 November 17 2025 ####
+
+* [Fix Health Check Permission Requirements](https://github.com/petabridge/Akka.Persistence.Azure/pull/543)
+
+This release addresses permission issues in the connectivity health checks introduced in v1.5.55.
+
+**Bug Fix:**
+
+The connectivity health checks were using `GetPropertiesAsync()` operations that require service-level Azure permissions, causing authentication failures for users whose credentials didn't have these elevated permissions. This was separate from the permissions needed by the journal and snapshot store themselves.
+
+**Solution:**
+
+Changed health checks to use the same operations as the actual persistence plugins:
+
+- **Table Journal**: Now uses `TableServiceClient.QueryAsync()` - matching the journal's `IsTableExist()` method
+- **Blob Snapshot Store**: Now uses `BlobContainerClient.ExistsAsync()` - matching the snapshot store's `InitCloudStorage()` method
+
+**Impact:**
+
+Health checks now require only the same permissions as normal journal/snapshot store operations. No additional Azure role assignments are needed, and the checks work whether the table/container exists or not (supporting auto-initialize scenarios).
+
+This change is **fully backward compatible** and requires no code changes from users.
+
 #### 1.5.55.1-beta1 October 31 2025 ####
 
 * [Fix authentication storm issue in connectivity health checks](https://github.com/petabridge/Akka.Persistence.Azure/pull/542)
