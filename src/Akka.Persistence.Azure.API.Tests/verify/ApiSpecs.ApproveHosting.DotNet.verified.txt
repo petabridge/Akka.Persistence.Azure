@@ -33,7 +33,7 @@ namespace Akka.Persistence.Azure.Hosting
     {
         public AzureBlobSnapshotStoreConnectivityCheck(string connectionString, System.Uri serviceUri, Azure.Core.TokenCredential azureCredential, Azure.Storage.Blobs.BlobClientOptions blobClientOptions, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Func<Azure.Storage.Blobs.BlobServiceClient> blobServiceClientFactory, [System.Runtime.CompilerServices.NullableAttribute(1)] string snapshotStoreId) { }
+                1})] System.Func<Azure.Storage.Blobs.BlobServiceClient> blobServiceClientFactory, [System.Runtime.CompilerServices.NullableAttribute(1)] string containerName, [System.Runtime.CompilerServices.NullableAttribute(1)] string snapshotStoreId) { }
         public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Akka.Hosting.AkkaHealthCheckContext context, System.Threading.CancellationToken cancellationToken = null) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
@@ -110,7 +110,7 @@ namespace Akka.Persistence.Azure.Hosting
     {
         public AzureTableJournalConnectivityCheck(string connectionString, System.Uri serviceUri, Azure.Core.TokenCredential azureCredential, Azure.Data.Tables.TableClientOptions tableClientOptions, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
-                1})] System.Func<Azure.Data.Tables.TableServiceClient> tableServiceClientFactory, [System.Runtime.CompilerServices.NullableAttribute(1)] string journalId) { }
+                1})] System.Func<Azure.Data.Tables.TableServiceClient> tableServiceClientFactory, [System.Runtime.CompilerServices.NullableAttribute(1)] string tableName, [System.Runtime.CompilerServices.NullableAttribute(1)] string journalId) { }
         public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Akka.Hosting.AkkaHealthCheckContext context, System.Threading.CancellationToken cancellationToken = null) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
