@@ -17,10 +17,17 @@
     <PackageVersion Include="Microsoft.Identity.Client" Version="4.73.1" />
     <PackageVersion Include="Testcontainers.Azurite" Version="4.8.0" />
   </ItemGroup>
+  <!-- Aspire dependencies -->
+  <ItemGroup>
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.1.0" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="9.1.0" />
+    <PackageVersion Include="Aspire.Azure.Storage.Blobs" Version="9.1.0" />
+    <PackageVersion Include="Aspire.Azure.Data.Tables" Version="9.1.0" />
+  </ItemGroup>
   <!-- Test dependencies -->
   <ItemGroup>
     <PackageVersion Include="Akka.Hosting.TestKit" Version="$(AkkaHostingVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageVersion Include="Akka.Cluster.Sharding" Version="$(AkkaVersion)" />
     <PackageVersion Include="NBench" Version="2.0.1" />
     <PackageVersion Include="Docker.DotNet" Version="3.125.15" />

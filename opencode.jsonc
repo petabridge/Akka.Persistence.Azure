@@ -1,0 +1,12 @@
+{
+  // OpenCode configuration for Akka.Persistence.Azure
+  // See: https://opencode.ai/docs/configuration
+  
+  "mcp": {
+    "aspire": {
+      "type": "local",
+      "command": ["aspire", "agent", "mcp"],
+      "enabled": true
+    }
+  }
+}
