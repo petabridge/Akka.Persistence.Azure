@@ -107,25 +107,26 @@ var tableConnectionString = builder.Configuration.GetConnectionString("persisten
 
 ### Configuring Akka.Persistence.Azure
 
+**Important:** When using Aspire with Azurite, always use **separate connection strings** for blob and table storage. Aspire provides endpoint-specific connection strings that include the correct `BlobEndpoint=` or `TableEndpoint=` URLs pointing to the Azurite container.
+
 ```csharp
-var journalOptions = new AzureTableStorageJournalOptions(isDefault: true)
-{
-    ConnectionString = tableConnectionString,
-    TableName = "AkkaJournal",
-    AutoInitialize = true
-};
+// Get separate connection strings from Aspire
+var blobConnectionString = builder.Configuration.GetConnectionString("persistence-blobs");
+var tableConnectionString = builder.Configuration.GetConnectionString("persistence-tables");
 
-var snapshotOptions = new AzureBlobSnapshotOptions
-{
-    ConnectionString = blobConnectionString,
-    ContainerName = "akka-snapshots",
-    AutoInitialize = true
-};
-
+// Configure each persistence component with its specific connection string
 akkaBuilder
-    .WithAzureTableJournal(journalOptions)
-    .WithAzureBlobsSnapshotStore(snapshotOptions);
+    .WithAzureTableJournal(
+        connectionString: tableConnectionString,
+        autoInitialize: true,
+        tableName: "AkkaJournal")
+    .WithAzureBlobsSnapshotStore(
+        connectionString: blobConnectionString,
+        autoInitialize: true,
+        containerName: "akka-snapshots");
 ```
+
+> **Note:** While `WithAzurePersistence()` accepts a single connection string for both journal and snapshot store, this pattern may not work correctly with Aspire because Aspire provides different endpoint URLs for blob and table storage. Using separate `WithAzureTableJournal()` and `WithAzureBlobsSnapshotStore()` calls ensures each component uses its correct endpoint.
 
 ## Troubleshooting
 
