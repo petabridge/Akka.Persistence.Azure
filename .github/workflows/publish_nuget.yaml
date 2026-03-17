@@ -90,6 +90,17 @@ jobs:
     - name: Push Packages to NuGet
       run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" -k ${{ secrets.NUGET_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
 
+    - name: "Extract latest release notes"
+      shell: pwsh
+      run: |
+        $content = Get-Content ${{ github.workspace }}/artifacts/RELEASE_NOTES.md -Raw
+        # Match from the first #### heading to just before the second one
+        if ($content -match '(?s)(####.+?)(?=\n####|\z)') {
+          $Matches[1].Trim() | Set-Content ${{ github.workspace }}/artifacts/RELEASE_NOTES_LATEST.md
+        } else {
+          $content | Set-Content ${{ github.workspace }}/artifacts/RELEASE_NOTES_LATEST.md
+        }
+
     - name: Create GitHub Release
       id: create_release
       uses: actions/create-release@v1
@@ -98,7 +109,7 @@ jobs:
       with:
         tag_name: ${{ github.ref }}
         release_name: 'Akka.Persistence.Azure ${{ github.ref_name }}'
-        body_path: ${{ github.workspace }}/artifacts/RELEASE_NOTES.md # Use note from artifact
+        body_path: ${{ github.workspace }}/artifacts/RELEASE_NOTES_LATEST.md # Use latest release notes
         draft: false
         prerelease: false
 
