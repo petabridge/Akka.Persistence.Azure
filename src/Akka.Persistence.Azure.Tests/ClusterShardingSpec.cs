@@ -80,7 +80,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit.TestKit, IAsyncLifetime
     {
         // basic test, shard actor should wake up and persist message
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-        var persistActor = _probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(20));
+        var persistActor = _probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(20), null, TestContext.Current.CancellationToken);
         _probe.Watch(persistActor);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "a"));
@@ -110,7 +110,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit.TestKit, IAsyncLifetime
         await Task.Delay(20, TestContext.Current.CancellationToken);
 
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-        var newPersistActor = _probe.ExpectMsg<IActorRef>();
+        var newPersistActor = _probe.ExpectMsg<IActorRef>(null, null, TestContext.Current.CancellationToken);
         Assert.NotEqual(persistActor, newPersistActor);
         _probe.Watch(newPersistActor);
         
@@ -123,7 +123,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit.TestKit, IAsyncLifetime
         await Task.Delay(20, TestContext.Current.CancellationToken);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-        var resetActor = _probe.ExpectMsg<IActorRef>();
+        var resetActor = _probe.ExpectMsg<IActorRef>(null, null, TestContext.Current.CancellationToken);
         Assert.NotEqual(persistActor, resetActor);
         Assert.NotEqual(newPersistActor, resetActor);
         _probe.Watch(resetActor);
@@ -140,7 +140,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit.TestKit, IAsyncLifetime
         foreach (var _ in Enumerable.Range(0, 100))
         {
             _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-            var persistActor = _probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(20));
+            var persistActor = _probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(20), null, TestContext.Current.CancellationToken);
             if (oldActor is not null)
                 Assert.NotEqual(oldActor, persistActor);
             _probe.Watch(persistActor);

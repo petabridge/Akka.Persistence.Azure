@@ -103,7 +103,7 @@ public class MultiOptionsSanityCheck: Akka.Hosting.TestKit.TestKit
             
             // wait until snapshot actor is ready
             defaultSnapshot.Tell(new Identify(null), TestActor);
-            await ExpectMsgAsync<ActorIdentity>(TestContext.Current.CancellationToken);
+            await ExpectMsgAsync<ActorIdentity>(null, null, TestContext.Current.CancellationToken);
             Assert.True(_snapshotFactory1Called);
 
             var snapshot1 = persistence.SnapshotStoreFor(_snapshotOptions1.PluginId);
@@ -114,7 +114,7 @@ public class MultiOptionsSanityCheck: Akka.Hosting.TestKit.TestKit
             
             // wait until journal actor is ready
             journal2.Tell(new Identify(null), TestActor);
-            await ExpectMsgAsync<ActorIdentity>(TestContext.Current.CancellationToken);
+            await ExpectMsgAsync<ActorIdentity>(null, null, TestContext.Current.CancellationToken);
             Assert.True(_journalFactory2Called);
 
             var snapshot2 = persistence.SnapshotStoreFor(_snapshotOptions2.PluginId);
@@ -122,7 +122,7 @@ public class MultiOptionsSanityCheck: Akka.Hosting.TestKit.TestKit
             
             // wait until snapshot actor is ready
             snapshot2.Tell(new Identify(null), TestActor);
-            await ExpectMsgAsync<ActorIdentity>(TestContext.Current.CancellationToken);
+            await ExpectMsgAsync<ActorIdentity>(null, null, TestContext.Current.CancellationToken);
             Assert.True(_snapshotFactory2Called);
     }
     

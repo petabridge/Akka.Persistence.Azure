@@ -39,32 +39,32 @@ namespace Akka.Persistence.Azure.Tests.Query
             var d = Sys.ActorOf(JournalTestActor.Props("d"));
 
             b.Tell("a black car");
-            ExpectMsg("a black car-done");
+            ExpectMsg("a black car-done", null, null, TestContext.Current.CancellationToken);
 
             var blackSrc = queries.EventsByTag("black", offset: Offset.NoOffset());
             var probe = blackSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe.Request(2);
-            probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 1L && p.Event.Equals("a black car"));
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 1L && p.Event.Equals("a black car"), TestContext.Current.CancellationToken);
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
 
             d.Tell("a black dog");
-            ExpectMsg("a black dog-done");
+            ExpectMsg("a black dog-done", null, null, TestContext.Current.CancellationToken);
             d.Tell("a black night");
-            ExpectMsg("a black night-done");
+            ExpectMsg("a black night-done", null, null, TestContext.Current.CancellationToken);
 
-            probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "d" && p.SequenceNr == 1L && p.Event.Equals("a black dog"));
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "d" && p.SequenceNr == 1L && p.Event.Equals("a black dog"), TestContext.Current.CancellationToken);
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
             probe.Request(10);
-            probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "d" && p.SequenceNr == 2L && p.Event.Equals("a black night"));
+            probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "d" && p.SequenceNr == 2L && p.Event.Equals("a black night"), TestContext.Current.CancellationToken);
 
             b.Tell(new JournalTestActor.DeleteCommand(1));
-            AwaitAssert(() => ExpectMsg("1-deleted"));
+            AwaitAssert(() => ExpectMsg("1-deleted", null, null, TestContext.Current.CancellationToken), null, null, TestContext.Current.CancellationToken);
 
             d.Tell(new JournalTestActor.DeleteCommand(2));
-            AwaitAssert(() => ExpectMsg("2-deleted"));
+            AwaitAssert(() => ExpectMsg("2-deleted", null, null, TestContext.Current.CancellationToken), null, null, TestContext.Current.CancellationToken);
 
             probe.Request(10);
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
 
             probe.Cancel();
         }

@@ -156,6 +156,6 @@ public class EventAdapterRuntimeInvocationSpecs : Akka.Hosting.TestKit.TestKit
 
             // Verify the events are the correct type
             Assert.True(taggedEvents.All(e => e.Event is TestEvent));
-        });
+        }, null, null, TestContext.Current.CancellationToken);
     }
 }

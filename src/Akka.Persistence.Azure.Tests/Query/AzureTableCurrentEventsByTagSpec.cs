@@ -51,7 +51,7 @@ namespace Akka.Persistence.Azure.Tests.Query
             {
                 a.Tell(str);
             }
-            ReceiveN(2000);
+            ReceiveN(2000, TestContext.Current.CancellationToken);
 
             var probe = queries.CurrentEventsByTag("green", Offset.NoOffset())
                 .RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
