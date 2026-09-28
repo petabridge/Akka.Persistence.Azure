@@ -5,12 +5,10 @@ using Akka.Actor;
 using Akka.Hosting;
 using Akka.Persistence.Azure.Hosting;
 using Akka.Persistence.Azure.Tests.Helper;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests.Hosting
 {
@@ -46,8 +44,8 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var result = await healthCheckService.CheckHealthAsync();
 
             // Assert
-            result.Status.Should().Be(HealthStatus.Healthy);
-            result.Entries.Keys.Should().Contain("akka.persistence.journal.azure-table");
+            Assert.Equal(HealthStatus.Healthy, result.Status);
+            Assert.Contains("akka.persistence.journal.azure-table", result.Entries.Keys);
         }
 
         [Fact]
@@ -58,8 +56,8 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var result = await healthCheckService.CheckHealthAsync();
 
             // Assert
-            result.Status.Should().Be(HealthStatus.Healthy);
-            result.Entries.Keys.Should().Contain("akka.persistence.snapshot-store.azure-blob-store");
+            Assert.Equal(HealthStatus.Healthy, result.Status);
+            Assert.Contains("akka.persistence.snapshot-store.azure-blob-store", result.Entries.Keys);
         }
 
         [Fact]
@@ -70,9 +68,9 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var result = await healthCheckService.CheckHealthAsync();
 
             // Assert
-            result.Status.Should().Be(HealthStatus.Healthy);
-            result.Entries.Keys.Should().Contain("akka.persistence.journal.azure-table");
-            result.Entries.Keys.Should().Contain("akka.persistence.snapshot-store.azure-blob-store");
+            Assert.Equal(HealthStatus.Healthy, result.Status);
+            Assert.Contains("akka.persistence.journal.azure-table", result.Entries.Keys);
+            Assert.Contains("akka.persistence.snapshot-store.azure-blob-store", result.Entries.Keys);
         }
 
         [Fact]
@@ -84,9 +82,9 @@ namespace Akka.Persistence.Azure.Tests.Hosting
 
             // Assert
             // Health checks should be registered and report as healthy (degraded status is for failures)
-            result.Status.Should().Be(HealthStatus.Healthy);
-            result.Entries.Keys.Should().Contain("akka.persistence.journal.azure-table");
-            result.Entries.Keys.Should().Contain("akka.persistence.snapshot-store.azure-blob-store");
+            Assert.Equal(HealthStatus.Healthy, result.Status);
+            Assert.Contains("akka.persistence.journal.azure-table", result.Entries.Keys);
+            Assert.Contains("akka.persistence.snapshot-store.azure-blob-store", result.Entries.Keys);
         }
 
         [Fact]
@@ -99,25 +97,25 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             // Act - perform persistence operations
             var resp1 = await myPersistentActor.Ask<string>(1, TimeSpan.FromSeconds(5));
             var resp2 = await myPersistentActor.Ask<string>(2, TimeSpan.FromSeconds(5));
-            resp1.Should().Be("ACK");
-            resp2.Should().Be("ACK");
+            Assert.Equal("ACK", resp1);
+            Assert.Equal("ACK", resp2);
 
             // Now check health
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
             var result = await healthCheckService.CheckHealthAsync();
 
             // Assert
-            result.Status.Should().Be(HealthStatus.Healthy);
-            result.Entries.Keys.Should().Contain("akka.persistence.journal.azure-table");
-            result.Entries.Keys.Should().Contain("akka.persistence.snapshot-store.azure-blob-store");
+            Assert.Equal(HealthStatus.Healthy, result.Status);
+            Assert.Contains("akka.persistence.journal.azure-table", result.Entries.Keys);
+            Assert.Contains("akka.persistence.snapshot-store.azure-blob-store", result.Entries.Keys);
 
             // Verify individual entries are healthy
-            result.Entries["akka.persistence.journal.azure-table"].Status.Should().Be(HealthStatus.Healthy);
-            result.Entries["akka.persistence.snapshot-store.azure-blob-store"].Status.Should().Be(HealthStatus.Healthy);
+            Assert.Equal(HealthStatus.Healthy, result.Entries["akka.persistence.journal.azure-table"].Status);
+            Assert.Equal(HealthStatus.Healthy, result.Entries["akka.persistence.snapshot-store.azure-blob-store"].Status);
 
             // Verify data and descriptions exist
-            result.Entries["akka.persistence.journal.azure-table"].Data.Should().NotBeNull();
-            result.Entries["akka.persistence.snapshot-store.azure-blob-store"].Data.Should().NotBeNull();
+            Assert.NotNull(result.Entries["akka.persistence.journal.azure-table"].Data);
+            Assert.NotNull(result.Entries["akka.persistence.snapshot-store.azure-blob-store"].Data);
         }
 
         public sealed class MyPersistenceActor : ReceivePersistentActor

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //   <copyright file="Issue350Spec.cs" company="Petabridge, LLC">
 //     Copyright (C) 2015-2023 .NET Petabridge, LLC
 //   </copyright>
@@ -9,19 +9,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Tests.Helper;
-using Xunit.Abstractions;
 using Akka.Actor;
 using Akka.Cluster.Sharding;
 using Akka.Event;
 using Akka.TestKit;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Persistence.Azure.Tests;
 
 [Collection("AzureSpecs")]
-public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
+public class ClusterShardingSpec: Akka.TestKit.Xunit.TestKit, IAsyncLifetime
 {
 
     private static Config JournalConfig(string connectionString)
@@ -83,7 +80,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
     {
         // basic test, shard actor should wake up and persist message
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-        var persistActor = _probe.ExpectMsg<IActorRef>(20.Seconds());
+        var persistActor = _probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(20));
         _probe.Watch(persistActor);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "a"));
@@ -114,7 +111,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
 
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
         var newPersistActor = _probe.ExpectMsg<IActorRef>();
-        newPersistActor.Should().NotBe(persistActor);
+        Assert.NotEqual(persistActor, newPersistActor);
         _probe.Watch(newPersistActor);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "state"));
@@ -127,8 +124,8 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
         
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
         var resetActor = _probe.ExpectMsg<IActorRef>();
-        resetActor.Should().NotBe(persistActor);
-        resetActor.Should().NotBe(newPersistActor);
+        Assert.NotEqual(persistActor, resetActor);
+        Assert.NotEqual(newPersistActor, resetActor);
         _probe.Watch(resetActor);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "state"));
@@ -143,9 +140,9 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
         foreach (var _ in Enumerable.Range(0, 100))
         {
             _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-            var persistActor = _probe.ExpectMsg<IActorRef>(20.Seconds());
+            var persistActor = _probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(20));
             if (oldActor is not null)
-                persistActor.Should().NotBe(oldActor);
+                Assert.NotEqual(oldActor, persistActor);
             _probe.Watch(persistActor);
         
             _shardRegion.Tell(new ShardEnvelope(PId, "state"));
@@ -173,7 +170,7 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
         }
     }
     
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _probe = CreateTestProbe();
         
@@ -196,9 +193,9 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
         await tcs.Task;
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
     
     private sealed class ShardEnvelope

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -6,15 +6,13 @@ using Akka.Event;
 using Akka.Hosting;
 using Akka.Persistence.Azure.Hosting;
 using Akka.Persistence.Azure.Tests.Helper;
-using Akka.TestKit.Xunit2.Internals;
+using Akka.TestKit.Xunit.Internals;
 using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Storage.Blobs;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests.Hosting
 {
@@ -157,19 +155,19 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var snapshot = await myPersistentActor.Ask<int[]>("getall", TimeSpan.FromSeconds(3));
 
             // assert
-            snapshot.Should().BeEquivalentTo(new[] {1, 2});
+            Assert.Equal(new[] {1, 2}, snapshot);
 
             // kill + recreate actor with same PersistentId
             await myPersistentActor.GracefulStop(TimeSpan.FromSeconds(3));
             var myPersistentActor2 = actorSystem.ActorOf(Props.Create(() => new MyPersistenceActor(persistenceId)), "actor1a");
             
             var snapshot2 = await myPersistentActor2.Ask<int[]>("getall", TimeSpan.FromSeconds(3));
-            snapshot2.Should().BeEquivalentTo(new[] {1, 2});
+            Assert.Equal(new[] {1, 2}, snapshot2);
             
             // validate configs
             var config = actorSystem.Settings.Config;
-            config.GetString("akka.persistence.journal.plugin").Should().Be("akka.persistence.journal.azure-table");
-            config.GetString("akka.persistence.snapshot-store.plugin").Should().Be("akka.persistence.snapshot-store.azure-blob-store");
+            Assert.Equal("akka.persistence.journal.azure-table", config.GetString("akka.persistence.journal.plugin"));
+            Assert.Equal("akka.persistence.snapshot-store.azure-blob-store", config.GetString("akka.persistence.snapshot-store.plugin"));
         }
     }
 }

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
+using System;
 using Testcontainers.Azurite;
 using Xunit;
 
@@ -24,7 +25,7 @@ namespace Akka.Persistence.Azure.Tests.Helper
         /// </summary>
         public string ConnectionString { get; private set; }
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             _container = new AzuriteBuilder()
                 .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
@@ -34,7 +35,7 @@ namespace Akka.Persistence.Azure.Tests.Helper
             ConnectionString = _container.GetConnectionString();
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             if (_container != null)
             {

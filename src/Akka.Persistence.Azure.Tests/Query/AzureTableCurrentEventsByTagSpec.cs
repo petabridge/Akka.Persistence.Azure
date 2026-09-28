@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,9 +10,7 @@ using Akka.Persistence.Azure.Tests.Helper;
 using Akka.Persistence.Query;
 using Akka.Persistence.TCK.Query;
 using Akka.Streams.TestKit;
-using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
 using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
@@ -69,7 +67,7 @@ namespace Akka.Persistence.Azure.Tests.Query
             }
 
             await probe.ExpectCompleteAsync();
-            received.Should().BeEquivalentTo(allMessages);
+            Assert.Equal(allMessages.ToList(), received.ToList());
         }
 
         private sealed class TestPersistenceActor : UntypedPersistentActor

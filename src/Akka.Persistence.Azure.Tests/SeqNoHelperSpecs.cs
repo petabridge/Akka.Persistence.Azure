@@ -1,6 +1,5 @@
-﻿using System.Linq;
+using System.Linq;
 using Akka.Persistence.Azure.Util;
-using FluentAssertions;
 using Xunit;
 
 namespace Akka.Persistence.Azure.Tests
@@ -19,7 +18,7 @@ namespace Akka.Persistence.Azure.Tests
                 foreach (var current in seqNos.OrderByDescending(y => y))
                 {
                     enumerator.MoveNext();
-                    current.ToJournalRowKey().Should().Be(enumerator.Current);
+                    Assert.Equal(enumerator.Current, current.ToJournalRowKey());
                 }
             }
         }

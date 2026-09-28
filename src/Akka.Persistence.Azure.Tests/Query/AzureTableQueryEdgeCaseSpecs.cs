@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -12,15 +12,13 @@ using Akka.Persistence.Journal;
 using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Util.Internal;
-using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests.Query
 {
     [Collection("AzureSpecs")]
-    public class AzureTableQueryEdgeCaseSpecs : Akka.TestKit.Xunit2.TestKit
+    public class AzureTableQueryEdgeCaseSpecs : Akka.TestKit.Xunit.TestKit
     {
         public static readonly AtomicCounter Counter = new AtomicCounter(0);
         private readonly ITestOutputHelper _output;
@@ -62,15 +60,15 @@ namespace Akka.Persistence.Azure.Tests.Query
             var eventsById = await ReadJournal.CurrentEventsByPersistenceId("x", 0L, long.MaxValue)
                 .RunAggregate(ImmutableHashSet<EventEnvelope>.Empty, (agg, e) => agg.Add(e), Materializer);
 
-            eventsById.Count.Should().Be(MessageCount);
+            Assert.Equal(MessageCount, eventsById.Count);
 
             var eventsByTag = await ReadJournal.CurrentEventsByTag(typeof(RealMsg).Name)
                 .RunAggregate(ImmutableHashSet<EventEnvelope>.Empty, (agg, e) => agg.Add(e), Materializer);
 
-            eventsByTag.Count.Should().Be(MessageCount, "All events should be loaded by tag");
+            Assert.Equal(MessageCount, eventsByTag.Count);
 
-            eventsById.All(x => x.Event is RealMsg).Should().BeTrue("Expected all events by id to be RealMsg");
-            eventsByTag.All(x => x.Event is RealMsg).Should().BeTrue("Expected all events by tag to be RealMsg");
+            Assert.True(eventsById.All(x => x.Event is RealMsg));
+            Assert.True(eventsByTag.All(x => x.Event is RealMsg));
         }
 
         /// <summary>

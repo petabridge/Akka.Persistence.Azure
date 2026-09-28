@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
@@ -9,7 +9,6 @@ using Akka.Persistence.Query;
 using Akka.Persistence.TCK.Query;
 using Akka.Streams.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests.Query
