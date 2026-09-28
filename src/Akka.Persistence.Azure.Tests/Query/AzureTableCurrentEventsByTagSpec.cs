@@ -56,17 +56,17 @@ namespace Akka.Persistence.Azure.Tests.Query
             var probe = queries.CurrentEventsByTag("green", Offset.NoOffset())
                 .RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
 
-            await probe.ExpectSubscriptionAsync();
+            await probe.ExpectSubscriptionAsync(TestContext.Current.CancellationToken);
             probe.Request(3000);
             
             var received = new List<string>();
             foreach (var _ in Enumerable.Range(0, 2000))
             {
-                var env = await probe.ExpectNextAsync();
+                var env = await probe.ExpectNextAsync(TestContext.Current.CancellationToken);
                 received.Add((string)env.Event);
             }
 
-            await probe.ExpectCompleteAsync();
+            await probe.ExpectCompleteAsync(TestContext.Current.CancellationToken);
             Assert.Equal(allMessages.ToList(), received.ToList());
         }
 

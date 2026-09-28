@@ -307,10 +307,10 @@ namespace Akka.Persistence.Azure.Tests
         }
         
         [Theory]
-        [InlineData("fo", "Invalid table name length")]
-        [InlineData("1foo", "Invalid table name")]
-        [InlineData("tables", "Reserved table name")]
-        public void ShouldThrowArgumentExceptionForIllegalTableNames(string tableName, string reason)
+        [InlineData("fo")]
+        [InlineData("1foo")]
+        [InlineData("tables")]
+        public void ShouldThrowArgumentExceptionForIllegalTableNames(string tableName)
         {
             Action createJournalSettings = () => AzureTableStorageJournalSettings.Create(
                     ConfigurationFactory.ParseString(@"akka.persistence.journal.azure-table{
@@ -322,9 +322,9 @@ namespace Akka.Persistence.Azure.Tests
         }
         
         [Theory]
-        [InlineData("ba", "Invalid container name length")]
-        [InlineData("bar--table", "Invalid container name")]
-        public void ShouldThrowArgumentExceptionForIllegalContainerNames(string containerName, string reason)
+        [InlineData("ba")]
+        [InlineData("bar--table")]
+        public void ShouldThrowArgumentExceptionForIllegalContainerNames(string containerName)
         {
             Action createSnapshotSettings = () =>
                 AzureBlobSnapshotStoreSettings.Create(

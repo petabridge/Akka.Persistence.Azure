@@ -41,7 +41,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         {
             // Act
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(HealthStatus.Healthy, result.Status);
@@ -53,7 +53,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         {
             // Act
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(HealthStatus.Healthy, result.Status);
@@ -65,7 +65,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         {
             // Act
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(HealthStatus.Healthy, result.Status);
@@ -78,7 +78,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
         {
             // Act
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             // Health checks should be registered and report as healthy (degraded status is for failures)
@@ -95,14 +95,14 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var myPersistentActor = Sys.ActorOf(Props.Create(() => new MyPersistenceActor(persistenceId)), "test-actor");
 
             // Act - perform persistence operations
-            var resp1 = await myPersistentActor.Ask<string>(1, TimeSpan.FromSeconds(5));
-            var resp2 = await myPersistentActor.Ask<string>(2, TimeSpan.FromSeconds(5));
+            var resp1 = await myPersistentActor.Ask<string>(1, TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            var resp2 = await myPersistentActor.Ask<string>(2, TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
             Assert.Equal("ACK", resp1);
             Assert.Equal("ACK", resp2);
 
             // Now check health
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(HealthStatus.Healthy, result.Status);

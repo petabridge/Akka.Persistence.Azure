@@ -136,9 +136,9 @@ public class EventAdapterRuntimeInvocationSpecs : Akka.Hosting.TestKit.TestKit
         var actor = Sys.ActorOf(Props.Create(() => new TestPersistentActor("test-1")));
 
         // Persist 3 events
-        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-1"), TimeSpan.FromSeconds(3));
-        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-2"), TimeSpan.FromSeconds(3));
-        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-3"), TimeSpan.FromSeconds(3));
+        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-1"), TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-2"), TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-3"), TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
 
         // CRITICAL: Use Persistence Query to verify events were tagged
         var queries = Sys.ReadJournalFor<AzureTableStorageReadJournal>(AzureTableStorageReadJournal.Identifier);

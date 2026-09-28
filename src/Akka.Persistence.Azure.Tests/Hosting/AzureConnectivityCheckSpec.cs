@@ -74,7 +74,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Contains(result.Entries.Keys, key => key.Contains("Journal") && key.Contains("Connectivity"));
@@ -87,7 +87,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Contains(result.Entries.Keys, key => key.Contains("SnapshotStore") && key.Contains("Connectivity"));
@@ -100,7 +100,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var journalCheck = result.Entries.First(e => e.Key.Contains("Journal") && e.Key.Contains("Connectivity"));
@@ -119,7 +119,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var snapshotCheck = result.Entries.First(e => e.Key.Contains("SnapshotStore") && e.Key.Contains("Connectivity"));
@@ -138,7 +138,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var connectivityChecks = result.Entries
@@ -161,7 +161,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var journalCheck = result.Entries.First(e => e.Key.Contains("Journal") && e.Key.Contains("Connectivity"));
@@ -236,7 +236,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var journalCheck = result.Entries.First(e => e.Key.Contains("Journal") && e.Key.Contains("Connectivity"));
@@ -257,7 +257,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var snapshotCheck = result.Entries.First(e => e.Key.Contains("SnapshotStore") && e.Key.Contains("Connectivity"));
@@ -278,7 +278,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(HealthStatus.Unhealthy, result.Status);

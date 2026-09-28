@@ -84,14 +84,12 @@ public class HealthCheckSpec : Akka.Hosting.TestKit.TestKit
         var journalHealthCheck = persistenceHealthChecks
             .FirstOrDefault(e => e.Key.Contains("journal", StringComparison.OrdinalIgnoreCase));
 
-        Assert.NotNull(journalHealthCheck);
         Assert.Equal(HealthStatus.Healthy, journalHealthCheck.Value.Status);
 
         // Verify snapshot health check exists and is healthy
         var snapshotHealthCheck = persistenceHealthChecks
             .FirstOrDefault(e => e.Key.Contains("snapshot", StringComparison.OrdinalIgnoreCase));
 
-        Assert.NotNull(snapshotHealthCheck);
         Assert.Equal(HealthStatus.Healthy, snapshotHealthCheck.Value.Status);
 
         // Verify overall health status

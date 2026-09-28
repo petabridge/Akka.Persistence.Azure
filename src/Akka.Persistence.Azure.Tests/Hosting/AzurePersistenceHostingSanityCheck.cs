@@ -150,15 +150,15 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var myPersistentActor = actorRegistry.Get<MyPersistenceActor>();
             
             // act
-            var resp1 = await myPersistentActor.Ask<string>(1, TimeSpan.FromSeconds(3));
-            var resp2 = await myPersistentActor.Ask<string>(2, TimeSpan.FromSeconds(3));
-            var snapshot = await myPersistentActor.Ask<int[]>("getall", TimeSpan.FromSeconds(3));
+            var resp1 = await myPersistentActor.Ask<string>(1, TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+            var resp2 = await myPersistentActor.Ask<string>(2, TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+            var snapshot = await myPersistentActor.Ask<int[]>("getall", TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
 
             // assert
             Assert.Equal(new[] {1, 2}, snapshot);
 
             // kill + recreate actor with same PersistentId
-            await myPersistentActor.GracefulStop(TimeSpan.FromSeconds(3));
+            await myPersistentActor.GracefulStop(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
             var myPersistentActor2 = actorSystem.ActorOf(Props.Create(() => new MyPersistenceActor(persistenceId)), "actor1a");
             
             var snapshot2 = await myPersistentActor2.Ask<int[]>("getall", TimeSpan.FromSeconds(3));
