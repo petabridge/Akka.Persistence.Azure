@@ -146,7 +146,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
                 .ToList();
 
             Assert.Equal(2, connectivityChecks.Count);
-            Assert.All(connectivityChecks, e => Assert.True(e.Value.Status == HealthStatus.Healthy));
+            Assert.All(connectivityChecks, e => Assert.Equal(HealthStatus.Healthy, e.Value.Status));
 
             foreach (var check in connectivityChecks)
             {
@@ -288,7 +288,7 @@ namespace Akka.Persistence.Azure.Tests.Hosting
                 .ToList();
 
             Assert.Equal(2, connectivityChecks.Count);
-            Assert.All(connectivityChecks, e => Assert.True(e.Value.Status == HealthStatus.Unhealthy));
+            Assert.All(connectivityChecks, e => Assert.Equal(HealthStatus.Unhealthy, e.Value.Status));
 
             foreach (var check in connectivityChecks)
             {

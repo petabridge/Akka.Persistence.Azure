@@ -41,11 +41,13 @@ namespace Akka.Persistence.Azure.Tests
         [Fact(DisplayName = "Limited batch with 0 entries should return empty list")]
         public async Task ZeroEntriesTest()
         {
-            var result = await _tableClient.ExecuteBatchAsLimitedBatches(new List<TableTransactionAction>(), TestContext.Current.CancellationToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(3));
+            var result = await _tableClient.ExecuteBatchAsLimitedBatches(new List<TableTransactionAction>(), cts.Token);
             Assert.Empty(result);
 
-            var entities = await _tableClient.QueryAsync<TableEntity>("PartitionKey eq 'test'", null, null, TestContext.Current.CancellationToken)
-                .ToListAsync(TestContext.Current.CancellationToken);
+            var entities = await _tableClient.QueryAsync<TableEntity>("PartitionKey eq 'test'", null, null, cts.Token)
+                .ToListAsync(cts.Token);
             Assert.Empty(entities);
         }
         

@@ -195,6 +195,9 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit.TestKit, IAsyncLifetime
 
     public ValueTask DisposeAsync()
     {
+        // xunit v3 calls DisposeAsync instead of Dispose when a test class implements
+        // IAsyncDisposable, so run TestKit's Dispose here to shut down the ActorSystem.
+        Dispose();
         return ValueTask.CompletedTask;
     }
     

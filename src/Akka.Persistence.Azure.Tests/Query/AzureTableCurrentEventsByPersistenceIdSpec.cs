@@ -22,19 +22,21 @@ namespace Akka.Persistence.Azure.Tests.Query
                     AzureTableStorageReadJournal.Identifier);
         }
 
-        [Fact(Skip = "Batch delete is not supported by Azurite in Linux")]
+        public static bool IsWindows => OperatingSystem.IsWindows();
+
+        [Fact(Skip = "Batch delete is not supported by Azurite in Linux", SkipUnless = nameof(IsWindows))]
         public override void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_MaxLong()
         {
             base.ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_MaxLong();
         }
 
-        [Fact(Skip = "Batch delete is not supported by Azurite in Linux")]
+        [Fact(Skip = "Batch delete is not supported by Azurite in Linux", SkipUnless = nameof(IsWindows))]
         public override void ReadJournal_CurrentEventsByPersistenceId_should_return_remaining_values_after_partial_journal_cleanup()
         {
             base.ReadJournal_CurrentEventsByPersistenceId_should_return_remaining_values_after_partial_journal_cleanup();
         }
 
-        [Fact(Skip = "Batch delete is not supported by Azurite in Linux")]
+        [Fact(Skip = "Batch delete is not supported by Azurite in Linux", SkipUnless = nameof(IsWindows))]
         public override void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_0()
         {
             base.ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_0();
