@@ -1,7 +1,30 @@
 <Project>
   <PropertyGroup>
-    <VersionPrefix>1.5.59</VersionPrefix>
-    <PackageReleaseNotes>* [Update Akka.NET v1.5.59](https://github.com/akkadotnet/akka.net/releases/tag/1.5.59)
-* [Update Akka.Hosting v1.5.59](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.59)</PackageReleaseNotes>
+    <VersionPrefix>1.5.71</VersionPrefix>
+    <PackageReleaseNotes>* [Fix `AzureBlobSnapshotStore` loading stale or missing snapshots and matching other persistence ids](https://github.com/petabridge/Akka.Persistence.Azure/pull/560)
+* [Update Akka.NET v1.5.71](https://github.com/akkadotnet/akka.net/releases/tag/1.5.71)
+* [Update Akka.Hosting v1.5.71](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.71) - [#558](https://github.com/petabridge/Akka.Persistence.Azure/pull/558)
+
+**Bug Fixes:**
+
+This release fixes two bugs in `AzureBlobSnapshotStore`, reported by a user.
+
+1. **Loading could return an older snapshot, or none at all.** `LoadAsync` read only the first page of the blob listing. Azure Blob Storage can return an empty or partial first page along with a continuation token, and when that happened the actor recovered as if it had no snapshot, with no error logged. A persistence id with more than 5,000 snapshots also got an older snapshot, since the newest one sits on a later page. Because recovery takes the actor's sequence number from the snapshot when the snapshot is ahead of the journal, a stale or missing snapshot could move the sequence number backwards and cause existing snapshots to be overwritten. `LoadAsync` now reads every page and picks the newest match.
+2. **Snapshot operations matched other persistence ids that share the same prefix.** Loading `orders-1` could return the snapshot of `orders-1-2`, and recovery would then skip replaying `orders-1`'s own events that came after its real snapshot. Deleting snapshots for `acct-1` also deleted the snapshots of `acct-10`, `acct-11`, and so on. `LoadAsync` and `DeleteAsync(persistenceId, criteria)` now match only the exact persistence id.
+
+No public API or storage format changes.
+
+**Behavior change:**
+
+`LoadAsync` now reads the full blob listing within the snapshot store's `request-timeout` (default `3s`; `AzureBlobSnapshotOptions.RequestTimeout` in Akka.Hosting). If the listing can't finish in time, loading the snapshot fails and recovery fails with an error, instead of silently recovering without a snapshot. If you keep a very large number of previous blob versions or soft-deleted blobs in your snapshot container, raise `request-timeout` or clean up those old entries.
+
+**Dependency changes:**
+
+Akka.Hosting 1.5.71 raises the minimum versions of some transitive dependencies for users of `Akka.Persistence.Azure.Hosting`:
+
+* `Microsoft.Extensions.Hosting.Abstractions`, `Microsoft.Extensions.Configuration.Abstractions`, `Microsoft.Extensions.Logging.Abstractions`, and `Microsoft.Extensions.Diagnostics.HealthChecks`: 8.0 to 9.0
+* `OpenTelemetry`: 1.9 to 1.10
+
+The test suite also moved to xunit v3; this does not affect the published packages.</PackageReleaseNotes>
   </PropertyGroup>
 </Project>
