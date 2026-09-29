@@ -77,6 +77,10 @@ jobs:
     name: Push NuGet and Create Release
     needs: build_and_sign
     runs-on: ubuntu-latest # Can use ubuntu as signing is done
+    environment: nuget # Must match the environment in the nuget.org Trusted Publishing policy.
+    permissions:
+      contents: write # Create the GitHub release and upload its assets.
+      id-token: write # NuGet Trusted Publishing (OIDC token exchange).
     steps:
     - name: Download Artifacts
       uses: actions/download-artifact@v4
@@ -87,8 +91,17 @@ jobs:
     - name: List downloaded artifacts
       run: ls -R ${{ github.workspace }}/artifacts
 
+    - name: NuGet login (OIDC)
+      # Exchanges the workflow's OIDC token for a short-lived (1 hour) NuGet API key
+      # under the Trusted Publishing policy configured on nuget.org.
+      # See https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing
+      uses: NuGet/login@v1
+      id: nuget-login
+      with:
+        user: ${{ secrets.NUGET_USER }}
+
     - name: Push Packages to NuGet
-      run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" -k ${{ secrets.NUGET_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+      run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" -k ${{ steps.nuget-login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
 
     - name: "Extract latest release notes"
       shell: pwsh
