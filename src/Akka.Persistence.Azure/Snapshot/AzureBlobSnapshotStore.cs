@@ -183,27 +183,39 @@ namespace Akka.Persistence.Azure.Snapshot
             cts.CancelAfter(_settings.RequestTimeout);
             using(cts)
             {
+                var prefix = SeqNoHelper.ToSnapshotSearchQuery(persistenceId, _settings.Folders);
                 var results = Container.GetBlobsAsync(
-                    prefix: SeqNoHelper.ToSnapshotSearchQuery(persistenceId, _settings.Folders), 
+                    prefix: prefix,
                     traits: BlobTraits.Metadata,
                     cancellationToken: cts.Token);
 
-                var pageEnumerator = results.AsPages().GetAsyncEnumerator(cts.Token);
+                // Every page must be enumerated, not just the first one:
+                // - List Blobs may return partial or even empty pages together with a continuation
+                //   token (e.g. when many blob versions or soft-deleted blobs sit under the prefix).
+                // - Blob names sort ascending by sequence number, so once a persistence id has more
+                //   snapshots than fit in one page, the newest snapshot is on the LAST page.
+                BlobItem? filtered = null;
+                long filteredSeqNo = -1;
+                long filteredTimestamp = -1;
+                await foreach (var blob in results.WithCancellation(cts.Token))
+                {
+                    if (!IsSnapshotOf(blob.Name, prefix)
+                        || !FilterBlobSeqNo(criteria, blob)
+                        || !FilterBlobTimestamp(criteria, blob))
+                        continue;
 
-                if (!await pageEnumerator.MoveNextAsync())
-                    return null;
+                    // highest seqNo wins; if there are multiple snapshots taken at same SeqNo, latest timestamp wins
+                    var seqNo = FetchBlobSeqNo(blob);
+                    var timestamp = FetchBlobTimestamp(blob);
+                    if (seqNo > filteredSeqNo || (seqNo == filteredSeqNo && timestamp > filteredTimestamp))
+                    {
+                        filtered = blob;
+                        filteredSeqNo = seqNo;
+                        filteredTimestamp = timestamp;
+                    }
+                }
 
-                // TODO: see if there's ever a scenario where the most recent snapshots aren't in the first page of the pagination list.
-                // apply filter criteria
-                var filtered = pageEnumerator.Current.Values
-                    .Where(x => FilterBlobSeqNo(criteria, x))
-                    .Where(x => FilterBlobTimestamp(criteria, x))
-                    .OrderByDescending(FetchBlobSeqNo) // ordering matters - get highest seqNo item
-                    .ThenByDescending(FetchBlobTimestamp) // if there are multiple snapshots taken at same SeqNo, need latest timestamp
-                    .FirstOrDefault();
-
-                // couldn't find what we were looking for. Onto the next part of the query
-                // or return null to sender possibly.
+                // couldn't find what we were looking for, return null to sender
                 if (filtered == null)
                     return null;
 
@@ -287,12 +299,14 @@ namespace Akka.Persistence.Azure.Snapshot
             cts.CancelAfter(_settings.RequestTimeout);
             using (cts)
             {
+                var prefix = SeqNoHelper.ToSnapshotSearchQuery(persistenceId, _settings.Folders);
                 var items = Container.GetBlobsAsync(
-                    prefix: SeqNoHelper.ToSnapshotSearchQuery(persistenceId, _settings.Folders), 
+                    prefix: prefix,
                     traits: BlobTraits.Metadata,
                     cancellationToken: cts.Token);
 
                 var filtered = items
+                    .Where(x => IsSnapshotOf(x.Name, prefix))
                     .Where(x => FilterBlobSeqNo(criteria, x))
                     .Where(x => FilterBlobTimestamp(criteria, x));
 
@@ -305,6 +319,25 @@ namespace Akka.Persistence.Azure.Snapshot
 
                 await Task.WhenAll(deleteTasks);
             }
+        }
+
+        /// <summary>
+        /// Snapshot blob ids are exactly "{prefix}-{seqNr:d19}" (see <see cref="SeqNoHelper.ToSnapshotBlobId"/>).
+        /// A plain prefix match also returns other persistence ids that share the prefix
+        /// (listing "snapshot-orders" also returns "snapshot-orders-2-..."), so the name must be verified.
+        /// </summary>
+        private static bool IsSnapshotOf(string blobName, string prefix)
+        {
+            if (blobName.Length != prefix.Length + 20 || blobName[prefix.Length] != '-')
+                return false;
+
+            for (var i = prefix.Length + 1; i < blobName.Length; i++)
+            {
+                if (blobName[i] < '0' || blobName[i] > '9')
+                    return false;
+            }
+
+            return true;
         }
 
         private static bool FilterBlobSeqNo(SnapshotSelectionCriteria criteria, BlobItem x)
