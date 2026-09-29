@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <AkkaVersion>1.5.60</AkkaVersion>
-    <AkkaHostingVersion>1.5.60</AkkaHostingVersion>
+    <AkkaVersion>1.5.71</AkkaVersion>
+    <AkkaHostingVersion>1.5.71</AkkaHostingVersion>
   </PropertyGroup>
   <!-- App dependencies -->
   <ItemGroup>
@@ -20,7 +20,7 @@
   <!-- Test dependencies -->
   <ItemGroup>
     <PackageVersion Include="Akka.Hosting.TestKit" Version="$(AkkaHostingVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
     <PackageVersion Include="Akka.Cluster.Sharding" Version="$(AkkaVersion)" />
     <PackageVersion Include="NBench" Version="2.0.1" />
     <PackageVersion Include="Docker.DotNet" Version="3.125.15" />
@@ -28,10 +28,10 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="PublicApiGenerator" Version="9.3.0" />
-    <PackageVersion Include="Verify.Xunit" Version="25.0.2" />
+    <PackageVersion Include="Verify.XunitV3" Version="31.28.0" />
     <PackageVersion Include="Verify.DiffPlex" Version="3.0.0" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>

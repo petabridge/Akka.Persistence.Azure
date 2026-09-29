@@ -11,12 +11,10 @@ using System.Threading.Tasks;
 using Akka.Hosting;
 using Akka.Persistence.Azure.Hosting;
 using Akka.Persistence.Azure.Tests.Helper;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests.Hosting;
 
@@ -65,7 +63,7 @@ public class HealthCheckSpec : Akka.Hosting.TestKit.TestKit
         var healthReport = await healthCheckService.CheckHealthAsync(CancellationToken.None);
 
         // Assert - verify that health checks are registered and healthy
-        healthReport.Entries.Should().NotBeEmpty("health checks should be registered");
+        Assert.NotEmpty(healthReport.Entries);
 
         // Debug: print all registered health checks (ALL of them, not just SQL)
         Output?.WriteLine($"Total health checks registered: {healthReport.Entries.Count}");
@@ -80,23 +78,21 @@ public class HealthCheckSpec : Akka.Hosting.TestKit.TestKit
             .Where(e => e.Key.Contains("Akka.Persistence", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        persistenceHealthChecks.Should().HaveCount(2, "because we registered health checks for both journal and snapshot store");
+        Assert.Equal(2, persistenceHealthChecks.Count);
 
         // Verify journal health check exists and is healthy
         var journalHealthCheck = persistenceHealthChecks
             .FirstOrDefault(e => e.Key.Contains("journal", StringComparison.OrdinalIgnoreCase));
 
-        journalHealthCheck.Should().NotBeNull("journal health check should be registered");
-        journalHealthCheck.Value.Status.Should().Be(HealthStatus.Healthy, "SQL journal should be properly initialized");
+        Assert.Equal(HealthStatus.Healthy, journalHealthCheck.Value.Status);
 
         // Verify snapshot health check exists and is healthy
         var snapshotHealthCheck = persistenceHealthChecks
             .FirstOrDefault(e => e.Key.Contains("snapshot", StringComparison.OrdinalIgnoreCase));
 
-        snapshotHealthCheck.Should().NotBeNull("snapshot health check should be registered");
-        snapshotHealthCheck.Value.Status.Should().Be(HealthStatus.Healthy, "SQL snapshot store should be properly initialized");
+        Assert.Equal(HealthStatus.Healthy, snapshotHealthCheck.Value.Status);
 
         // Verify overall health status
-        healthReport.Status.Should().Be(HealthStatus.Healthy, "because all health checks should pass");
+        Assert.Equal(HealthStatus.Healthy, healthReport.Status);
     }
 }

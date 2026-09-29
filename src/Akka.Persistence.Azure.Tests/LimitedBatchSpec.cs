@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="LimitedBatchSpec.cs" company="Akka.NET Project">
 //      Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //      Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -12,10 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Persistence.Azure.Tests.Helper;
 using Azure.Data.Tables;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests
 {
@@ -31,26 +28,27 @@ namespace Akka.Persistence.Azure.Tests
             _tableClient = new TableClient(fixture.ConnectionString, tableName);
         }
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await _tableClient.CreateAsync();
         }
 
-        public Task DisposeAsync()
+        public ValueTask DisposeAsync()
         {
-            return Task.CompletedTask;
+            return ValueTask.CompletedTask;
         }
 
         [Fact(DisplayName = "Limited batch with 0 entries should return empty list")]
         public async Task ZeroEntriesTest()
         {
-            using var cts = new CancellationTokenSource(3.Seconds());
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(3));
             var result = await _tableClient.ExecuteBatchAsLimitedBatches(new List<TableTransactionAction>(), cts.Token);
-            result.Count.Should().Be(0);
+            Assert.Empty(result);
 
             var entities = await _tableClient.QueryAsync<TableEntity>("PartitionKey eq 'test'", null, null, cts.Token)
                 .ToListAsync(cts.Token);
-            entities.Count.Should().Be(0);
+            Assert.Empty(entities);
         }
         
         [Fact(DisplayName = "Limited batch with less than 100 entries should work")]
@@ -63,14 +61,14 @@ namespace Akka.Persistence.Azure.Tests
                     RowKey = i.ToString("D8")
                 })).ToList();
             
-            using var cts = new CancellationTokenSource(3.Seconds());
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
             var result = await _tableClient.ExecuteBatchAsLimitedBatches(entries, cts.Token);
-            result.Count.Should().Be(50);
+            Assert.Equal(50, result.Count);
 
             var entities = await _tableClient.QueryAsync<TableEntity>("PartitionKey eq 'test'", null, null, cts.Token)
                 .ToListAsync(cts.Token);
-            entities.Count.Should().Be(50);
-            entities.Select(e => int.Parse(e.RowKey.TrimStart('0'))).Should().BeEquivalentTo(Enumerable.Range(1, 50));
+            Assert.Equal(50, entities.Count);
+            Assert.Equal(Enumerable.Range(1, 50).ToList(), entities.Select(e => int.Parse(e.RowKey.TrimStart('0'))).ToList());
         }
         
         [Fact(DisplayName = "Limited batch with more than 100 entries should work")]
@@ -83,14 +81,14 @@ namespace Akka.Persistence.Azure.Tests
                     RowKey = i.ToString("D8")
                 })).ToList();
             
-            using var cts = new CancellationTokenSource(3.Seconds());
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
             var result = await _tableClient.ExecuteBatchAsLimitedBatches(entries, cts.Token);
-            result.Count.Should().Be(505);
+            Assert.Equal(505, result.Count);
 
             var entities = await _tableClient.QueryAsync<TableEntity>("PartitionKey eq 'test'", null, null, cts.Token)
                 .ToListAsync(cts.Token);
-            entities.Count.Should().Be(505);
-            entities.Select(e => int.Parse(e.RowKey.TrimStart('0'))).Should().BeEquivalentTo(Enumerable.Range(1, 505));
+            Assert.Equal(505, entities.Count);
+            Assert.Equal(Enumerable.Range(1, 505).ToList(), entities.Select(e => int.Parse(e.RowKey.TrimStart('0'))).ToList());
         }
     }
 }

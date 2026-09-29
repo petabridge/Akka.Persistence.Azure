@@ -1,18 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Tests.Helper;
-using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests
 {
     [Collection("AzureSpecs")]
-    public class SerializerHelperSpecs : Akka.TestKit.Xunit2.TestKit
+    public class SerializerHelperSpecs : Akka.TestKit.Xunit.TestKit
     {
         private readonly SerializationHelper _helper;
 
@@ -31,12 +29,12 @@ namespace Akka.Persistence.Azure.Tests
             var bytes = _helper.PersistentToBytes(persistentRepresentation);
             var deserialized = _helper.PersistentFromBytes(bytes);
 
-            deserialized.Payload.Should().Be(persistentRepresentation.Payload);
-            deserialized.Manifest.Should().Be(persistentRepresentation.Manifest);
-            deserialized.SequenceNr.Should().Be(persistentRepresentation.SequenceNr);
-            deserialized.PersistenceId.Should().Be(persistentRepresentation.PersistenceId);
-            deserialized.Sender.Should().Be(persistentRepresentation.Sender);
-            deserialized.IsDeleted.Should().BeFalse();
+            Assert.Equal(persistentRepresentation.Payload, deserialized.Payload);
+            Assert.Equal(persistentRepresentation.Manifest, deserialized.Manifest);
+            Assert.Equal(persistentRepresentation.SequenceNr, deserialized.SequenceNr);
+            Assert.Equal(persistentRepresentation.PersistenceId, deserialized.PersistenceId);
+            Assert.Equal(persistentRepresentation.Sender, deserialized.Sender);
+            Assert.False(deserialized.IsDeleted);
         }
     }
 }

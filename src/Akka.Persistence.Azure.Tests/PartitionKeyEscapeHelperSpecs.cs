@@ -1,6 +1,5 @@
 using Akka.Actor;
 using Akka.Persistence.Azure.Util;
-using FluentAssertions;
 using Xunit;
 
 namespace Akka.Persistence.Azure.Tests
@@ -14,9 +13,9 @@ namespace Akka.Persistence.Azure.Tests
         public void Should_escape_correctly(string partitionKey)
         {
             var escapedKey = PartitionKeyEscapeHelper.Escape(partitionKey);
-            escapedKey.Should().NotContain("/");
+            Assert.DoesNotContain("/", escapedKey);
             var originalKey = PartitionKeyEscapeHelper.Unescape(escapedKey);
-            originalKey.Should().Be(partitionKey);
+            Assert.Equal(partitionKey, originalKey);
         }
     }
     

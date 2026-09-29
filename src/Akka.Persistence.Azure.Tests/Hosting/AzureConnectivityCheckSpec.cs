@@ -10,12 +10,10 @@ using System.Threading.Tasks;
 using Akka.Hosting;
 using Akka.Persistence.Azure.Hosting;
 using Akka.Persistence.Azure.Tests.Helper;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests.Hosting
 {
@@ -76,10 +74,10 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
-            result.Entries.Keys.Should().Contain(key => key.Contains("Journal") && key.Contains("Connectivity"));
+            Assert.Contains(result.Entries.Keys, key => key.Contains("Journal") && key.Contains("Connectivity"));
         }
 
         [Fact]
@@ -89,10 +87,10 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
-            result.Entries.Keys.Should().Contain(key => key.Contains("SnapshotStore") && key.Contains("Connectivity"));
+            Assert.Contains(result.Entries.Keys, key => key.Contains("SnapshotStore") && key.Contains("Connectivity"));
         }
 
         [Fact]
@@ -102,12 +100,12 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var journalCheck = result.Entries.First(e => e.Key.Contains("Journal") && e.Key.Contains("Connectivity"));
-            journalCheck.Value.Status.Should().Be(HealthStatus.Healthy);
-            journalCheck.Value.Description.Should().Contain("connection successful");
+            Assert.Equal(HealthStatus.Healthy, journalCheck.Value.Status);
+            Assert.Contains("connection successful", journalCheck.Value.Description);
 
             Output?.WriteLine($"Journal connectivity check: {journalCheck.Key}");
             Output?.WriteLine($"Status: {journalCheck.Value.Status}");
@@ -121,12 +119,12 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var snapshotCheck = result.Entries.First(e => e.Key.Contains("SnapshotStore") && e.Key.Contains("Connectivity"));
-            snapshotCheck.Value.Status.Should().Be(HealthStatus.Healthy);
-            snapshotCheck.Value.Description.Should().Contain("connection successful");
+            Assert.Equal(HealthStatus.Healthy, snapshotCheck.Value.Status);
+            Assert.Contains("connection successful", snapshotCheck.Value.Description);
 
             Output?.WriteLine($"Snapshot connectivity check: {snapshotCheck.Key}");
             Output?.WriteLine($"Status: {snapshotCheck.Value.Status}");
@@ -140,15 +138,15 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var connectivityChecks = result.Entries
                 .Where(e => e.Key.Contains("Connectivity"))
                 .ToList();
 
-            connectivityChecks.Should().HaveCount(2, "both journal and snapshot connectivity checks should be registered");
-            connectivityChecks.Should().OnlyContain(e => e.Value.Status == HealthStatus.Healthy);
+            Assert.Equal(2, connectivityChecks.Count);
+            Assert.All(connectivityChecks, e => Assert.Equal(HealthStatus.Healthy, e.Value.Status));
 
             foreach (var check in connectivityChecks)
             {
@@ -163,22 +161,22 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var journalCheck = result.Entries.First(e => e.Key.Contains("Journal") && e.Key.Contains("Connectivity"));
-            journalCheck.Value.Tags.Should().Contain("akka");
-            journalCheck.Value.Tags.Should().Contain("persistence");
-            journalCheck.Value.Tags.Should().Contain("azure");
-            journalCheck.Value.Tags.Should().Contain("journal");
-            journalCheck.Value.Tags.Should().Contain("connectivity");
+            Assert.Contains("akka", journalCheck.Value.Tags);
+            Assert.Contains("persistence", journalCheck.Value.Tags);
+            Assert.Contains("azure", journalCheck.Value.Tags);
+            Assert.Contains("journal", journalCheck.Value.Tags);
+            Assert.Contains("connectivity", journalCheck.Value.Tags);
 
             var snapshotCheck = result.Entries.First(e => e.Key.Contains("SnapshotStore") && e.Key.Contains("Connectivity"));
-            snapshotCheck.Value.Tags.Should().Contain("akka");
-            snapshotCheck.Value.Tags.Should().Contain("persistence");
-            snapshotCheck.Value.Tags.Should().Contain("azure");
-            snapshotCheck.Value.Tags.Should().Contain("snapshot-store");
-            snapshotCheck.Value.Tags.Should().Contain("connectivity");
+            Assert.Contains("akka", snapshotCheck.Value.Tags);
+            Assert.Contains("persistence", snapshotCheck.Value.Tags);
+            Assert.Contains("azure", snapshotCheck.Value.Tags);
+            Assert.Contains("snapshot-store", snapshotCheck.Value.Tags);
+            Assert.Contains("connectivity", snapshotCheck.Value.Tags);
         }
     }
 
@@ -238,13 +236,13 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var journalCheck = result.Entries.First(e => e.Key.Contains("Journal") && e.Key.Contains("Connectivity"));
-            journalCheck.Value.Status.Should().Be(HealthStatus.Unhealthy, "because the connection is invalid");
-            journalCheck.Value.Description.Should().Contain("connection failed");
-            journalCheck.Value.Exception.Should().NotBeNull("because the connection should have failed with an exception");
+            Assert.Equal(HealthStatus.Unhealthy, journalCheck.Value.Status);
+            Assert.Contains("connection failed", journalCheck.Value.Description);
+            Assert.NotNull(journalCheck.Value.Exception);
 
             Output?.WriteLine($"Journal connectivity check: {journalCheck.Key}");
             Output?.WriteLine($"Status: {journalCheck.Value.Status}");
@@ -259,13 +257,13 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
             var snapshotCheck = result.Entries.First(e => e.Key.Contains("SnapshotStore") && e.Key.Contains("Connectivity"));
-            snapshotCheck.Value.Status.Should().Be(HealthStatus.Unhealthy, "because the connection is invalid");
-            snapshotCheck.Value.Description.Should().Contain("connection failed");
-            snapshotCheck.Value.Exception.Should().NotBeNull("because the connection should have failed with an exception");
+            Assert.Equal(HealthStatus.Unhealthy, snapshotCheck.Value.Status);
+            Assert.Contains("connection failed", snapshotCheck.Value.Description);
+            Assert.NotNull(snapshotCheck.Value.Exception);
 
             Output?.WriteLine($"Snapshot connectivity check: {snapshotCheck.Key}");
             Output?.WriteLine($"Status: {snapshotCheck.Value.Status}");
@@ -280,18 +278,17 @@ namespace Akka.Persistence.Azure.Tests.Hosting
             var healthCheckService = Host.Services.GetRequiredService<HealthCheckService>();
 
             // Act
-            var result = await healthCheckService.CheckHealthAsync();
+            var result = await healthCheckService.CheckHealthAsync(TestContext.Current.CancellationToken);
 
             // Assert
-            result.Status.Should().Be(HealthStatus.Unhealthy,
-                "because at least one health check is unhealthy");
+            Assert.Equal(HealthStatus.Unhealthy, result.Status);
 
             var connectivityChecks = result.Entries
                 .Where(e => e.Key.Contains("Connectivity"))
                 .ToList();
 
-            connectivityChecks.Should().HaveCount(2);
-            connectivityChecks.Should().OnlyContain(e => e.Value.Status == HealthStatus.Unhealthy);
+            Assert.Equal(2, connectivityChecks.Count);
+            Assert.All(connectivityChecks, e => Assert.Equal(HealthStatus.Unhealthy, e.Value.Status));
 
             foreach (var check in connectivityChecks)
             {

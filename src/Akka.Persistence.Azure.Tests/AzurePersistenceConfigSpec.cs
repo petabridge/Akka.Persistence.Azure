@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="AzurePersistenceConfigSpec.cs" company="Petabridge, LLC">
 //      Copyright (C) 2015 - 2023 Petabridge, LLC <https://petabridge.com>
 // </copyright>
@@ -14,8 +14,6 @@ using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Xunit;
 #pragma warning disable CS0618 // Type or member is obsolete
 
@@ -34,9 +32,9 @@ namespace Akka.Persistence.Azure.Tests
         [Fact]
         public void ShouldLoadDefaultConfig()
         {
-            AzurePersistence.DefaultConfig.HasPath(AzureBlobSnapshotStoreSettings.SnapshotStoreConfigPath).Should().BeTrue();
-            AzurePersistence.DefaultConfig.HasPath(AzureTableStorageJournalSettings.JournalConfigPath).Should().BeTrue();
-            AzurePersistence.DefaultConfig.HasPath(AzureTableStorageReadJournal.Identifier).Should().BeTrue();
+            Assert.True(AzurePersistence.DefaultConfig.HasPath(AzureBlobSnapshotStoreSettings.SnapshotStoreConfigPath));
+            Assert.True(AzurePersistence.DefaultConfig.HasPath(AzureTableStorageJournalSettings.JournalConfigPath));
+            Assert.True(AzurePersistence.DefaultConfig.HasPath(AzureTableStorageReadJournal.Identifier));
         }
 
         [Fact]
@@ -44,18 +42,18 @@ namespace Akka.Persistence.Azure.Tests
         {
             var settings = DefaultSnapshotSettings;
 
-            settings.ConnectionString.Should().BeEmpty();
-            settings.ContainerName.Should().Be("akka-persistence-default-container");
-            settings.ConnectTimeout.Should().Be(3.Seconds());
-            settings.RequestTimeout.Should().Be(3.Seconds());
-            settings.VerboseLogging.Should().BeFalse();
-            settings.Development.Should().BeFalse();
-            settings.AutoInitialize.Should().BeTrue();
-            settings.ContainerPublicAccessType.Should().Be(PublicAccessType.None);
-            settings.ServiceUri.Should().BeNull();
-            settings.AzureCredential.Should().BeNull();
-            settings.BlobClientOptions.Should().BeNull();
-            settings.BlobServiceClientFactory.Should().BeNull();
+            Assert.Empty(settings.ConnectionString);
+            Assert.Equal("akka-persistence-default-container", settings.ContainerName);
+            Assert.Equal(TimeSpan.FromSeconds(3), settings.ConnectTimeout);
+            Assert.Equal(TimeSpan.FromSeconds(3), settings.RequestTimeout);
+            Assert.False(settings.VerboseLogging);
+            Assert.False(settings.Development);
+            Assert.True(settings.AutoInitialize);
+            Assert.Equal(PublicAccessType.None, settings.ContainerPublicAccessType);
+            Assert.Null(settings.ServiceUri);
+            Assert.Null(settings.AzureCredential);
+            Assert.Null(settings.BlobClientOptions);
+            Assert.Null(settings.BlobServiceClientFactory);
         }
         
         [Fact(DisplayName = "AzureBlobSnapshotStoreSettings With overrides should override default values")]
@@ -68,8 +66,8 @@ namespace Akka.Persistence.Azure.Tests
             var settings = DefaultSnapshotSettings
                     .WithConnectionString("abc")
                     .WithContainerName("bcd")
-                    .WithConnectTimeout(1.Seconds())
-                    .WithRequestTimeout(2.Seconds())
+                    .WithConnectTimeout(TimeSpan.FromSeconds(1))
+                    .WithRequestTimeout(TimeSpan.FromSeconds(2))
                     .WithVerboseLogging(true)
                     .WithDevelopment(true)
                     .WithAutoInitialize(false)
@@ -77,19 +75,19 @@ namespace Akka.Persistence.Azure.Tests
                     .WithAzureCredential(uri, credentials, options)
                     .WithBlobServiceClientFactory(() => client);
 
-            settings.ConnectionString.Should().Be("abc");
-            settings.ContainerName.Should().Be("bcd");
-            settings.ConnectTimeout.Should().Be(1.Seconds());
-            settings.RequestTimeout.Should().Be(2.Seconds());
-            settings.VerboseLogging.Should().BeTrue();
-            settings.Development.Should().BeFalse();
-            settings.AutoInitialize.Should().BeFalse();
-            settings.ContainerPublicAccessType.Should().Be(PublicAccessType.Blob);
-            settings.ServiceUri.Should().Be(uri);
-            settings.AzureCredential.Should().Be(credentials);
-            settings.BlobClientOptions.Should().Be(options);
-            settings.BlobServiceClientFactory.Should().NotBeNull();
-            settings.BlobServiceClientFactory!.Invoke().Should().Be(client);
+            Assert.Equal("abc", settings.ConnectionString);
+            Assert.Equal("bcd", settings.ContainerName);
+            Assert.Equal(TimeSpan.FromSeconds(1), settings.ConnectTimeout);
+            Assert.Equal(TimeSpan.FromSeconds(2), settings.RequestTimeout);
+            Assert.True(settings.VerboseLogging);
+            Assert.False(settings.Development);
+            Assert.False(settings.AutoInitialize);
+            Assert.Equal(PublicAccessType.Blob, settings.ContainerPublicAccessType);
+            Assert.Equal(uri, settings.ServiceUri);
+            Assert.Equal(credentials, settings.AzureCredential);
+            Assert.Equal(options, settings.BlobClientOptions);
+            Assert.NotNull(settings.BlobServiceClientFactory);
+            Assert.Equal(client, settings.BlobServiceClientFactory!.Invoke());
         }
 
         [Fact(DisplayName = "AzureBlobSnapshotStoreSetup should override settings values")]
@@ -103,8 +101,8 @@ namespace Akka.Persistence.Azure.Tests
             {
                 ConnectionString = "abc",
                 ContainerName = "bcd",
-                ConnectTimeout = 1.Seconds(),
-                RequestTimeout = 2.Seconds(),
+                ConnectTimeout = TimeSpan.FromSeconds(1),
+                RequestTimeout = TimeSpan.FromSeconds(2),
                 VerboseLogging = true,
                 Development = true,
                 AutoInitialize = false,
@@ -117,19 +115,19 @@ namespace Akka.Persistence.Azure.Tests
 
             var settings = setup.Apply(DefaultSnapshotSettings);
             
-            settings.ConnectionString.Should().Be("abc");
-            settings.ContainerName.Should().Be("bcd");
-            settings.ConnectTimeout.Should().Be(1.Seconds());
-            settings.RequestTimeout.Should().Be(2.Seconds());
-            settings.VerboseLogging.Should().BeTrue();
-            settings.Development.Should().BeFalse();
-            settings.AutoInitialize.Should().BeFalse();
-            settings.ContainerPublicAccessType.Should().Be(PublicAccessType.Blob);
-            settings.ServiceUri.Should().Be(uri);
-            settings.AzureCredential.Should().Be(credentials);
-            settings.BlobClientOptions.Should().Be(options);
-            settings.BlobServiceClientFactory.Should().NotBeNull();
-            settings.BlobServiceClientFactory!.Invoke().Should().Be(client);
+            Assert.Equal("abc", settings.ConnectionString);
+            Assert.Equal("bcd", settings.ContainerName);
+            Assert.Equal(TimeSpan.FromSeconds(1), settings.ConnectTimeout);
+            Assert.Equal(TimeSpan.FromSeconds(2), settings.RequestTimeout);
+            Assert.True(settings.VerboseLogging);
+            Assert.False(settings.Development);
+            Assert.False(settings.AutoInitialize);
+            Assert.Equal(PublicAccessType.Blob, settings.ContainerPublicAccessType);
+            Assert.Equal(uri, settings.ServiceUri);
+            Assert.Equal(credentials, settings.AzureCredential);
+            Assert.Equal(options, settings.BlobClientOptions);
+            Assert.NotNull(settings.BlobServiceClientFactory);
+            Assert.Equal(client, settings.BlobServiceClientFactory!.Invoke());
         }
 
         [Fact(DisplayName = "AzureBlobSnapshotStoreOptions should override settings values")]
@@ -143,8 +141,8 @@ namespace Akka.Persistence.Azure.Tests
             {
                 ConnectionString = "abc",
                 ContainerName = "bcd",
-                ConnectTimeout = 1.Seconds(),
-                RequestTimeout = 2.Seconds(),
+                ConnectTimeout = TimeSpan.FromSeconds(1),
+                RequestTimeout = TimeSpan.FromSeconds(2),
                 VerboseLogging = true,
                 Development = true,
                 AutoInitialize = false,
@@ -162,19 +160,19 @@ namespace Akka.Persistence.Azure.Tests
             options.Apply(setup);
             settings = setup.Apply(settings);
             
-            settings.ConnectionString.Should().Be("abc");
-            settings.ContainerName.Should().Be("bcd");
-            settings.ConnectTimeout.Should().Be(1.Seconds());
-            settings.RequestTimeout.Should().Be(2.Seconds());
-            settings.VerboseLogging.Should().BeTrue();
-            settings.Development.Should().BeFalse();
-            settings.AutoInitialize.Should().BeFalse();
-            settings.ContainerPublicAccessType.Should().Be(PublicAccessType.Blob);
-            settings.ServiceUri.Should().Be(uri);
-            settings.AzureCredential.Should().Be(credentials);
-            settings.BlobClientOptions.Should().Be(blobOptions);
-            settings.BlobServiceClientFactory.Should().NotBeNull();
-            settings.BlobServiceClientFactory!.Invoke().Should().Be(client);
+            Assert.Equal("abc", settings.ConnectionString);
+            Assert.Equal("bcd", settings.ContainerName);
+            Assert.Equal(TimeSpan.FromSeconds(1), settings.ConnectTimeout);
+            Assert.Equal(TimeSpan.FromSeconds(2), settings.RequestTimeout);
+            Assert.True(settings.VerboseLogging);
+            Assert.False(settings.Development);
+            Assert.False(settings.AutoInitialize);
+            Assert.Equal(PublicAccessType.Blob, settings.ContainerPublicAccessType);
+            Assert.Equal(uri, settings.ServiceUri);
+            Assert.Equal(credentials, settings.AzureCredential);
+            Assert.Equal(blobOptions, settings.BlobClientOptions);
+            Assert.NotNull(settings.BlobServiceClientFactory);
+            Assert.Equal(client, settings.BlobServiceClientFactory!.Invoke());
         }
 
         [Fact]
@@ -182,17 +180,17 @@ namespace Akka.Persistence.Azure.Tests
         {
             var settings = DefaultJournalSettings;
 
-            settings.ConnectionString.Should().BeEmpty();
-            settings.TableName.Should().Be("AkkaPersistenceDefaultTable");
-            settings.ConnectTimeout.Should().Be(3.Seconds());
-            settings.RequestTimeout.Should().Be(3.Seconds());
-            settings.VerboseLogging.Should().BeFalse();
-            settings.Development.Should().BeFalse();
-            settings.AutoInitialize.Should().BeTrue();
-            settings.ServiceUri.Should().BeNull();
-            settings.AzureCredential.Should().BeNull();
-            settings.TableClientOptions.Should().BeNull();
-            settings.TableServiceClientFactory.Should().BeNull();
+            Assert.Empty(settings.ConnectionString);
+            Assert.Equal("AkkaPersistenceDefaultTable", settings.TableName);
+            Assert.Equal(TimeSpan.FromSeconds(3), settings.ConnectTimeout);
+            Assert.Equal(TimeSpan.FromSeconds(3), settings.RequestTimeout);
+            Assert.False(settings.VerboseLogging);
+            Assert.False(settings.Development);
+            Assert.True(settings.AutoInitialize);
+            Assert.Null(settings.ServiceUri);
+            Assert.Null(settings.AzureCredential);
+            Assert.Null(settings.TableClientOptions);
+            Assert.Null(settings.TableServiceClientFactory);
         }
 
         [Fact(DisplayName = "AzureTableStorageJournalSettings With overrides should override default values")]
@@ -205,26 +203,26 @@ namespace Akka.Persistence.Azure.Tests
             var settings = DefaultJournalSettings
                     .WithConnectionString("abc")
                     .WithTableName("bcd")
-                    .WithConnectTimeout(1.Seconds())
-                    .WithRequestTimeout(2.Seconds())
+                    .WithConnectTimeout(TimeSpan.FromSeconds(1))
+                    .WithRequestTimeout(TimeSpan.FromSeconds(2))
                     .WithVerboseLogging(true)
                     .WithDevelopment(true)
                     .WithAutoInitialize(false)
                     .WithAzureCredential(uri, credentials, options)
                     .WithTableServiceClientFactory(() => client);
 
-            settings.ConnectionString.Should().Be("abc");
-            settings.TableName.Should().Be("bcd");
-            settings.ConnectTimeout.Should().Be(1.Seconds());
-            settings.RequestTimeout.Should().Be(2.Seconds());
-            settings.VerboseLogging.Should().BeTrue();
-            settings.Development.Should().BeFalse();
-            settings.AutoInitialize.Should().BeFalse();
-            settings.ServiceUri.Should().Be(uri);
-            settings.AzureCredential.Should().Be(credentials);
-            settings.TableClientOptions.Should().Be(options);
-            settings.TableServiceClientFactory.Should().NotBeNull();
-            settings.TableServiceClientFactory!.Invoke().Should().Be(client);
+            Assert.Equal("abc", settings.ConnectionString);
+            Assert.Equal("bcd", settings.TableName);
+            Assert.Equal(TimeSpan.FromSeconds(1), settings.ConnectTimeout);
+            Assert.Equal(TimeSpan.FromSeconds(2), settings.RequestTimeout);
+            Assert.True(settings.VerboseLogging);
+            Assert.False(settings.Development);
+            Assert.False(settings.AutoInitialize);
+            Assert.Equal(uri, settings.ServiceUri);
+            Assert.Equal(credentials, settings.AzureCredential);
+            Assert.Equal(options, settings.TableClientOptions);
+            Assert.NotNull(settings.TableServiceClientFactory);
+            Assert.Equal(client, settings.TableServiceClientFactory!.Invoke());
         }
 
         [Fact(DisplayName = "AzureTableStorageJournalSetup should override settings values")]
@@ -238,8 +236,8 @@ namespace Akka.Persistence.Azure.Tests
             {
                 ConnectionString = "abc",
                 TableName = "bcd",
-                ConnectTimeout = 1.Seconds(),
-                RequestTimeout = 2.Seconds(),
+                ConnectTimeout = TimeSpan.FromSeconds(1),
+                RequestTimeout = TimeSpan.FromSeconds(2),
                 VerboseLogging = true,
                 Development = true,
                 AutoInitialize = false,
@@ -251,18 +249,18 @@ namespace Akka.Persistence.Azure.Tests
 
             var settings = setup.Apply(DefaultJournalSettings);
             
-            settings.ConnectionString.Should().Be("abc");
-            settings.TableName.Should().Be("bcd");
-            settings.ConnectTimeout.Should().Be(1.Seconds());
-            settings.RequestTimeout.Should().Be(2.Seconds());
-            settings.VerboseLogging.Should().BeTrue();
-            settings.Development.Should().BeFalse();
-            settings.AutoInitialize.Should().BeFalse();
-            settings.ServiceUri.Should().Be(uri);
-            settings.AzureCredential.Should().Be(credentials);
-            settings.TableClientOptions.Should().Be(options);
-            settings.TableServiceClientFactory.Should().NotBeNull();
-            settings.TableServiceClientFactory!.Invoke().Should().Be(client);
+            Assert.Equal("abc", settings.ConnectionString);
+            Assert.Equal("bcd", settings.TableName);
+            Assert.Equal(TimeSpan.FromSeconds(1), settings.ConnectTimeout);
+            Assert.Equal(TimeSpan.FromSeconds(2), settings.RequestTimeout);
+            Assert.True(settings.VerboseLogging);
+            Assert.False(settings.Development);
+            Assert.False(settings.AutoInitialize);
+            Assert.Equal(uri, settings.ServiceUri);
+            Assert.Equal(credentials, settings.AzureCredential);
+            Assert.Equal(options, settings.TableClientOptions);
+            Assert.NotNull(settings.TableServiceClientFactory);
+            Assert.Equal(client, settings.TableServiceClientFactory!.Invoke());
         }
         
         [Fact(DisplayName = "AzureTableStorageJournalOptions should override settings values")]
@@ -276,8 +274,8 @@ namespace Akka.Persistence.Azure.Tests
             {
                 ConnectionString = "abc",
                 TableName = "bcd",
-                ConnectTimeout = 1.Seconds(),
-                RequestTimeout = 2.Seconds(),
+                ConnectTimeout = TimeSpan.FromSeconds(1),
+                RequestTimeout = TimeSpan.FromSeconds(2),
                 VerboseLogging = true,
                 Development = true,
                 AutoInitialize = false,
@@ -294,25 +292,25 @@ namespace Akka.Persistence.Azure.Tests
             options.Apply(setup);
             settings = setup.Apply(settings);
 
-            settings.ConnectionString.Should().Be("abc");
-            settings.TableName.Should().Be("bcd");
-            settings.ConnectTimeout.Should().Be(1.Seconds());
-            settings.RequestTimeout.Should().Be(2.Seconds());
-            settings.VerboseLogging.Should().BeTrue();
-            settings.Development.Should().BeFalse();
-            settings.AutoInitialize.Should().BeFalse();
-            settings.ServiceUri.Should().Be(uri);
-            settings.AzureCredential.Should().Be(credentials);
-            settings.TableClientOptions.Should().Be(clientOptions);
-            settings.TableServiceClientFactory.Should().NotBeNull();
-            settings.TableServiceClientFactory!.Invoke().Should().Be(client);
+            Assert.Equal("abc", settings.ConnectionString);
+            Assert.Equal("bcd", settings.TableName);
+            Assert.Equal(TimeSpan.FromSeconds(1), settings.ConnectTimeout);
+            Assert.Equal(TimeSpan.FromSeconds(2), settings.RequestTimeout);
+            Assert.True(settings.VerboseLogging);
+            Assert.False(settings.Development);
+            Assert.False(settings.AutoInitialize);
+            Assert.Equal(uri, settings.ServiceUri);
+            Assert.Equal(credentials, settings.AzureCredential);
+            Assert.Equal(clientOptions, settings.TableClientOptions);
+            Assert.NotNull(settings.TableServiceClientFactory);
+            Assert.Equal(client, settings.TableServiceClientFactory!.Invoke());
         }
         
         [Theory]
-        [InlineData("fo", "Invalid table name length")]
-        [InlineData("1foo", "Invalid table name")]
-        [InlineData("tables", "Reserved table name")]
-        public void ShouldThrowArgumentExceptionForIllegalTableNames(string tableName, string reason)
+        [InlineData("fo")]
+        [InlineData("1foo")]
+        [InlineData("tables")]
+        public void ShouldThrowArgumentExceptionForIllegalTableNames(string tableName)
         {
             Action createJournalSettings = () => AzureTableStorageJournalSettings.Create(
                     ConfigurationFactory.ParseString(@"akka.persistence.journal.azure-table{
@@ -320,13 +318,13 @@ namespace Akka.Persistence.Azure.Tests
                         table-name = " + tableName + @" 
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.journal.azure-table"));
-            createJournalSettings.Should().Throw<ArgumentException>(reason);
+            Assert.Throws<ArgumentException>(() => createJournalSettings());
         }
         
         [Theory]
-        [InlineData("ba", "Invalid container name length")]
-        [InlineData("bar--table", "Invalid container name")]
-        public void ShouldThrowArgumentExceptionForIllegalContainerNames(string containerName, string reason)
+        [InlineData("ba")]
+        [InlineData("bar--table")]
+        public void ShouldThrowArgumentExceptionForIllegalContainerNames(string containerName)
         {
             Action createSnapshotSettings = () =>
                 AzureBlobSnapshotStoreSettings.Create(
@@ -336,7 +334,7 @@ namespace Akka.Persistence.Azure.Tests
                     }").WithFallback(AzurePersistence.DefaultConfig)
                         .GetConfig("akka.persistence.snapshot-store.azure-blob-store"));
 
-            createSnapshotSettings.Should().Throw<ArgumentException>(reason);
+            Assert.Throws<ArgumentException>(() => createSnapshotSettings());
         }
     }
 }

@@ -7,7 +7,6 @@ using Akka.Persistence.TCK;
 using Akka.Persistence.TCK.Journal;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests
@@ -28,19 +27,21 @@ namespace Akka.Persistence.Azure.Tests
             Initialize();
         }
 
-        [WindowsFact(SkipUnixReason = "Batch delete is not supported by Azurite in Linux")]
+        public static bool IsWindows => OperatingSystem.IsWindows();
+
+        [Fact(Skip = "Batch delete is not supported by Azurite in Linux", SkipUnless = nameof(IsWindows))]
         public override void Journal_should_not_reset_HighestSequenceNr_after_message_deletion()
         {
             base.Journal_should_not_reset_HighestSequenceNr_after_message_deletion();
         }
 
-        [WindowsFact(SkipUnixReason = "Batch delete is not supported by Azurite in Linux")]
+        [Fact(Skip = "Batch delete is not supported by Azurite in Linux", SkipUnless = nameof(IsWindows))]
         public override void Journal_should_not_replay_permanently_deleted_messages_on_range_deletion()
         {
             base.Journal_should_not_replay_permanently_deleted_messages_on_range_deletion();
         }
 
-        [WindowsFact(SkipUnixReason = "Batch delete is not supported by Azurite in Linux")]
+        [Fact(Skip = "Batch delete is not supported by Azurite in Linux", SkipUnless = nameof(IsWindows))]
         public override void Journal_should_not_reset_HighestSequenceNr_after_journal_cleanup()
         {
             base.Journal_should_not_reset_HighestSequenceNr_after_journal_cleanup();

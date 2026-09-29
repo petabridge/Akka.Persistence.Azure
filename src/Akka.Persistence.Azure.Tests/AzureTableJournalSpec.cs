@@ -9,7 +9,6 @@ using Akka.Persistence.TCK.Journal;
 using System;
 using Akka.Persistence.Azure.Tests.Helper;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
 namespace Akka.Persistence.Azure.Tests

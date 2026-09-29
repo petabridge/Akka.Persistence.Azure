@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //   <copyright file="Issue350Spec.cs" company="Petabridge, LLC">
 //     Copyright (C) 2015-2023 .NET Petabridge, LLC
 //   </copyright>
@@ -9,19 +9,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Persistence.Azure.Tests.Helper;
-using Xunit.Abstractions;
 using Akka.Actor;
 using Akka.Cluster.Sharding;
 using Akka.Event;
 using Akka.TestKit;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Persistence.Azure.Tests;
 
 [Collection("AzureSpecs")]
-public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
+public class ClusterShardingSpec: Akka.TestKit.Xunit.TestKit, IAsyncLifetime
 {
 
     private static Config JournalConfig(string connectionString)
@@ -83,56 +80,56 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
     {
         // basic test, shard actor should wake up and persist message
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-        var persistActor = _probe.ExpectMsg<IActorRef>(20.Seconds());
+        var persistActor = _probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(20), null, TestContext.Current.CancellationToken);
         _probe.Watch(persistActor);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "a"));
-        await _probe.ExpectMsgAsync("-a");
+        await _probe.ExpectMsgAsync("-a", null, null, TestContext.Current.CancellationToken);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "b"));
-        await _probe.ExpectMsgAsync("-a-b");
+        await _probe.ExpectMsgAsync("-a-b", null, null, TestContext.Current.CancellationToken);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "state"));
-        await _probe.ExpectMsgAsync("-a-b");
+        await _probe.ExpectMsgAsync("-a-b", null, null, TestContext.Current.CancellationToken);
 
         _shardRegion.Tell(new ShardEnvelope(PId, "snap"));
-        await _probe.ExpectMsgAsync("OK");
+        await _probe.ExpectMsgAsync("OK", null, null, TestContext.Current.CancellationToken);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "state"));
-        await _probe.ExpectMsgAsync("-a-b");
+        await _probe.ExpectMsgAsync("-a-b", null, null, TestContext.Current.CancellationToken);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "c"));
-        await _probe.ExpectMsgAsync("-a-b-c");
+        await _probe.ExpectMsgAsync("-a-b-c", null, null, TestContext.Current.CancellationToken);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "d"));
-        await _probe.ExpectMsgAsync("-a-b-c-d");
+        await _probe.ExpectMsgAsync("-a-b-c-d", null, null, TestContext.Current.CancellationToken);
         
         // recovery test, shard actor should wake up and recover
         _shardRegion.Tell(new ShardEnvelope(PId, "die"));
-        await _probe.ExpectTerminatedAsync(persistActor);
-        await Task.Delay(20);
+        await _probe.ExpectTerminatedAsync(persistActor, null, null, TestContext.Current.CancellationToken);
+        await Task.Delay(20, TestContext.Current.CancellationToken);
 
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-        var newPersistActor = _probe.ExpectMsg<IActorRef>();
-        newPersistActor.Should().NotBe(persistActor);
+        var newPersistActor = _probe.ExpectMsg<IActorRef>(null, null, TestContext.Current.CancellationToken);
+        Assert.NotEqual(persistActor, newPersistActor);
         _probe.Watch(newPersistActor);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "state"));
-        await _probe.ExpectMsgAsync("-a-b-c-d");
+        await _probe.ExpectMsgAsync("-a-b-c-d", null, null, TestContext.Current.CancellationToken);
         
         // recovery test, shard actor should wake up and recover after state reset
         _shardRegion.Tell(new ShardEnvelope(PId, "reset"));
-        await _probe.ExpectTerminatedAsync(newPersistActor);
-        await Task.Delay(20);
+        await _probe.ExpectTerminatedAsync(newPersistActor, null, null, TestContext.Current.CancellationToken);
+        await Task.Delay(20, TestContext.Current.CancellationToken);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-        var resetActor = _probe.ExpectMsg<IActorRef>();
-        resetActor.Should().NotBe(persistActor);
-        resetActor.Should().NotBe(newPersistActor);
+        var resetActor = _probe.ExpectMsg<IActorRef>(null, null, TestContext.Current.CancellationToken);
+        Assert.NotEqual(persistActor, resetActor);
+        Assert.NotEqual(newPersistActor, resetActor);
         _probe.Watch(resetActor);
         
         _shardRegion.Tell(new ShardEnvelope(PId, "state"));
-        await _probe.ExpectMsgAsync(string.Empty);
+        await _probe.ExpectMsgAsync(string.Empty, null, null, TestContext.Current.CancellationToken);
     }
 
     [Fact(DisplayName = "Persistent actor in cluster sharding environment should survive repeated resets")]
@@ -143,37 +140,37 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
         foreach (var _ in Enumerable.Range(0, 100))
         {
             _shardRegion.Tell(new ShardEnvelope(PId, "wake-up"));
-            var persistActor = _probe.ExpectMsg<IActorRef>(20.Seconds());
+            var persistActor = _probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(20), null, TestContext.Current.CancellationToken);
             if (oldActor is not null)
-                persistActor.Should().NotBe(oldActor);
+                Assert.NotEqual(oldActor, persistActor);
             _probe.Watch(persistActor);
         
             _shardRegion.Tell(new ShardEnvelope(PId, "state"));
-            await _probe.ExpectMsgAsync(string.Empty);
+            await _probe.ExpectMsgAsync(string.Empty, null, null, TestContext.Current.CancellationToken);
             
             _shardRegion.Tell(new ShardEnvelope(PId, "a"));
-            await _probe.ExpectMsgAsync("-a");
+            await _probe.ExpectMsgAsync("-a", null, null, TestContext.Current.CancellationToken);
         
             _shardRegion.Tell(new ShardEnvelope(PId, "b"));
-            await _probe.ExpectMsgAsync("-a-b");
+            await _probe.ExpectMsgAsync("-a-b", null, null, TestContext.Current.CancellationToken);
         
             _shardRegion.Tell(new ShardEnvelope(PId, "state"));
-            await _probe.ExpectMsgAsync("-a-b");
+            await _probe.ExpectMsgAsync("-a-b", null, null, TestContext.Current.CancellationToken);
 
             _shardRegion.Tell(new ShardEnvelope(PId, "snap"));
-            await _probe.ExpectMsgAsync("OK");
+            await _probe.ExpectMsgAsync("OK", null, null, TestContext.Current.CancellationToken);
         
             _shardRegion.Tell(new ShardEnvelope(PId, "state"));
-            await _probe.ExpectMsgAsync("-a-b");
+            await _probe.ExpectMsgAsync("-a-b", null, null, TestContext.Current.CancellationToken);
 
             oldActor = persistActor;
             _shardRegion.Tell(new ShardEnvelope(PId, "reset"));
-            await _probe.ExpectTerminatedAsync(persistActor);
-            await Task.Delay(20);
+            await _probe.ExpectTerminatedAsync(persistActor, null, null, TestContext.Current.CancellationToken);
+            await Task.Delay(20, TestContext.Current.CancellationToken);
         }
     }
     
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _probe = CreateTestProbe();
         
@@ -196,9 +193,12 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit2.TestKit, IAsyncLifetime
         await tcs.Task;
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        return Task.CompletedTask;
+        // xunit v3 calls DisposeAsync instead of Dispose when a test class implements
+        // IAsyncDisposable, so run TestKit's Dispose here to shut down the ActorSystem.
+        Dispose();
+        return ValueTask.CompletedTask;
     }
     
     private sealed class ShardEnvelope

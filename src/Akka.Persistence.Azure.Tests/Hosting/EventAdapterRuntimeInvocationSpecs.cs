@@ -11,10 +11,8 @@ using Akka.Persistence.Journal;
 using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.Dsl;
-using FluentAssertions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests.Hosting;
 
@@ -131,16 +129,16 @@ public class EventAdapterRuntimeInvocationSpecs : Akka.Hosting.TestKit.TestKit
         _output.WriteLine("=== HOCON Configuration ===");
         _output.WriteLine(journalConfig.ToString());
 
-        journalConfig.HasPath("event-adapters").Should().BeTrue("event-adapters should be in HOCON");
-        journalConfig.HasPath("event-adapter-bindings").Should().BeTrue("event-adapter-bindings should be in HOCON");
+        Assert.True(journalConfig.HasPath("event-adapters"));
+        Assert.True(journalConfig.HasPath("event-adapter-bindings"));
 
         // Create persistent actor
         var actor = Sys.ActorOf(Props.Create(() => new TestPersistentActor("test-1")));
 
         // Persist 3 events
-        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-1"), TimeSpan.FromSeconds(3));
-        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-2"), TimeSpan.FromSeconds(3));
-        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-3"), TimeSpan.FromSeconds(3));
+        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-1"), TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-2"), TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+        await actor.Ask<string>(new TestPersistentActor.SaveEvent("event-3"), TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
 
         // CRITICAL: Use Persistence Query to verify events were tagged
         var queries = Sys.ReadJournalFor<AzureTableStorageReadJournal>(AzureTableStorageReadJournal.Identifier);
@@ -154,11 +152,10 @@ public class EventAdapterRuntimeInvocationSpecs : Akka.Hosting.TestKit.TestKit
 
             _output.WriteLine($"Found {taggedEvents.Count()} events with tag 'test-tag'");
 
-            taggedEvents.Count().Should().Be(3,
-                "event adapter should have tagged 3 events - if this fails, the adapter was not invoked at runtime");
+            Assert.Equal(3, taggedEvents.Count());
 
             // Verify the events are the correct type
-            taggedEvents.All(e => e.Event is TestEvent).Should().BeTrue();
-        });
+            Assert.True(taggedEvents.All(e => e.Event is TestEvent));
+        }, null, null, TestContext.Current.CancellationToken);
     }
 }

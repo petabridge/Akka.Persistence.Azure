@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,9 +10,7 @@ using Akka.Persistence.Azure.Tests.Helper;
 using Akka.Persistence.Query;
 using Akka.Persistence.TCK.Query;
 using Akka.Streams.TestKit;
-using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
 using static Akka.Persistence.Azure.Tests.Helper.AzureStorageConfigHelper;
 
@@ -53,23 +51,23 @@ namespace Akka.Persistence.Azure.Tests.Query
             {
                 a.Tell(str);
             }
-            ReceiveN(2000);
+            ReceiveN(2000, TestContext.Current.CancellationToken);
 
             var probe = queries.CurrentEventsByTag("green", Offset.NoOffset())
                 .RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
 
-            await probe.ExpectSubscriptionAsync();
+            await probe.ExpectSubscriptionAsync(TestContext.Current.CancellationToken);
             probe.Request(3000);
             
             var received = new List<string>();
             foreach (var _ in Enumerable.Range(0, 2000))
             {
-                var env = await probe.ExpectNextAsync();
+                var env = await probe.ExpectNextAsync(TestContext.Current.CancellationToken);
                 received.Add((string)env.Event);
             }
 
-            await probe.ExpectCompleteAsync();
-            received.Should().BeEquivalentTo(allMessages);
+            await probe.ExpectCompleteAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(allMessages.ToList(), received.ToList());
         }
 
         private sealed class TestPersistenceActor : UntypedPersistentActor

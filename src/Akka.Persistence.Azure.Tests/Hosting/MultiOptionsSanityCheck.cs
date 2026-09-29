@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Hosting;
@@ -8,9 +8,7 @@ using Akka.Persistence.Azure.Snapshot;
 using Akka.Persistence.Azure.Tests.Helper;
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
-using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Azure.Tests.Hosting;
 
@@ -79,53 +77,53 @@ public class MultiOptionsSanityCheck: Akka.Hosting.TestKit.TestKit
     {
             var config = Sys.Settings.Config;
 
-            config.GetString("akka.persistence.journal.plugin").Should().Be("akka.persistence.journal.azure-table");
-            config.GetString("akka.persistence.snapshot-store.plugin").Should().Be("akka.persistence.snapshot-store.azure-blob-store");
+            Assert.Equal("akka.persistence.journal.azure-table", config.GetString("akka.persistence.journal.plugin"));
+            Assert.Equal("akka.persistence.snapshot-store.azure-blob-store", config.GetString("akka.persistence.snapshot-store.plugin"));
             
-            config.GetConfig("akka.persistence.journal.azure-table").Should().NotBeNull();
-            config.GetConfig("akka.persistence.journal.azure-sharding-table").Should().NotBeNull();
-            config.GetConfig("akka.persistence.snapshot-store.azure-blob-store").Should().NotBeNull();
-            config.GetConfig("akka.persistence.snapshot-store.azure-sharding-blob-store").Should().NotBeNull();
+            Assert.NotNull(config.GetConfig("akka.persistence.journal.azure-table"));
+            Assert.NotNull(config.GetConfig("akka.persistence.journal.azure-sharding-table"));
+            Assert.NotNull(config.GetConfig("akka.persistence.snapshot-store.azure-blob-store"));
+            Assert.NotNull(config.GetConfig("akka.persistence.snapshot-store.azure-sharding-blob-store"));
 
             var persistence = Persistence.Instance.Apply(Sys);
             
             var defaultJournal = persistence.JournalFor(null);
-            ((RepointableActorRef)defaultJournal).Underlying.Props.Type.Should().Be(typeof(AzureTableStorageJournal));
+            Assert.Equal(typeof(AzureTableStorageJournal), ((RepointableActorRef)defaultJournal).Underlying.Props.Type);
             
             // wait until journal actor is ready
             defaultJournal.Tell(new Identify(null), TestActor);
-            await ExpectMsgAsync<ActorIdentity>();
-            _journalFactory1Called.Should().BeTrue();
+            await ExpectMsgAsync<ActorIdentity>(null, null, TestContext.Current.CancellationToken);
+            Assert.True(_journalFactory1Called);
             
             var journal1 = persistence.JournalFor(_journalOptions1.PluginId);
-            journal1.Equals(defaultJournal).Should().BeTrue();
+            Assert.True(journal1.Equals(defaultJournal));
 
             var defaultSnapshot = persistence.SnapshotStoreFor(null);
-            ((RepointableActorRef)defaultSnapshot).Underlying.Props.Type.Should().Be(typeof(AzureBlobSnapshotStore));
+            Assert.Equal(typeof(AzureBlobSnapshotStore), ((RepointableActorRef)defaultSnapshot).Underlying.Props.Type);
             
             // wait until snapshot actor is ready
             defaultSnapshot.Tell(new Identify(null), TestActor);
-            await ExpectMsgAsync<ActorIdentity>();
-            _snapshotFactory1Called.Should().BeTrue();
+            await ExpectMsgAsync<ActorIdentity>(null, null, TestContext.Current.CancellationToken);
+            Assert.True(_snapshotFactory1Called);
 
             var snapshot1 = persistence.SnapshotStoreFor(_snapshotOptions1.PluginId);
-            snapshot1.Equals(defaultSnapshot).Should().BeTrue();
+            Assert.True(snapshot1.Equals(defaultSnapshot));
             
             var journal2 = persistence.JournalFor(_journalOptions2.PluginId);
-            ((RepointableActorRef)journal2).Underlying.Props.Type.Should().Be(typeof(AzureTableStorageJournal));
+            Assert.Equal(typeof(AzureTableStorageJournal), ((RepointableActorRef)journal2).Underlying.Props.Type);
             
             // wait until journal actor is ready
             journal2.Tell(new Identify(null), TestActor);
-            await ExpectMsgAsync<ActorIdentity>();
-            _journalFactory2Called.Should().BeTrue();
+            await ExpectMsgAsync<ActorIdentity>(null, null, TestContext.Current.CancellationToken);
+            Assert.True(_journalFactory2Called);
 
             var snapshot2 = persistence.SnapshotStoreFor(_snapshotOptions2.PluginId);
-            ((RepointableActorRef)snapshot2).Underlying.Props.Type.Should().Be(typeof(AzureBlobSnapshotStore));
+            Assert.Equal(typeof(AzureBlobSnapshotStore), ((RepointableActorRef)snapshot2).Underlying.Props.Type);
             
             // wait until snapshot actor is ready
             snapshot2.Tell(new Identify(null), TestActor);
-            await ExpectMsgAsync<ActorIdentity>();
-            _snapshotFactory2Called.Should().BeTrue();
+            await ExpectMsgAsync<ActorIdentity>(null, null, TestContext.Current.CancellationToken);
+            Assert.True(_snapshotFactory2Called);
     }
     
     private BlobServiceClient SnapshotClientFactory1()
