@@ -76,6 +76,10 @@ jobs:
   push_nuget:
     name: Push NuGet and Create Release
     needs: build_and_sign
+    permissions:
+      id-token: write # Require write permission to Fetch an OIDC token.
+      contents: write  # <-- THIS is required for private repo checkout!
+    environment: publish # NOTE: This environment needs to be configured in GitHub repository settings
     runs-on: ubuntu-latest # Can use ubuntu as signing is done
     steps:
     - name: Download Artifacts
@@ -87,8 +91,21 @@ jobs:
     - name: List downloaded artifacts
       run: ls -R ${{ github.workspace }}/artifacts
 
+    - name: "NuGet login (OIDC)"
+      # Exchanges the workflow's OIDC token for a short-lived NuGet API key
+      # under the Trusted Publisher policy configured on nuget.org.
+      # Requires:
+      #   - permissions.id-token: write at the workflow level (above)
+      #   - environment: nuget on this job (matches the policy)
+      #   - NUGET_USER repo secret = the package owner's nuget.org username
+      # See https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing
+      uses: NuGet/login@v1
+      id: nuget-login
+      with:
+        user: ${{ secrets.NUGET_USER }}
+
     - name: Push Packages to NuGet
-      run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" -k ${{ secrets.NUGET_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+      run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" -k ${{ steps.nuget-login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
 
     - name: "Extract latest release notes"
       shell: pwsh
