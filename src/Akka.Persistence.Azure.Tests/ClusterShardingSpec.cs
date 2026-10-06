@@ -18,7 +18,7 @@ using Xunit;
 namespace Akka.Persistence.Azure.Tests;
 
 [Collection("AzureSpecs")]
-public class ClusterShardingSpec: Akka.TestKit.Xunit.TestKit, IAsyncLifetime
+public class ClusterShardingSpec: Akka.TestKit.Xunit.TestKit
 {
 
     private static Config JournalConfig(string connectionString)
@@ -170,8 +170,9 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit.TestKit, IAsyncLifetime
         }
     }
     
-    public async ValueTask InitializeAsync()
+    public override async ValueTask InitializeAsync()
     {
+        await base.InitializeAsync();
         _probe = CreateTestProbe();
         
         var sharding = ClusterSharding.Get(Sys);
@@ -193,14 +194,6 @@ public class ClusterShardingSpec: Akka.TestKit.Xunit.TestKit, IAsyncLifetime
         await tcs.Task;
     }
 
-    public ValueTask DisposeAsync()
-    {
-        // xunit v3 calls DisposeAsync instead of Dispose when a test class implements
-        // IAsyncDisposable, so run TestKit's Dispose here to shut down the ActorSystem.
-        Dispose();
-        return ValueTask.CompletedTask;
-    }
-    
     private sealed class ShardEnvelope
     {
         public readonly string EntityId;

@@ -1,3 +1,16 @@
+#### 1.6.0-beta1 October 6 2026 ####
+
+* Built against [Akka.NET 1.6.0-beta2](https://github.com/akkadotnet/akka.net/releases/tag/1.6.0-beta2) and Akka.Hosting 1.6.0-beta2.
+* Both packages now target `net10.0` only, as Akka.NET 1.6 does.
+
+**Breaking changes:**
+
+* `Akka.Persistence.Azure` and `Akka.Persistence.Azure.Hosting` no longer target `netstandard2.0` or `net6.0`. Projects that use them need Akka.NET 1.6 and .NET 10.
+* The `System.Linq.Async` package reference is gone. The .NET 10 BCL has its own `System.Linq.AsyncEnumerable`.
+* See the [Akka.NET 1.6 breaking changes](https://github.com/akkadotnet/akka.net/blob/dev/BREAKING_CHANGES_V1.6.md) for changes in Akka.NET itself.
+
+No public API or storage format changes. The 1.5.x line continues on the `v1.5` branch.
+
 #### 1.5.71 September 29 2026 ####
 
 * [Fix `AzureBlobSnapshotStore` loading stale or missing snapshots and matching other persistence ids](https://github.com/petabridge/Akka.Persistence.Azure/pull/560)

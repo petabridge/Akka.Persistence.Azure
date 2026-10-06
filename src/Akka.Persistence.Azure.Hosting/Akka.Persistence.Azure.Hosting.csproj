@@ -1,10 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
     
     <PropertyGroup>
-		<TargetFrameworks>$(NetStandardLibVersion);$(NetVersion)</TargetFrameworks>
+		<TargetFramework>$(NetVersion)</TargetFramework>
         <Description>Akka.Hosting support for Akka.Persistence.Azure.</Description>
         <Nullable>enable</Nullable>
-        <LangVersion>8.0</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
