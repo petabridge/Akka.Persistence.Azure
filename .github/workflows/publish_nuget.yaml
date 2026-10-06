@@ -128,7 +128,7 @@ jobs:
         release_name: 'Akka.Persistence.Azure ${{ github.ref_name }}'
         body_path: ${{ github.workspace }}/artifacts/RELEASE_NOTES_LATEST.md # Use latest release notes
         draft: false
-        prerelease: false
+        prerelease: ${{ contains(github.ref_name, '-') }}
 
     - name: Upload Release Assets
       uses: AButler/upload-release-assets@v3.0
