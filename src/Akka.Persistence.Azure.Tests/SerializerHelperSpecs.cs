@@ -33,7 +33,9 @@ namespace Akka.Persistence.Azure.Tests
             Assert.Equal(persistentRepresentation.Manifest, deserialized.Manifest);
             Assert.Equal(persistentRepresentation.SequenceNr, deserialized.SequenceNr);
             Assert.Equal(persistentRepresentation.PersistenceId, deserialized.PersistenceId);
-            Assert.Equal(persistentRepresentation.Sender, deserialized.Sender);
+            // Sender is not stored in the journal. Akka.NET 1.6 always resolves Persistent through the
+            // built-in protobuf serializer, which turns NoSender into dead letters on the way back.
+            Assert.True(deserialized.Sender == null || deserialized.Sender.Equals(Sys.DeadLetters));
             Assert.False(deserialized.IsDeleted);
         }
     }
