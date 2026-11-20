@@ -1,9 +1,8 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <AkkaVersion>1.6.0-beta3</AkkaVersion>
-    <AkkaHostingVersion>1.6.0-beta3</AkkaHostingVersion>
+    <AkkaVersion>1.6.0-beta8</AkkaVersion>
+    <AkkaHostingVersion>1.6.0-beta8</AkkaHostingVersion>
   </PropertyGroup>
   <!-- App dependencies -->
   <ItemGroup>
@@ -16,8 +15,6 @@
     <!-- Needed to fix Microsoft.Identity.Client typosquatting phishing link bug (https://github.com/AzureAD/microsoft-authentication-library-for-dotnet/pull/5278) -->
     <PackageVersion Include="Microsoft.Identity.Client" Version="4.92.0" />
     <PackageVersion Include="Testcontainers.Azurite" Version="4.17.0" />
-    <!-- Transitive pin via Akka.Serialization.V2. 3.1.8 has GHSA-qhrr-8q5h-9q3h (fixed in 3.1.9). Remove once Akka.NET ships a patched dependency. -->
-    <PackageVersion Include="MessagePack" Version="3.1.12" />
   </ItemGroup>
   <!-- Test dependencies -->
   <ItemGroup>
