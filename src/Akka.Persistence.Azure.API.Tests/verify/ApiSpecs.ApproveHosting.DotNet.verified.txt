@@ -1,11 +1,13 @@
 ﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Azure.Tests")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Persistence.Azure.Hosting
 {
     [System.Runtime.CompilerServices.NullableAttribute(0)]
+    [System.Runtime.CompilerServices.NullableContextAttribute(2)]
     public sealed class AzureBlobSnapshotOptions : Akka.Persistence.Hosting.SnapshotOptions
     {
         public AzureBlobSnapshotOptions() { }
+        [System.Runtime.CompilerServices.NullableContextAttribute(1)]
         public AzureBlobSnapshotOptions(bool isDefault, string identifier = "azure-blob-store") { }
         public Azure.Core.TokenCredential AzureCredential { get; set; }
         public Azure.Storage.Blobs.BlobClientOptions BlobClientOptions { get; set; }
@@ -20,23 +22,30 @@ namespace Akka.Persistence.Azure.Hosting
         public System.Nullable<bool> Development { get; set; }
         public string Folders { get; set; }
         [System.Runtime.CompilerServices.NullableAttribute(1)]
+        [get: System.Runtime.CompilerServices.NullableContextAttribute(1)]
+        [set: System.Runtime.CompilerServices.NullableContextAttribute(1)]
         public override string Identifier { get; set; }
         [System.Runtime.CompilerServices.NullableAttribute(1)]
+        [get: System.Runtime.CompilerServices.NullableContextAttribute(1)]
         protected override Akka.Configuration.Config InternalDefaultConfig { get; }
         public System.Nullable<System.TimeSpan> RequestTimeout { get; set; }
         public System.Uri ServiceUri { get; set; }
         public System.Nullable<bool> VerboseLogging { get; set; }
+        [System.Runtime.CompilerServices.NullableContextAttribute(1)]
         protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
+    [System.Runtime.CompilerServices.NullableContextAttribute(1)]
     public sealed class AzureBlobSnapshotStoreConnectivityCheck : Akka.Hosting.IAkkaHealthCheck
     {
+        [System.Runtime.CompilerServices.NullableContextAttribute(2)]
         public AzureBlobSnapshotStoreConnectivityCheck(string connectionString, System.Uri serviceUri, Azure.Core.TokenCredential azureCredential, Azure.Storage.Blobs.BlobClientOptions blobClientOptions, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
                 1})] System.Func<Azure.Storage.Blobs.BlobServiceClient> blobServiceClientFactory, [System.Runtime.CompilerServices.NullableAttribute(1)] string containerName, [System.Runtime.CompilerServices.NullableAttribute(1)] string snapshotStoreId) { }
         public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Akka.Hosting.AkkaHealthCheckContext context, System.Threading.CancellationToken cancellationToken = null) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
+    [System.Runtime.CompilerServices.NullableContextAttribute(1)]
     public class static AzureConnectivityCheckExtensions
     {
         public static Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder WithConnectivityCheck(this Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder builder, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus unHealthyStatus = 0, [System.Runtime.CompilerServices.NullableAttribute(2)] string name = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
@@ -53,6 +62,7 @@ namespace Akka.Persistence.Azure.Hosting
                 1})] string[] tags = null) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
+    [System.Runtime.CompilerServices.NullableContextAttribute(1)]
     public class static AzurePersistenceExtensions
     {
         public const string DefaultBlobContainerName = "akka-persistence-default-container";
@@ -106,25 +116,32 @@ namespace Akka.Persistence.Azure.Hosting
                 1})] System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
+    [System.Runtime.CompilerServices.NullableContextAttribute(1)]
     public sealed class AzureTableJournalConnectivityCheck : Akka.Hosting.IAkkaHealthCheck
     {
+        [System.Runtime.CompilerServices.NullableContextAttribute(2)]
         public AzureTableJournalConnectivityCheck(string connectionString, System.Uri serviceUri, Azure.Core.TokenCredential azureCredential, Azure.Data.Tables.TableClientOptions tableClientOptions, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
                 1})] System.Func<Azure.Data.Tables.TableServiceClient> tableServiceClientFactory, [System.Runtime.CompilerServices.NullableAttribute(1)] string tableName, [System.Runtime.CompilerServices.NullableAttribute(1)] string journalId) { }
         public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Akka.Hosting.AkkaHealthCheckContext context, System.Threading.CancellationToken cancellationToken = null) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
+    [System.Runtime.CompilerServices.NullableContextAttribute(2)]
     public sealed class AzureTableStorageJournalOptions : Akka.Persistence.Hosting.JournalOptions
     {
         public AzureTableStorageJournalOptions() { }
+        [System.Runtime.CompilerServices.NullableContextAttribute(1)]
         public AzureTableStorageJournalOptions(bool isDefault, string identifier = "azure-table") { }
         public Azure.Core.TokenCredential AzureCredential { get; set; }
         public System.Nullable<System.TimeSpan> ConnectTimeout { get; set; }
         public string ConnectionString { get; set; }
         public System.Nullable<bool> Development { get; set; }
         [System.Runtime.CompilerServices.NullableAttribute(1)]
+        [get: System.Runtime.CompilerServices.NullableContextAttribute(1)]
+        [set: System.Runtime.CompilerServices.NullableContextAttribute(1)]
         public override string Identifier { get; set; }
         [System.Runtime.CompilerServices.NullableAttribute(1)]
+        [get: System.Runtime.CompilerServices.NullableContextAttribute(1)]
         protected override Akka.Configuration.Config InternalDefaultConfig { get; }
         public System.Nullable<System.TimeSpan> RequestTimeout { get; set; }
         public System.Uri ServiceUri { get; set; }
@@ -135,6 +152,7 @@ namespace Akka.Persistence.Azure.Hosting
                 1})]
         public System.Func<Azure.Data.Tables.TableServiceClient> TableServiceClientFactory { get; set; }
         public System.Nullable<bool> VerboseLogging { get; set; }
+        [System.Runtime.CompilerServices.NullableContextAttribute(1)]
         protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
     }
 }
