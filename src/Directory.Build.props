@@ -8,8 +8,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup>
-    <NetVersion>net6.0</NetVersion>
-    <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
+    <NetVersion>net10.0</NetVersion>
   </PropertyGroup>
 
   <!-- Code Coverage Support -->
