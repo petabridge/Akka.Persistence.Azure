@@ -1,12 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>$(NetVersion)</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The library depends on System.Linq.Async for its netstandard2.0/net6.0 builds. On net10.0 the BCL has
+         System.Linq.AsyncEnumerable too, which makes calls like ToListAsync ambiguous. Hide the package's
+         compile-time API from this project; the runtime assembly still flows through for the library. -->
+    <PackageReference Include="System.Linq.Async" ExcludeAssets="compile" />
     <PackageReference Include="Akka.Cluster.Sharding" />
     <PackageReference Include="Akka.Persistence.TCK" />
     <PackageReference Include="Akka.Hosting.TestKit" />
