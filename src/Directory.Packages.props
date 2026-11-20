@@ -8,14 +8,14 @@
   <!-- App dependencies -->
   <ItemGroup>
     <PackageVersion Include="Akka.Persistence.Query" Version="$(AkkaVersion)" />
-    <PackageVersion Include="Azure.Data.Tables" Version="12.10.0" />
-    <PackageVersion Include="Azure.Identity" Version="1.13.2" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.23.0" />
+    <PackageVersion Include="Azure.Data.Tables" Version="12.13.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
     <PackageVersion Include="Akka.Persistence.Hosting" Version="$(AkkaHostingVersion)" />
     <PackageVersion Include="Akka.Cluster.Hosting" Version="$(AkkaHostingVersion)" />
     <!-- Needed to fix Microsoft.Identity.Client typosquatting phishing link bug (https://github.com/AzureAD/microsoft-authentication-library-for-dotnet/pull/5278) -->
-    <PackageVersion Include="Microsoft.Identity.Client" Version="4.73.1" />
-    <PackageVersion Include="Testcontainers.Azurite" Version="4.15.0" />
+    <PackageVersion Include="Microsoft.Identity.Client" Version="4.92.0" />
+    <PackageVersion Include="Testcontainers.Azurite" Version="4.17.0" />
     <!-- Transitive pin via Akka.Serialization.V2. 3.1.8 has GHSA-qhrr-8q5h-9q3h (fixed in 3.1.9). Remove once Akka.NET ships a patched dependency. -->
     <PackageVersion Include="MessagePack" Version="3.1.12" />
   </ItemGroup>

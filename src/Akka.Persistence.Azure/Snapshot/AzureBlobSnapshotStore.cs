@@ -187,6 +187,7 @@ namespace Akka.Persistence.Azure.Snapshot
                 var results = Container.GetBlobsAsync(
                     prefix: prefix,
                     traits: BlobTraits.Metadata,
+                    states: BlobStates.None,
                     cancellationToken: cts.Token);
 
                 // Every page must be enumerated, not just the first one:
@@ -303,6 +304,7 @@ namespace Akka.Persistence.Azure.Snapshot
                 var items = Container.GetBlobsAsync(
                     prefix: prefix,
                     traits: BlobTraits.Metadata,
+                    states: BlobStates.None,
                     cancellationToken: cts.Token);
 
                 var filtered = items
