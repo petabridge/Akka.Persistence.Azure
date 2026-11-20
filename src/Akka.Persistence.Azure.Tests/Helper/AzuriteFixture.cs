@@ -27,8 +27,7 @@ namespace Akka.Persistence.Azure.Tests.Helper
 
         public async ValueTask InitializeAsync()
         {
-            _container = new AzuriteBuilder()
-                .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
+            _container = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest")
                 .Build();
 
             await _container.StartAsync();

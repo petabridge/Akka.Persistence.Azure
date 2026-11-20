@@ -1,21 +1,21 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <AkkaVersion>1.5.71</AkkaVersion>
-    <AkkaHostingVersion>1.5.71</AkkaHostingVersion>
+    <AkkaVersion>1.5.75</AkkaVersion>
+    <AkkaHostingVersion>1.5.75</AkkaHostingVersion>
   </PropertyGroup>
   <!-- App dependencies -->
   <ItemGroup>
     <PackageVersion Include="Akka.Persistence.Query" Version="$(AkkaVersion)" />
-    <PackageVersion Include="Azure.Data.Tables" Version="12.10.0" />
-    <PackageVersion Include="Azure.Identity" Version="1.13.2" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.23.0" />
+    <PackageVersion Include="Azure.Data.Tables" Version="12.13.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
     <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
     <PackageVersion Include="Akka.Persistence.Hosting" Version="$(AkkaHostingVersion)" />
     <PackageVersion Include="Akka.Cluster.Hosting" Version="$(AkkaHostingVersion)" />
     <!-- Needed to fix Microsoft.Identity.Client typosquatting phishing link bug (https://github.com/AzureAD/microsoft-authentication-library-for-dotnet/pull/5278) -->
-    <PackageVersion Include="Microsoft.Identity.Client" Version="4.73.1" />
-    <PackageVersion Include="Testcontainers.Azurite" Version="4.8.0" />
+    <PackageVersion Include="Microsoft.Identity.Client" Version="4.92.0" />
+    <PackageVersion Include="Testcontainers.Azurite" Version="4.17.0" />
   </ItemGroup>
   <!-- Test dependencies -->
   <ItemGroup>
@@ -35,6 +35,6 @@
   </ItemGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
   </ItemGroup>
 </Project>
