@@ -324,16 +324,18 @@ namespace Akka.Persistence.Azure.Snapshot
         }
 
         /// <summary>
-        /// Snapshot blob ids are exactly "{prefix}-{seqNr:d19}" (see <see cref="SeqNoHelper.ToSnapshotBlobId"/>).
-        /// A plain prefix match also returns other persistence ids that share the prefix
-        /// (listing "snapshot-orders" also returns "snapshot-orders-2-..."), so the name must be verified.
+        /// Snapshot blob ids are exactly "{prefix}{seqNr:d19}" (see <see cref="SeqNoHelper.ToSnapshotBlobId"/>),
+        /// where the prefix comes from <see cref="SeqNoHelper.ToSnapshotSearchQuery"/> and ends with "-".
+        /// The prefix already excludes ids that extend ours with a digit ("customer-90" vs "customer-9").
+        /// It still matches ids that extend ours after a dash ("snapshot-orders-" also lists
+        /// "snapshot-orders-2-..."), so the name must be verified.
         /// </summary>
         private static bool IsSnapshotOf(string blobName, string prefix)
         {
-            if (blobName.Length != prefix.Length + 20 || blobName[prefix.Length] != '-')
+            if (blobName.Length != prefix.Length + 19)
                 return false;
 
-            for (var i = prefix.Length + 1; i < blobName.Length; i++)
+            for (var i = prefix.Length; i < blobName.Length; i++)
             {
                 if (blobName[i] < '0' || blobName[i] > '9')
                     return false;
