@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Akka.Actor;
 using Akka.Actor.Setup;
+using Akka.Configuration;
 using Akka.Persistence.Azure.Snapshot;
 using Akka.Persistence.Azure.Tests.Helper;
 using Akka.Persistence.Azure.Util;
@@ -33,38 +34,69 @@ namespace Akka.Persistence.Azure.Tests;
 /// and do not depend on how fast Azurite answers.
 /// </summary>
 [Collection("AzureSpecs")]
-public class AzureBlobSnapshotStoreListingScopeSpec : Akka.TestKit.Xunit.TestKit
+public class AzureBlobSnapshotStoreListingScopeSpec : AzureBlobSnapshotStoreListingScopeSpecBase
+{
+    public AzureBlobSnapshotStoreListingScopeSpec(AzuriteFixture fixture, ITestOutputHelper output)
+        : base(fixture, output, folders: null)
+    {
+    }
+}
+
+/// <summary>
+/// Same checks with the <c>folders</c> setting, which puts "{folders}/" in front of every blob name.
+/// </summary>
+[Collection("AzureSpecs")]
+public class AzureBlobSnapshotStoreListingScopeCustomFolderSpec : AzureBlobSnapshotStoreListingScopeSpecBase
+{
+    public AzureBlobSnapshotStoreListingScopeCustomFolderSpec(AzuriteFixture fixture, ITestOutputHelper output)
+        : base(fixture, output, folders: "/folder-1/folder-2/")
+    {
+    }
+}
+
+public abstract class AzureBlobSnapshotStoreListingScopeSpecBase : Akka.TestKit.Xunit.TestKit
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
     private readonly ListRequestRecorder _recorder;
     private readonly IActorRef _store;
+    private readonly string _folders;
 
-    public AzureBlobSnapshotStoreListingScopeSpec(AzuriteFixture fixture, ITestOutputHelper output)
-        : this(fixture, output, new ListRequestRecorder())
+    protected AzureBlobSnapshotStoreListingScopeSpecBase(
+        AzuriteFixture fixture, ITestOutputHelper output, string? folders)
+        : this(fixture, output, folders, new ListRequestRecorder())
     {
     }
 
-    private AzureBlobSnapshotStoreListingScopeSpec(
-        AzuriteFixture fixture, ITestOutputHelper output, ListRequestRecorder recorder)
+    private AzureBlobSnapshotStoreListingScopeSpecBase(
+        AzuriteFixture fixture, ITestOutputHelper output, string? folders, ListRequestRecorder recorder)
         : base(
-            CreateSystem(fixture.ConnectionString, recorder),
+            CreateSystem(fixture.ConnectionString, folders, recorder),
             output)
     {
         _recorder = recorder;
         AzurePersistence.Get(Sys);
+        _folders = AzureBlobSnapshotStoreSettings.Create(Sys).Folders;
+        if (folders != null)
+            Assert.False(string.IsNullOrWhiteSpace(_folders)); // sanity: the folder setting took effect
         _store = Persistence.Instance.Apply(Sys).SnapshotStoreFor(null);
     }
 
-    private static ActorSystem CreateSystem(string connectionString, ListRequestRecorder recorder)
+    private static ActorSystem CreateSystem(string connectionString, string? folders, ListRequestRecorder recorder)
     {
         var options = new BlobClientOptions();
         options.AddPolicy(recorder, HttpPipelinePosition.PerCall);
 
+        var config = AzureConfig(connectionString);
+        if (folders != null)
+            config = ConfigurationFactory
+                .ParseString($"akka.persistence.snapshot-store.azure-blob-store.folders = \"{folders}\"")
+                .WithFallback(config);
+
         var setup = ActorSystemSetup.Create(
-            Akka.Actor.BootstrapSetup.Create().WithConfig(AzureConfig(connectionString)),
+            Akka.Actor.BootstrapSetup.Create().WithConfig(config),
             AzureBlobSnapshotSetup.Create(() => new BlobServiceClient(connectionString, options)));
 
-        return ActorSystem.Create(nameof(AzureBlobSnapshotStoreListingScopeSpec), setup);
+        return ActorSystem.Create("AzureBlobSnapshotStoreListingScopeSpec", setup);
     }
 
     [Fact(DisplayName = "LoadAsync must not list blobs of persistence ids that merely start with the same text")]
@@ -73,11 +105,10 @@ public class AzureBlobSnapshotStoreListingScopeSpec : Akka.TestKit.Xunit.TestKit
         var (pid, siblings) = await SeedSiblings();
         _recorder.Clear();
 
-        var reply = await _store.Ask<object>(
-            new LoadSnapshot(pid, SnapshotSelectionCriteria.Latest, long.MaxValue), Timeout, TestContext.Current.CancellationToken);
-        var loaded = Assert.IsType<LoadSnapshotResult>(reply).Snapshot;
+        var loaded = await Load(pid);
 
         Assert.NotNull(loaded); // sanity: we still find our own snapshot
+        Assert.Equal(pid, loaded.Metadata.PersistenceId);
         AssertListingExcludes(siblings);
     }
 
@@ -92,6 +123,11 @@ public class AzureBlobSnapshotStoreListingScopeSpec : Akka.TestKit.Xunit.TestKit
         Assert.IsType<DeleteSnapshotsSuccess>(reply);
 
         AssertListingExcludes(siblings);
+
+        // our snapshot is gone; every sibling's snapshot is still there
+        Assert.Null(await Load(pid));
+        foreach (var digit in "0123456789")
+            Assert.NotNull(await Load(pid + digit));
     }
 
     /// <summary>
@@ -108,7 +144,7 @@ public class AzureBlobSnapshotStoreListingScopeSpec : Akka.TestKit.Xunit.TestKit
         {
             var siblingPid = pid + digit;
             await Save(siblingPid, 1);
-            siblingBlobNames.Add(new SnapshotMetadata(siblingPid, 1, DateTime.UtcNow).ToSnapshotBlobId(string.Empty));
+            siblingBlobNames.Add(new SnapshotMetadata(siblingPid, 1, DateTime.UtcNow).ToSnapshotBlobId(_folders));
         }
 
         return (pid, siblingBlobNames);
@@ -126,6 +162,13 @@ public class AzureBlobSnapshotStoreListingScopeSpec : Akka.TestKit.Xunit.TestKit
                 covered.Count == 0,
                 $"List Blobs used prefix '{prefix}', which also covers {covered.Count} blob(s) of other persistence ids, e.g. '{covered.FirstOrDefault()}'.");
         }
+    }
+
+    private async Task<SelectedSnapshot?> Load(string persistenceId)
+    {
+        var reply = await _store.Ask<object>(
+            new LoadSnapshot(persistenceId, SnapshotSelectionCriteria.Latest, long.MaxValue), Timeout, TestContext.Current.CancellationToken);
+        return Assert.IsType<LoadSnapshotResult>(reply).Snapshot;
     }
 
     private async Task Save(string persistenceId, long seqNr)
