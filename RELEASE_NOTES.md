@@ -1,8 +1,7 @@
 #### 1.5.75 November 23 2026 ####
 
 * [Fix `AzureBlobSnapshotStore` listing the snapshots of other persistence ids](https://github.com/petabridge/Akka.Persistence.Azure/pull/574)
-* [Update Akka.NET v1.5.75](https://github.com/akkadotnet/akka.net/releases/tag/1.5.75)
-* [Update Akka.Hosting v1.5.75](https://github.com/akkadotnet/Akka.Hosting/releases/tag/1.5.75) - [#570](https://github.com/petabridge/Akka.Persistence.Azure/pull/570)
+* [Update Akka.NET and Akka.Hosting v1.5.75](https://github.com/akkadotnet/akka.net/releases/tag/1.5.75) - [#570](https://github.com/petabridge/Akka.Persistence.Azure/pull/570)
 * Update the Azure SDK packages - [#570](https://github.com/petabridge/Akka.Persistence.Azure/pull/570)
 
 **Bug Fixes:**
