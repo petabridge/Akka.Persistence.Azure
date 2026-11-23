@@ -1,12 +1,12 @@
 #### 1.6.0-beta8 November 23 2026 ####
 
-* Built against [Akka.NET 1.6.0-beta8](https://github.com/akkadotnet/akka.net/releases/tag/1.6.0-beta8) and Akka.Hosting 1.6.0-beta8 - [#569](https://github.com/petabridge/Akka.Persistence.Azure/pull/569)
+* Built against [Akka.NET and Akka.Hosting 1.6.0-beta8](https://github.com/akkadotnet/akka.net/releases/tag/1.6.0-beta8) - [#569](https://github.com/petabridge/Akka.Persistence.Azure/pull/569)
 * [Fix `AzureBlobSnapshotStore` listing the snapshots of other persistence ids](https://github.com/petabridge/Akka.Persistence.Azure/pull/575)
 * Update the Azure SDK packages - [#568](https://github.com/petabridge/Akka.Persistence.Azure/pull/568)
 
 **Bug Fixes:**
 
-Includes the snapshot listing fix from 1.5.75. The listing for `customer-9` no longer returns the snapshots of `customer-90`, `customer-91` and so on, which could make `LoadAsync` time out when many persistence ids started with the same text. See the 1.5.75 notes below.
+Includes the snapshot listing fix from 1.5.75. The listing for `customer-9` no longer returns the snapshots of `customer-90`, `customer-91` and so on, which could make `LoadAsync` time out when many persistence ids started with the same text. See the [1.5.75 release](https://github.com/petabridge/Akka.Persistence.Azure/releases/tag/1.5.75).
 
 **Dependency changes:**
 
