@@ -1,3 +1,43 @@
+#### 1.6.0-beta8 November 23 2026 ####
+
+* Built against [Akka.NET and Akka.Hosting 1.6.0-beta8](https://github.com/akkadotnet/akka.net/releases/tag/1.6.0-beta8) - [#569](https://github.com/petabridge/Akka.Persistence.Azure/pull/569)
+* [Fix `AzureBlobSnapshotStore` listing the snapshots of other persistence ids](https://github.com/petabridge/Akka.Persistence.Azure/pull/575)
+* Update the Azure SDK packages - [#568](https://github.com/petabridge/Akka.Persistence.Azure/pull/568)
+
+**Bug Fixes:**
+
+Includes the snapshot listing fix from 1.5.75. The listing for `customer-9` no longer returns the snapshots of `customer-90`, `customer-91` and so on, which could make `LoadAsync` time out when many persistence ids started with the same text. See the [1.5.75 release](https://github.com/petabridge/Akka.Persistence.Azure/releases/tag/1.5.75).
+
+**Dependency changes:**
+
+* `Azure.Storage.Blobs` 12.23.0 to 12.30.1, `Azure.Data.Tables` 12.10.0 to 12.13.0, `Azure.Identity` 1.13.2 to 1.21.0, and `Microsoft.Identity.Client` 4.73.1 to 4.92.0.
+
+No public API or storage format changes.
+
+#### 1.5.75 November 23 2026 ####
+
+* [Fix `AzureBlobSnapshotStore` listing the snapshots of other persistence ids](https://github.com/petabridge/Akka.Persistence.Azure/pull/574)
+* [Update Akka.NET and Akka.Hosting v1.5.75](https://github.com/akkadotnet/akka.net/releases/tag/1.5.75) - [#570](https://github.com/petabridge/Akka.Persistence.Azure/pull/570)
+* Update the Azure SDK packages - [#570](https://github.com/petabridge/Akka.Persistence.Azure/pull/570)
+
+**Bug Fixes:**
+
+Loading a snapshot could time out when many persistence ids started with the same text. 1.5.71 made `LoadAsync` read every page of the blob listing, and the listing for `customer-9` also returned the snapshots of `customer-90`, `customer-91` and so on. With tens of thousands of such ids, the listing could not finish inside the default 3s `request-timeout`, so recovery failed. `DeleteAsync(persistenceId, criteria)` listed the same extra blobs.
+
+The listing now stops at the end of the persistence id, so `customer-9` no longer lists the snapshots of `customer-90`. Ids that continue with a dash, such as `customer-9-2`, are still listed and then skipped.
+
+No public API or storage format changes. Existing snapshots load as before.
+
+**Dependency changes:**
+
+These raise the minimum versions that users of the packages pick up:
+
+* `Azure.Storage.Blobs` 12.23.0 to 12.30.1, `Azure.Data.Tables` 12.10.0 to 12.13.0, `Azure.Identity` 1.13.2 to 1.21.0, and `Microsoft.Identity.Client` 4.73.1 to 4.92.0.
+* Akka.Hosting 1.5.75 raises `OpenTelemetry` from 1.10 to 1.12 and adds `OpenTelemetry.Api` 1.15.3, for users of `Akka.Persistence.Azure.Hosting`.
+* The new Azure SDK packages need `Azure.Core` 1.62.0, which brings in `Microsoft.Extensions.Hosting.Abstractions` and `Microsoft.Extensions.Configuration.Abstractions` 10.0.x. On `net6.0` and `net7.0`, the build warns that these packages are not tested with your framework. The warning comes from the Azure SDK and also appears if you reference these Azure packages directly.
+
+The packages still target `netstandard2.0` and `net6.0`. The build and the test suite now run on .NET 10, which does not affect the published packages.
+
 #### 1.6.0-beta3 October 7 2026 ####
 
 * Built against [Akka.NET 1.6.0-beta3](https://github.com/akkadotnet/akka.net/releases/tag/1.6.0-beta3) and Akka.Hosting 1.6.0-beta3.
