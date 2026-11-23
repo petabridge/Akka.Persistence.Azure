@@ -52,11 +52,16 @@ namespace Akka.Persistence.Azure.Util
         /// <param name="persistentId">The ID of the persistent entity.</param>
         /// <param name="folders">Folder prefix added to the front of the file name</param>
         /// <returns>The prefix of a blob store search string.</returns>
+        /// <remarks>
+        /// The prefix ends with the "-" that separates the persistence id from the sequence number.
+        /// Without it, listing "snapshot-customer-9" also returns every blob of "customer-90",
+        /// "customer-91" and so on.
+        /// </remarks>
         public static string ToSnapshotSearchQuery(string persistentId, string folders)
         {
             return string.IsNullOrWhiteSpace(folders)
-                ? $"snapshot-{Uri.EscapeDataString(persistentId)}"
-                : $"{folders}/snapshot-{Uri.EscapeDataString(persistentId)}";
+                ? $"snapshot-{Uri.EscapeDataString(persistentId)}-"
+                : $"{folders}/snapshot-{Uri.EscapeDataString(persistentId)}-";
         }
     }
 }
